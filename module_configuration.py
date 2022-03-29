@@ -7,18 +7,18 @@ import os
 import optparse
 
 
-def add_client_path(mod_path):
+def add_client_path(client_path):
     """
     Add path to the package to the PYTHONPATH environment variable.
 
-    :param mod_path: absolute path to module
+    :param client_path: absolute path to module location. Path should be 1 level above python package
     """
     if os.getenv('PYTHONPATH') is None:
         # PYTHONPATH env var does not exist, add it and configure the module path
-        print(f'\nRun the Following Command:\n\texport PYTHONPATH={mod_path}\n')
-    elif os.getenv('PYTHONPATH') is not None and mod_path not in os.getenv('PYTHONPATH'):
+        print(f'\nRun the Following Command:\n\texport PYTHONPATH={client_path}\n')
+    elif os.getenv('PYTHONPATH') is not None and client_path not in os.getenv('PYTHONPATH'):
         # PYTHONPATH exists, but the module path is not added
-        print(f'\nRun the Following Command:\n\texport PYTHONPATH={mod_path}:$PYTHONPATH\n')
+        print(f'\nRun the Following Command:\n\texport PYTHONPATH={client_path}:$PYTHONPATH\n')
     else:
         print('Environment Pathed Correctly')
 
@@ -28,18 +28,15 @@ def configure_server_module():
 
 
 def run(mod_path):
-    # TODO - validate mod_path exists
-    # TODO - does the path contain server? Will always have client.
-
-    if os.path.isdir(mod_path):
-        add_client_path(mod_path)
+    client_path = mod_path+"/client"
+    server_path = mod_path+"/server"
+    if os.path.exists(client_path):
+        add_client_path(client_path)
         if os.path.isdir(mod_path+"/server"):
-            configure_server_module(mod_path)
+            configure_server_module()
     else:
         print(f"Please provide a valid path to your module. {mod_path} does not exist. "
               "Please be sure you are providing the full path.")
-
-
 
 
 if __name__ == "__main__":
