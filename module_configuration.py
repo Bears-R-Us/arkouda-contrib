@@ -2,6 +2,7 @@
 # NOTE - this file will not automatically execute any commands, the user must manually copy the commands and run them.
 # TODO - add option to export commands to shell script
 # TODO - detect if module has client & server or just client and configure accordingly
+# TODO - prevent double / at end of path
 
 import os
 import optparse
@@ -36,13 +37,15 @@ def get_server_modules(cfg):
             mod_list += [m] if m else []
     return mod_list
 
+
 def get_chpl_files(mod_path):
     path = mod_path + "/server/*.chpl"
     return glob.glob(path)
 
 
 def configure_server_module(mod_path, ak_loc):
-    # TODO - add handling for when the user does not supply a location for arkouda
+    if not ak_loc:
+        raise RuntimeError("--ak option is required when configuring a module with server components.")
     mod_cfg = mod_path + "/server/ServerModules.cfg"
     ak_cfg = ak_loc + "/ServerModules.cfg"
     if not os.path.exists(mod_cfg):
@@ -71,8 +74,11 @@ def configure_server_module(mod_path, ak_loc):
           f"ARKOUDA_SKIP_CHECK_DEPS=true make -C {ak_loc}")
 
 def run(mod_path, ak_loc):
-    if os.path.isdir(mod_path):
-        install_client_pkg(mod_path)
+    mod_path = mod_path.rstrip("/")  # remove trailing slash
+    ak_loc = ak_loc.rstrip("/")  # remove trailing slash
+    
+    if os.path.exists(mod_path) and os.path.exists(ak_loc):
+        add_client_path(mod_path)
         if os.path.isdir(mod_path+"/server"):
             configure_server_module(mod_path, ak_loc)
     else:
@@ -81,8 +87,8 @@ def run(mod_path, ak_loc):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser()
-    parser.add_option("--path", dest="module", help="Path to external module you would like to configure, REQUIRED")
-    parser.add_option("--ak", dest="arkouda", help="Path to Arkouda installation, required when a server module provided.")
+    parser.add_option("--path", dest="module", help="Full Path to external module you would like to configure, REQUIRED")
+    parser.add_option("--ak", dest="arkouda", help="Full Path to Arkouda installation, required when a server module provided.")
     (options, args) = parser.parse_args()
 
     if not options.module:
