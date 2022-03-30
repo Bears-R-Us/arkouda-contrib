@@ -2,10 +2,16 @@
 module DistanceCalcMsg{
 
     use ServerConfig;
-    use DistanceCalc;
+    use MultiTypeSymbolTable;
+    use MultiTypeSymEntry;
     use Message;
+    use Reflection;
+    use ServerErrors;
+    use ServerErrorStrings;
+    use Logging;
 
-    // TODO - add logging
+    private config const logLevel = ServerConfig.logLevel;
+    const dcLogger = new Logger(logLevel);
 
     proc dotProductMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
         param pn = Reflection.getRoutineName();
@@ -23,7 +29,7 @@ module DistanceCalcMsg{
                 var prod = u.a * v.a;
                 var result: int = + reduce prod;
                 repMsg = "int64 %i".format(result);
-                asLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+                dcLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
                 return new MsgTuple(repMsg, MsgType.NORMAL);
             }
             when (DType.UInt64, DType.UInt64){
@@ -32,7 +38,7 @@ module DistanceCalcMsg{
                 var prod = u.a * v.a;
                 var result: uint = + reduce prod;
                 repMsg = "uint64 %i".format(result);
-                asLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+                dcLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
                 return new MsgTuple(repMsg, MsgType.NORMAL);
             }
             when (DType.Float64, DType.Float64){
@@ -41,12 +47,12 @@ module DistanceCalcMsg{
                 var prod = u.a * v.a;
                 var result: real = + reduce prod;
                 repMsg = "float64 %i".format(result);
-                asLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+                dcLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
                 return new MsgTuple(repMsg, MsgType.NORMAL);
             }
             otherwise{
-                var errorMsg = notImplementedError("dot",gEnt.dtype);
-                asLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);           
+                var errorMsg = notImplementedError("dotProduct", gEnt.dtype);
+                dcLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);           
                 return new MsgTuple(errorMsg, MsgType.ERROR);
             }
         }

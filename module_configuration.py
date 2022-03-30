@@ -1,8 +1,8 @@
 # This file is designed to provide a user with the commands required to configure their external module.
 # NOTE - this file will not automatically execute any commands, the user must manually copy the commands and run them.
 # TODO - add option to export commands to shell script
-# TODO - detect if module has client & server or just client and configure accordingly
-# TODO - prevent double / at end of path
+
+# Currently export of PYTHONPATH is only functional when run manually or source file.sh.
 
 import os
 import optparse
@@ -10,6 +10,7 @@ import pkg_resources as pr
 import subprocess
 import glob
 import time
+
 
 def install_client_pkg(client_path):
     """
@@ -28,6 +29,7 @@ def install_client_pkg(client_path):
     # Only provide install command if not already installed on system
     if pkg_name not in installed_pkgs:
         print(f"pip install {client_path}")
+
 
 def get_server_modules(cfg):
     mod_list = []
@@ -76,14 +78,19 @@ def configure_server_module(mod_path, ak_loc):
 def run(mod_path, ak_loc):
     mod_path = mod_path.rstrip("/")  # remove trailing slash
     ak_loc = ak_loc.rstrip("/")  # remove trailing slash
-    
-    if os.path.exists(mod_path) and os.path.exists(ak_loc):
-        add_client_path(mod_path)
-        if os.path.isdir(mod_path+"/server"):
-            configure_server_module(mod_path, ak_loc)
+
+    client_path = mod_path + "/client"
+    server_path = mod_path + "/server"
+
+    if os.path.exists(mod_path):
+        add_client_path(client_path)
+        if os.path.exists(server_path) and os.path.exists(ak_loc):
+            if os.path.exists(ak_loc):
+                configure_server_module(mod_path, ak_loc)
+            else:
+                raise RuntimeError("Arkouda Location must be provided when module contains a server element.")
     else:
-        print(f"Please provide a valid path to your module. {mod_path} does not exist. "
-              "Please be sure you are providing the full path.")
+        raise RuntimeError(f"Module path not valid: {mod_path}")
 
 if __name__ == "__main__":
     parser = optparse.OptionParser()
