@@ -10,6 +10,8 @@ import pkg_resources as pr
 import subprocess
 import glob
 import time
+import pkg_resources as pr
+import subprocess
 
 
 def install_client_pkg(client_path):
@@ -83,7 +85,7 @@ def run(mod_path, ak_loc):
     server_path = mod_path + "/server"
 
     if os.path.exists(mod_path):
-        add_client_path(client_path)
+        install_client_pkg(client_path)
         if os.path.exists(server_path) and os.path.exists(ak_loc):
             if os.path.exists(ak_loc):
                 configure_server_module(mod_path, ak_loc)
