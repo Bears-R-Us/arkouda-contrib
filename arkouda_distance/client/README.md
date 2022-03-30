@@ -1,9 +1,24 @@
 # Arkouda Distance
 
-Client only implementation of distance calculations.
+This is a client only implementation of distance functionality using Arkouda. Thus, all code is python and uses only server elements currently included in the main arkouda repository. 
 
-## Methods Implemented
-- `dot()` compute the dot product of 2 pdarrays.
-- `magnitude()` compute the magnitude/L2-Norm of a pdarray.
-- `consine()` compute the cosine distance of 2 pdarrays.
-- `euclidean()` compute the Euclidean distance of 2 pdarrays.
+## Functionality Implemented
+
+- `dot()` - Compute the dot product of 2 Arkouda `pdarrays`.
+- `magnitude()` - Compute the magnitude/l2-norm of Arkouda `pdarray`.
+- `cosine()` - Compute the cosine distance of 2 Arkouda `pdarrays`.
+- `euclidean()` - Compute the Euclidean distance of 2 Arkouda `pdarrays`.
+
+## Usage
+
+Arkouda must be installed prior to utilization.
+
+```commandline
+pip install arkouda
+```
+
+In your code,
+
+```python
+import arkouda_distance
+```

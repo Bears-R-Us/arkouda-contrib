@@ -1,25 +1,30 @@
-# Arkouda Distance
+# arkouda-contrib
+a place for contributed functionality for arkouda
 
-This is a client only implementation of distance functionality using Arkouda. Thus, all code is python and uses only server elements currently included in the main arkouda repository. 
+## Creating a Module
 
-## Functionality Implemented
+- All modules must include a `client` directory
+  - `client` directory must include a `README.md` and `setup.py`.
+  - The client module will be installed using `pip`. 
+  - Install uses `setuptools`
+- `server` directory is optional
 
-- `dot()` - Compute the dot product of 2 Arkouda `pdarrays`.
-- `magnitude()` - Compute the magnitude/l2-norm of Arkouda `pdarray`.
-- `cosine()` - Compute the cosine distance of 2 Arkouda `pdarrays`.
-- `euclidean()` - Compute the Euclidean distance of 2 Arkouda `pdarrays`.
+## Installation
 
-## Usage
+`module_configuration.py` is provided for easy set up. Currently, the script will print out commands that can be copied and run to configure Arkouda with your module. Currently, these commands cannot be piped due to an `export` that must be run manually.
 
-Arkouda must be installed prior to utilization.
+### Install Parameters
+- `path` - this is the full path to the module you want to configure. *REQUIRED*
+- `ak` - this is the full path to the Arkouda installation on your machince. *REQUIRED when module contains a server element only*.
 
 ```commandline
-pip install arkouda
+python3 module_configuration.py --path <path to module> --ak <path to arkouda>
 ```
 
-In your code,
+## Usage Notes
 
 ```python
-import arkouda_distance
+import arkouda as ak
+import yourModule
+# Code using your module and Arkouda
 ```
-**Please Note - You may need to modify `PATH` to ensure you can import this package properly without being located in the package directory.**
