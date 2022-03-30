@@ -1,19 +1,25 @@
-# arkouda-contrib
-a place for contributed functionality for arkouda
+# Arkouda Distance
 
-## Environment Configuration
+This is a client only implementation of distance functionality using Arkouda. Thus, all code is python and uses only server elements currently included in the main arkouda repository. 
+
+## Functionality Implemented
+
+- `dot()` - Compute the dot product of 2 Arkouda `pdarrays`.
+- `magnitude()` - Compute the magnitude/l2-norm of Arkouda `pdarray`.
+- `cosine()` - Compute the cosine distance of 2 Arkouda `pdarrays`.
+- `euclidean()` - Compute the Euclidean distance of 2 Arkouda `pdarrays`.
+
+## Usage
+
+Arkouda must be installed prior to utilization.
 
 ```commandline
-python3 module_configuration <path to your module>
+pip install arkouda
 ```
 
-This command will output an export command. If your environment is already configured to import this module, this will be indicated by the output and no command will be returned.
-
-## Module Usage
+In your code,
 
 ```python
-import arkouda as ak
-import yourModuleName
-
-ak.connect()
+import arkouda_distance
 ```
+**Please Note - You may need to modify `PATH` to ensure you can import this package properly without being located in the package directory.**
