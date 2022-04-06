@@ -6,8 +6,6 @@
 
 import os
 import optparse
-import pkg_resources as pr
-import subprocess
 import glob
 import time
 import pkg_resources as pr
