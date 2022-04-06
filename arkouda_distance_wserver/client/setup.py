@@ -15,6 +15,7 @@ setup(
     packages=['arkouda_distance'],
     python_requires=">=3.7",
     install_requires=[
-        'arkouda'
+        'arkouda',
+        'typeguard'
     ]
 )
