@@ -33,7 +33,7 @@ filterwarnings =
     ignore:Version mismatch between client .*
 testpaths =
     test/pkg1_test.py
-    test/pk2_test.py
+    test/pkg2_test.py
     .
     .
     .
@@ -48,7 +48,7 @@ env =
     D:ARKOUDA_CLIENT_TIMEOUT=0
     D:ARKOUDA_LOG_LEVEL=DEBUG
 ```
-**NOTE** - All test definition naming should be of the format `test_<name>`.
+**NOTE** - All methods within test files should be named following this format `def test_<my_functionality_name>`.
 
 To run your tests,
 ```commandline
