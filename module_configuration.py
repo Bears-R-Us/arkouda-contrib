@@ -53,7 +53,7 @@ def configure_server_module(mod_path, ak_loc):
     if not os.path.exists(mod_cfg):
         raise RuntimeError(f"Could not locate module ServerModules.cfg: {mod_cfg}")
     if not os.path.exists(ak_cfg):
-        raise RuntimeError(f"Could not locate module ServerModules.cfg: {ak_cfg}")
+        raise RuntimeError(f"Could not locate arkouda ServerModules.cfg: {ak_cfg}")
 
     # get all of the modules listed in the .cfg file
     mods = get_server_modules(mod_cfg)
@@ -84,8 +84,8 @@ def run(mod_path, ak_loc):
 
     if os.path.exists(mod_path):
         install_client_pkg(client_path)
-        if os.path.exists(server_path) and os.path.exists(ak_loc):
-            if os.path.exists(ak_loc):
+        if os.path.exists(server_path):
+            if os.path.exists(ak_loc): # only require the arkouda location if server module present
                 configure_server_module(mod_path, ak_loc)
             else:
                 raise RuntimeError("Arkouda Location must be provided when module contains a server element.")
