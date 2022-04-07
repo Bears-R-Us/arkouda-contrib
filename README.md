@@ -15,6 +15,14 @@ a place for contributed functionality for arkouda
 
 `module_configuration.py` is provided for easy set up. Currently, the script will print out commands that can be copied and run to configure Arkouda with your module or piped into bash for immediate execution.
 
+```commandline
+# To see the commands that will be run
+python3 module_configuration.py --path=<path_to_module> --ak=<path_to_arkouda>
+
+# To automatically run the commands
+python3 module_configuration.py --path=<path_to_module> --ak=<path_to_arkouda> | bash
+```
+
 ### Install Parameters
 - `path` - this is the full path to the module you want to configure. *REQUIRED*
 - `ak` - this is the full path to the Arkouda installation on your machine. *REQUIRED when module contains a server element only*.
@@ -48,6 +56,7 @@ env =
     D:ARKOUDA_CLIENT_TIMEOUT=0
     D:ARKOUDA_LOG_LEVEL=DEBUG
 ```
+
 **NOTE** - All methods within test files should be named following this format `def test_<my_functionality_name>`.
 
 To run your tests,
