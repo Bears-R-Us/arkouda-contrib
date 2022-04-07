@@ -77,7 +77,8 @@ def configure_server_module(mod_path, ak_loc):
 
 def run(mod_path, ak_loc):
     mod_path = mod_path.rstrip("/")  # remove trailing slash
-    ak_loc = ak_loc.rstrip("/")  # remove trailing slash
+    if ak_loc:
+        ak_loc = ak_loc.rstrip("/")  # remove trailing slash
 
     client_path = mod_path + "/client"
     server_path = mod_path + "/server"
