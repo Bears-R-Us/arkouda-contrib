@@ -1,0 +1,10 @@
+*.*~
+*~
+*.ipynb_checkpoints*
+*__pycache__/*
+*.hdf5
+*.out
+*.err
+*.pyc
+*.egg-info/*
+*.eggs/*
