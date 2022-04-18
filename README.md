@@ -13,25 +13,10 @@ a place for contributed functionality for arkouda
 
 ## Installation
 
-`module_configuration.py` is provided for easy set up. Currently, the script will print out commands that can be copied and run to configure Arkouda with your module or piped into bash for immediate execution.
+Installation is performed by running `module_configuration.py`. For detailed package installation instructions please view [INSTALL.md](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/INSTALL.md).
 
-```commandline
-# To see the commands that will be run
-python3 module_configuration.py --path=<path_to_module> --ak=<path_to_arkouda>
 
-# To automatically run the commands
-python3 module_configuration.py --path=<path_to_module> --ak=<path_to_arkouda> | bash
-```
-
-### Install Parameters
-- `path` - this is the full path to the module you want to configure. *REQUIRED*
-- `ak` - this is the full path to the Arkouda installation on your machine. *REQUIRED when module contains a server element only*.
-
-```commandline
-python3 module_configuration.py --path <path to module> --ak <path to arkouda>
-```
-
-#### Defining Tests
+## Defining Tests
 
 In the `test` directory of your module, you will need to define testing for the newly defined functionality. At the same level as your `test` directory, be sure to define `pytest.ini`.
 
