@@ -25,3 +25,16 @@ class DistanceTest(ArkoudaTest):
         b = ak.arange(3, 6, 1)
         e = akd.euclidean(a, b)
         self.assertEqual(e, 5.196152422706632)
+
+    def test_error_handling(self):
+        with self.assertRaises(TypeError):
+            d = akd.dot(14, 14)
+
+        with self.assertRaises(TypeError):
+            m = akd.magnitude('a')
+
+        with self.assertRaises(TypeError):
+            c = akd.cosine('a', 15)
+
+        with self.assertRaises(TypeError):
+            e = akd.euclidean(ak.array['a', 'b', 'c'], [1, 2, 3])
