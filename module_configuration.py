@@ -9,7 +9,6 @@ import optparse
 import glob
 import time
 import pkg_resources as pr
-import subprocess
 
 PIP_INSTALLS = []
 USER_MODS = []
@@ -17,27 +16,30 @@ ADD_TO_CONFIG = []
 
 
 def install_client_pkg(client_path):
+    """
+    Add client path to list of packages to be pip installed
+
+    Parameters
+    __________
+        client_path: absolute path to python package
+    """
     global PIP_INSTALLS
-    """
-    Install the python package if not already installed.
-    :param client_path: absolute path to module
-    """
-    # get list of installed pkgs
 
-    if not os.path.exists(client_path + "/setup.py"):
-        raise RuntimeError("Configuration requires a setup.py file to install client. "
-                           f"Please configure {client_path}/setup.py")
-    p = subprocess.check_output(["python3", f"{client_path}/setup.py", "--name"], universal_newlines=True)
     PIP_INSTALLS.append(client_path)
-    # Only provide install command if not already installed on system
-    # installed_pkgs = {pkg.key for pkg in pr.working_set}
-    # if pkg_name not in installed_pkgs:
-    #     print(f"pip install {client_path}")
-
-    # TODO - else update already installed package
 
 
 def get_server_modules(cfg):
+    """
+    Get list of modules to add at users request.
+
+    Parameters
+    __________
+        cfg: ServerModules.cfg path for the module being added.
+
+    Returns
+    _______
+        List of module names that need to be added to the main .cfg file to be built
+    """
     mod_list = []
     with open(cfg) as f:
         for line in f.readlines():
@@ -47,11 +49,30 @@ def get_server_modules(cfg):
 
 
 def get_chpl_files(mod_path):
+    """
+    Get the chapel files that need to be compiled for the provided package
+
+    Parameters
+    __________
+        mod_path: path to the module being added to the server.
+
+    Returns
+    ______
+        List of .chpl files at mod_path/server
+    """
     path = mod_path + "/server/*.chpl"
     return glob.glob(path)
 
 
-def configure_server_module(mod_path, ak_loc):
+def configure_server_module(mod_path):
+    """
+    Configure elements that need to be added to the server for the provided module to be built
+
+    Parameters
+    __________
+        mod_path: Path to the package.
+
+    """
     global ADD_TO_CONFIG, USER_MODS
 
     mod_cfg = mod_path + "/server/ServerModules.cfg"
@@ -65,28 +86,24 @@ def configure_server_module(mod_path, ak_loc):
     c_files = get_chpl_files(mod_path)
     USER_MODS += c_files
 
-    # Generate commands - these can be piped into a shell for execution
-    # 1 make copy of the Arkouda ServerModules.cfg
-    # tmp_cfg = f"{mod_path}/TmpServerModules.cfg.{int(time.time())}"
-    # print(f"cp {ak_cfg} {tmp_cfg}")
-
-    # 2 append our modules
-    # for c in mods:
-    # print(f"echo {c} >> {tmp_cfg}")
-
-    # 3 generate make command with vars
-    # ak_srv_user_mods = '"' + " ".join(c_files) + '"' # setup our ARKOUDA_SERVER_USER_MODULES
-    # print(f"ARKOUDA_SERVER_USER_MODULES={ak_srv_user_mods} ARKOUDA_CONFIG_FILE={tmp_cfg} "
-    # f"ARKOUDA_SKIP_CHECK_DEPS=true make -C {ak_loc}")
-
 
 def validate_pkgs(pkg_list, ak_loc):
     """
     Validate that all packages are configured as required and provide errors if not
 
-    :param pkg_list: List of full paths to packages
-    :param ak_loc: string path to arkouda
-    :return: None
+    Parameters
+    __________
+        pkg_list: List of full paths to packages
+        ak_loc: string path to arkouda
+
+    Raises
+    ______
+        RuntimeError: If any configuration is incorrect.
+
+    Notes
+    _____
+        Validation is run on all packages at once. This prevents partial installations and quickly alerts the user to
+        any issues.
     """
     # Pip is required to install client pkgs, verify if is installed.
     installed_pkgs = {pkg.key for pkg in pr.working_set}
@@ -129,8 +146,20 @@ def validate_pkgs(pkg_list, ak_loc):
 
 
 def create_commands(ak_loc, config_loc):
-    # install clients
-    print(f"pip install {' '.join(PIP_INSTALLS)}")
+    """
+    Creates the commands needed to install the client packages and make the server with the supplied modules.
+
+    Parameters
+    __________
+        ak_loc: Path to arkouda
+        config_loc: Path to the directory where temporary .cfg files are stored. Defaults to ~ (users home directory)
+
+    Notes
+    _____
+        All commands are printed. Execution can be triggered by piping the script execution to bash.
+    """
+    # install clients or Update if already installed
+    print(f"pip install -U {' '.join(PIP_INSTALLS)}")
 
     # Create modified config file with user modules - .cfg saved to user home directory
     ak_cfg = ak_loc + "/ServerModules.cfg"
@@ -146,6 +175,15 @@ def create_commands(ak_loc, config_loc):
 
 
 def run(pkg_list, ak_loc, config_loc):
+    """
+    Main function used for installing packages. Validation, configuration, and printing commands triggered from here.
+
+    Parameters
+    __________
+        pkg_list: List of paths to packages to be installed/added to the server.
+        ak_loc: Path to arkouda
+        config_loc: Path to the directory where the user would like .cfg files stored.
+    """
     # If only single pkg being installed, convert to list
     if isinstance(pkg_list, str):
         pkg_list = [pkg_list.rstrip("/")]
@@ -170,6 +208,22 @@ def run(pkg_list, ak_loc, config_loc):
 
 
 def get_package_list_from_file(path):
+    """
+    Create a list of packages to install from a provided .txt file
+
+    Parameters
+    __________
+        path: Filepath to the text file (.txt) containing the list of packages to install.
+
+    Returns
+    ______
+        List of filepaths to packages to install.
+
+    Notes
+    _____
+        .txt file should provide the full filepath to packages to install and be newline (\n) delimited.
+
+    """
     # Verify we have a text file
     if not path.endswith('.txt'):
         raise RuntimeError("Package List must be a newline(\n) delimited text file.")
@@ -187,6 +241,21 @@ def get_package_list_from_file(path):
 
 
 def get_package_list_from_directory(path):
+    """
+    Build a package list from the directories (assumed to be packages) in the provided directory.
+
+    Parameters
+    __________
+        path: the full filepath to the directory storing packages to be installed.
+
+    Returns
+    _______
+        List of filepaths for the packages to be installed
+
+    Raises
+    ______
+        RuntimeError when the provided path does not exist or it is not a directory.
+    """
     # Verify the provided parent directory exists
     if not os.path.exists(path):
         raise RuntimeError(f"Specified parent directory does not exist. {path} Not Found.")
