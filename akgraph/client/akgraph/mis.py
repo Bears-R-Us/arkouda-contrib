@@ -148,28 +148,3 @@ def maximal_independent_set(
     return I
 
 
-if __name__ == '__main__':
-    from akgraph.generators import karate_club_graph
-
-    host = input("enter arkouda hostname: ")
-    ak.connect(host)
-
-    print('####################')
-    print('# PERFORMING TESTS #')
-    print('####################')
-
-    print('==== Testing Maximal Independent Set ====')
-    # karate club
-    c, V, U = karate_club_graph()
-    pi = ak.arange(c.size)
-    ans = ak.cast(
-        ak.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1,
-                  0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0]),
-        'bool')
-    I = maximal_independent_set(V, U, pi)
-    assert ak.all(I == ans)
-    
-    print('##############')
-    print('# YOU PASSED #')
-    print('##############')
-

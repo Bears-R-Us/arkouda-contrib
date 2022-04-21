@@ -146,35 +146,3 @@ def numpy_edges_to_hdf5(V: np.ndarray, U: np.ndarray, file: str):
         dst = f.create_dataset('dst', data=U)
 
 
-if __name__ == '__main__':
-    host = input("enter arkouda hostname: ")
-    ak.connect(host)
-
-    print('####################')
-    print('# PERFORMING TESTS #')
-    print('####################')
-
-    print('==== Testing Set Partitions ====')
-    A = ak.array([1, 2, 3, 1, 2, 3, 1, 2, 2, 3])
-    B = ak.array([0, 1, 2, 0, 1, 2, 0, 1, 1, 2])
-    assert ak.all(canonize_partition(A) == B)
-    assert is_refinement(A, B)
-    assert is_refinement(B, A)
-
-    A = ak.randint(0, 256, 2 ** 32)
-    B = canonize_partition(A)
-    assert is_refinement(A, B)
-    assert is_refinement(B, A)
-    C = ak.zeros_like(A)
-    assert is_refinement(A, C)
-    assert not is_refinement(C, A)
-
-    print('==== Testing Permutatitons ====')
-    pi = get_perm(10 ** 6)
-    assert is_perm(pi)
-    assert is_perm(ak.arange(10 ** 6))
-    assert not is_perm(ak.zeros(10, dtype='int64'))
-
-    print('##############')
-    print('# YOU PASSED #')
-    print('##############')

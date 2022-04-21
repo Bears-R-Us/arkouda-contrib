@@ -107,27 +107,3 @@ def msf_boruvka(
     return c, vF, uF, wF
 
 
-if __name__ == '__main__':
-    host = input("enter arkouda hostname: ")
-    ak.connect(host)
-
-    print('####################')
-    print('# PERFORMING TESTS #')
-    print('####################')
-
-    print('==== Testing Minimum Spanning Forest ====')
-    V = ak.array([0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 3,
-                  3, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6])
-    U = ak.array([1, 3, 0, 2, 3, 4, 1, 4, 0, 1, 4,
-                  5, 1, 2, 3, 5, 6, 3, 4, 6, 4, 5])
-    W = ak.array([7, 5, 7, 8, 9, 7, 8, 5, 5, 9, 15,
-                  6, 7, 5, 15, 8, 9, 6, 8, 11, 9, 11])
-    c, vF, uF, wF = msf_boruvka(V, U, W)
-    assert ak.all(c == 0)
-    assert ak.all(vF == ak.array([0, 0, 1, 2, 3, 4]))
-    assert ak.all(uF == ak.array([1, 3, 4, 4, 5, 6]))
-    assert ak.all(wF == ak.array([7, 5, 7, 5, 6, 9]))    
-
-    print('##############')
-    print('# YOU PASSED #')
-    print('##############')

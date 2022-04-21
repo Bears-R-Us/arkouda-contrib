@@ -21,7 +21,7 @@ def eigenvector_centrality(
     """
     Compute the eigenvector centrality a graph.
 
-    Eigenvector centrality computers the centrality for a node based on the
+    Eigenvector centrality computes the centrality for a node based on the
     centrality of its neighbors. The eigenvector centrality for a node i is
     the i-th element of the vector x which solves
 
@@ -313,80 +313,3 @@ def pagerank(
     return y
 
 
-if __name__ == '__main__':
-    from akgraph.generators import path_graph, complete_graph
-
-    host = input("enter arkouda hostname: ")
-    ak.connect(host)
-
-    # generate data
-    V = ak.array([1, 1, 3, 3, 3, 4, 4, 5, 5, 6]) - 1
-    U = ak.array([2, 3, 1, 2, 5, 5, 6, 4, 6, 4]) - 1
-    W = ak.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 1])
-    c4V, c4U = complete_graph(4)
-
-    print('####################')
-    print('# PERFORMING TESTS #')
-    print('####################')
-
-    print('==== Testing Eigenvector Centrality ====')
-    # unweighted
-    c, e = eigenvector_centrality(V, U)
-    e_ans = ak.array([0.3185602 , 0., 0.5154412 , 0.51544117, 0.51544117,
-                      0.31856016])
-    assert np.abs(c - 1.61803397) < 1e-4
-    assert ak.all(ak.abs(e - e_ans) < 1e-4)
-
-    # weighted
-    c, e = eigenvector_centrality(V, U, W, tol=1e-6)
-    e_ans = ak.array([0.11856115, 0., 0.46627055, 0.56972278, 0.66234765,
-                      0.07243326])
-    assert np.abs(c - 7.86545993) < 1e-4
-    assert ak.all(ak.abs(e - e_ans) < 1e-4)
-
-    print('==== Testing HITS ====')
-    # unweighted
-    h, a = hub_auth(V, U)
-    h_ans = ak.array( [0.35468849, 0., 0.75013338, 0.48164091, 0.26849258,
-                       0.08619601])
-    a_ans = ak.array( [0.3697928 , 0.54464337, 0.17485057, 0.17485062,
-                       0.60722703, 0.36979285])
-    assert ak.all(ak.abs(h - h_ans) < 1e-4)
-    assert ak.all(ak.abs(a - a_ans) < 1e-4)
-
-    # weighted
-    h, a = hub_auth(V, U, W)
-    h_ans = ak.array([0.00263481, 0., 0.119855 , 0.54681211, 0.82786225,
-                      0.03561533])
-    a_ans = ak.array([2.62970646e-02, 3.52554515e-02, 3.85397440e-04,
-                      4.86975543e-01, 2.83777614e-01, 8.24857839e-01])
-    assert ak.all(ak.abs(h - h_ans) < 1e-4)
-    assert ak.all(ak.abs(a - a_ans) < 1e-4)
-
-    print('==== Testing PageRank ====')
-    # unweighted
-    pr = ak.array([0.03721197, 0.05395736, 0.04150566,
-                   0.3750808 , 0.20599833, 0.28624587])
-    x = pagerank(V, U, alpha=0.9, tol=1.0e-08)
-    assert ak.all(ak.abs(x - pr) <= 1e-4)
-
-    # weighted
-    pr = ak.array([0.04711131, 0.06477131, 0.06087235,
-                   0.35146311, 0.19361657, 0.28216535])
-    x = pagerank(V, U, W)
-    assert ak.all(ak.abs(x - pr) <= 1e-4)
-
-    # complete graph with differing personalizations
-    p_vec = ak.array([1, 1, 4, 4])
-    pr = ak.array([0.23246, 0.23246, 0.26753, 0.26753])
-    x = pagerank(c4V, c4U, p_vec=p_vec)
-    assert ak.all(ak.abs(x - pr) <= 1e-4)
-
-    p_vec = ak.array([0, 0, 0, 1])
-    pr = ak.array([0.22077, 0.22077, 0.22077, 0.33766])
-    x = pagerank(c4V, c4U, p_vec=p_vec)
-    assert ak.all(ak.abs(x - pr) <= 1e-4)
-
-    print('##############')
-    print('# YOU PASSED #')
-    print('##############')
