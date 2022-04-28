@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+
+
+
+# This script converts CSV  files to HDF5 files with numeric types
+# for the fields. The CSV parsing uses pandas, so that reading a
+# dataframe from an output HDF5 file produces the same result as
+# reading from the corresponding input CSV file. The pandas
+# declarative interface for specifying column dtypes and other
+# parameters enables extending this parser to new formats of CSV.
+# The script can run in parallel over input files.
+
+import os, sys, pickle, re
+from glob import glob
+from time import time, sleep
+import datetime as dt
+SYNCDIR = os.path.join(os.environ['HOME'], '.hdflow', 'current')
+LOCK = os.path.join(SYNCDIR, '.lock')
+INPROGRESS = os.path.join(SYNCDIR, 'inprogress')
+PROCESSING_TIMEOUT = dt.timedelta(hours=4)
+DATEPATTERN = re.compile(r'\D(\d{10})\d*\D')
+
+def import_local(path):
+    if not os.path.exists(path):
+        raise ImportError(f"{path} not found")
+    importdir, filename = os.path.split(path)
+    importname, ext = os.path.splitext(filename)
+    if ext != '.py':
+        raise ImportError(f"{path} must be a .py file")
+    sys.path.append(importdir)
+    return f'from {importname} import OPTIONS as CUSTOM'
+
+def find_new_files(globstr, outdir, extension, lookback):
+    cutoff = dt.datetime.now() - dt.timedelta(days=lookback)
+    def get_date(filename):
+        m = DATEPATTERN.search(filename)
+        if m is None:
+            return dt.datetime.now()
+        return dt.datetime.strptime(m.groups()[0], '%Y%m%d%H')
+
+    def not_done(filename):
+        if get_date(filename) < cutoff:
+            return False
+        path, ext = os.path.splitext(filename)
+        basename = os.path.basename(path)
+        done = os.path.exists(os.path.join(outdir, basename+extension))
+        # inprogress = filename in filesinprogress
+        return not done
+
+    def still_in_progress(filetimes):
+        outstanding = {}
+        for name, start in filetimes.items():
+            if not_done(name) and (start >= dt.datetime.now() - PROCESSING_TIMEOUT):
+                outstanding[name] = start
+        return outstanding
+        
+    outbase = os.path.basename(os.path.abspath(outdir))
+    mysync = os.path.join(SYNCDIR, outbase)
+    if not os.path.isdir(mysync):
+        os.makedirs(mysync, mode=0o700)
+    LOCK = os.path.join(mysync, '.lock')
+    INPROGRESS = os.path.join(mysync, 'inprogress')
+    it = 0
+    while os.path.isfile(LOCK):
+        if it >= 600:
+            raise IOError(f"Timeout waiting for lockfile to be removed: {LOCK}")
+        sleep(0.1)
+        it += 1
+
+    open(LOCK, 'w').close()
+    if not os.path.isfile(INPROGRESS):
+        filetimes = {}
+    else:
+        with open(INPROGRESS, 'rb') as f:
+            filetimes = pickle.load(f)
+        # Remove files that have finished processing
+        filetimes = still_in_progress(filetimes)
+    # Find input files not yet processed or in progress
+    newfiles = set(filter(not_done, glob(globstr))) - set(filetimes.keys())
+    # Add these to the in-progress set and publish
+    for name in newfiles:
+        filetimes[name] = dt.datetime.now()
+    with open(INPROGRESS, 'wb') as f:
+        pickle.dump(filetimes, f)
+    os.remove(LOCK)
+    return sorted(newfiles)
+
+def process_new(args, pool):
+    def now():
+        return dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        print(f"({now()}) Searching for new files...")
+        for globstr in args.filenames:
+            if args.force:
+                newfiles = glob(globstr)
+            else:
+                try:
+                    newfiles = find_new_files(globstr, args.outdir, args.extension, args.lookback)
+                except Exception as e:
+                    if os.path.isfile(LOCK):
+                        os.remove(LOCK)
+                    raise e
+            if args.dry_run:
+                print(f'Found {len(newfiles)} new files')
+                print('\n'.join(sorted(newfiles)))
+                return False
+            if len(newfiles) == 0:
+                continue
+            
+            hdflow.convert_files(
+                    newfiles, 
+                    args.outdir, 
+                    args.extension,
+                    hdflow.OPTIONS[args.format],
+                    args.compress,
+                    pool)
+
+        return True
+    except KeyboardInterrupt:
+        return False
+
+if __name__ == "__main__":
+    import hdflow
+    from multiprocessing import cpu_count, Pool
+    import argparse
+    example_formats_file = os.path.join(os.path.dirname(hdflow.__file__), 'example_formats.py')
+    parser = argparse.ArgumentParser(description='Convert CSV files to HDF5 files with numeric dtypes in parallel.')
+    parser.add_argument('--continuous', default=False, action='store_true', help='Run continuously, searching for more files when the last batch is processed.')
+    parser.add_argument('--force', default=False, action='store_true', help='Force re-conversion of already converted files')
+    parser.add_argument('--dry-run', default=False, action='store_true', help='Do not actually process files; only show which files would be processed.')
+    parser.add_argument('--outdir', default='.', help='Output directory for HDF5 files (Default: current dir)')
+    parser.add_argument('--jobs', type=int, default=cpu_count(), help='Number of worker processes to use (Default: number of available cores)')
+    parser.add_argument('--MPI', default=False, action='store_true', help='Parallelize with MPI (must be launched with, e.g. `mpiexec -n 8 python3 csv2hdf...`). The --jobs option will be ignored if this option is used.')
+    parser.add_argument('--extension', default='.hdf', help='Output file extension (Default: .hdf)')
+    parser.add_argument('--format', required=True, help=f'Name of format. Predefined names: {set(hdflow.OPTIONS.keys())}')
+    parser.add_argument('--formats-file', help=f'Python file specifying custom format in the manner of {example_formats_file}')
+    parser.add_argument('--compress', default=None, action='store_const', const='gzip', help='Compress output files with gzip.')
+    parser.add_argument('--lookback', type=int, default=30, help='Maximum number of days to search back in time for unprocessed files (default: 30)')
+    parser.add_argument('filenames', nargs='+', help='Input filesor glob expressions to convert (if glob, remember to escape wildcards, e.g. \\*).')
+
+    args = parser.parse_args()
+    if args.MPI:
+        from mpi4py import MPI
+        from schwimmbad import MPIPool
+        rank = MPI.COMM_WORLD.Get_rank()
+        pool = MPIPool()
+        if not pool.is_master():
+            pool.wait()
+            sys.exit(0)
+    elif args.jobs > 1:
+        pool = Pool(args.jobs)
+    else:
+        pool = None
+    if not args.MPI or rank == 0:
+        print("Received {} filenames".format(len(args.filenames)))
+        print("First one: {}".format(args.filenames[0]))
+        if args.formats_file is not None:
+            exec(import_local(args.formats_file))
+            hdflow.OPTIONS.update(CUSTOM)
+        if args.format not in hdflow.OPTIONS:
+            raise ValueError(f'Format not found. Detected formats: {set(hdflow.OPTIONS.keys())}')
+        lasttry = time()
+        while process_new(args, pool) and args.continuous:
+            try:
+                interval = time() - lasttry
+                # Attempt to process every hour
+                if interval < 60*60:
+                    sleep(int(60*60 - interval))
+                    lasttry = time()
+            except KeyboardInterrupt:
+                break
+        if pool is not None:
+            pool.close()
+        sys.exit()

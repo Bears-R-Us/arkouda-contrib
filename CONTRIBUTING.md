@@ -1,10 +1,10 @@
-#Contributing to arkouda-contrib
+# Contributing to arkouda-contrib
 
 arkouda-contrib welcomes contributions via feedback, bug reports, and pull requests.
 
 We use a simple [Git Feature Branch Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow).
 
-##Development
+## Development
 All packages are required to contain `client` and `test` directories. The `server` directory is utilized when your package requires additional processing code on the Arkouda server.
 
 ### Package Structure
@@ -25,7 +25,7 @@ All packages are required to contain `client` and `test` directories. The `serve
 
 The top level of your package should be added under the `arkouda-contrib` directory. This is the top level of the repository.
 
-##Testing
+## Testing
 
 In the `test` directory of your package, you will need to define testing for the newly defined functionality. At the same level as your `test` directory, be sure to define `pytest.ini`. Example definition below:
 
@@ -58,5 +58,5 @@ To run your tests,
 python3 -m pytest /path_to_module/test/test_file.py
 ```
 
-##PR Submissions
+## PR Submissions
 arkouda-contrib asks that when submitting a PR, you link the issue you are closing to the PR.
