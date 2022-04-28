@@ -7,12 +7,12 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='arkouda_multidimarrays',
+    name='arkouda_BlockArrays2D',
     version='0.0.2',
-    description='Multi dimensional Arkouda pdarrays.',
+    description='2 dimensional Arkouda pdarrays.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    packages=['arkouda_multidimarrays'],
+    packages=['arkouda_BlockArrays2D'],
     python_requires=">=3.7",
     install_requires=[
         'arkouda'

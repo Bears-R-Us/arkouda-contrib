@@ -23,5 +23,5 @@ pip install arkouda
 In your code:
 
 ```python
-import arkouda_multidimarrays as ak2d
+import arkouda_BlockArrays2D as ak2d
 ```
