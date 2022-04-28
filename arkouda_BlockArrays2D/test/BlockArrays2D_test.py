@@ -6,12 +6,8 @@ class Array2DTest(ArkoudaTest):
     def test_reshape(self):
         a = ak.array([1,2,3,4])
         a2d = ak2D.reshape(a, (2, 2))
-        self.assertTrue((a2d == [[1,2],[3,4]]).all())
-
-    def test_flatten(self):
-        a = ak2D.array2D(10, 2,2)
-        flat = ak2D.reshape(a, 4)
-        self.assertTrue((flat == [10,10,10,10]).all())
+        self.assertTrue((a2d[0] == ak.array([1,2])).all())
+        self.assertTrue((a2d[1] == ak.array([3,4])).all())
         
     def test_operators(self):
         a = ak2D.randint2D(0,10,2,2)
