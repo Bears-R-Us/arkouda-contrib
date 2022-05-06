@@ -13,6 +13,11 @@ a place for contributed functionality for arkouda
 
 *For more details, visit [CONTRIBUTING.md](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/CONTRIBUTING.md)*.
 
+## Basic Examples
+Basic examples of client-only and client-srever extensions to arkouda:
+- Client-only example: [arkouda_distance](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda_distance)
+- Client-server example: [arkouda_distance_wserver](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda_distance_wserver)
+
 ## Installation
 
 Installation is performed by running `module_configuration.py`. For detailed package installation instructions please view [INSTALL.md](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/INSTALL.md).
