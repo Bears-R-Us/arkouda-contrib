@@ -1,3 +1,8 @@
+NOTICE: This code was developed on an old version of Arkouda and needs to be updated. See the issue here:
+
+https://github.com/Bears-R-Us/arkouda-contrib/issues/38
+
+
 # aksparse
 
 A python package that uses arkouda to perform sparse matrix operations.
