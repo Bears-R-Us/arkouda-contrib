@@ -1,3 +1,9 @@
+NOTICE: This code was developed with an older version of Arkouda and needs updating to work with current versions. See the issue here:
+
+https://github.com/Bears-R-Us/arkouda-contrib/issues/37
+
+
+
 # `akgraph`
 
 A library for manipulating graphs in `arkouda`.
