@@ -1,10 +1,3 @@
-
-extern {
-#include "gsl/gsl_rng.h"
-#include "gsl/gsl_randist.h"
-#include "gsl/gsl_cdf.h"
-}
-
 module MinHashCWSMsg
 {
 
@@ -29,9 +22,7 @@ module MinHashCWSMsg
   // LSH survivor output is likely to be sparse 
 
 
-  // Applied to each individual set in a collection of sets
-   
-  proc GetMinHash(S: [?S_Dom] uint(64)): [S_Dom] uint(64) {
+  proc GetMinHash(S: [?S_Dom] uint(32), hash_idx: uint(32)): sample: (uint(32), real(64)) {
 
     var u_z: real(64) = 0.0;
     var g_1: real(64) = 0.0;
@@ -41,13 +32,24 @@ module MinHashCWSMsg
     var y_z: real(64) = 0.0;
     var a_z: real(64) = 0.0;
 
-    var min_a_z: real(64) = 0xffffffffffffffff: real(64);
+    var min_az: real(64) = 0xffffffffffffffff: real(64);
+    var min_tz: real(64) = 0xffffffffffffffff: real(64);
+
+    var preimage: uint(32) = 0;
 
     var r = gsl_rng_alloc (gsl_rng_taus2);
 
     // Loop over hashes
-    for idx  {
-        gsl_rng_set(r, idx: uint(64));
+    for s in Set {
+
+        /* Create a unique, but globally consistent, seed for the 
+           RNG by concatenating the set and the hash indices */
+
+        var set_idx_str = s: string;
+        var hash_idx_str = hash_idx: string;
+        var seed_str = prefix_str + idx_str;
+
+        gsl_rng_set(r, seed_str: uint(64));
 
         u_z = gsl_rng_uniform(r);
         g_1 = gsl_ran_gamma(r, 2.0, 1.0);
@@ -58,17 +60,19 @@ module MinHashCWSMsg
         a_z = (g_2 / (y_z * exp(g_1)));
 
         if a_z < min_a_z then
-            min_a_z = a_z;
+            min_az = a_z;
+            min_tz = t_z;
+            preimage = s;
       }
 
     // Return the preimage of the MinHash and t_z
-    
+    return (preimage, min_tz);
   }
 
-  // Applied to each individual set in a collection of sets
-  // Returns the "zero bit" version of the hash that omits t_z above
 
-  proc GetMinHash_ZBit(S: [?S_Dom] uint(64)): [S_Dom] uint(64) {
+  /* Returns the "zero bit" version of the hash that omits t_z */
+
+  proc GetMinHash_ZBit(S: [?S_Dom] uint(32), hash_idx: uint(32)): sample: uint(32) {
 
     var u_z: real(64) = 0.0;
     var g_1: real(64) = 0.0;
@@ -80,11 +84,21 @@ module MinHashCWSMsg
 
     var min_a_z: real(64) = 0xffffffffffffffff: real(64);
 
+    var preimage: uint(32) = 0;
+
     var r = gsl_rng_alloc (gsl_rng_taus2);
 
     // Loop over hashes
-    for idx  {
-        gsl_rng_set(r, idx: uint(64));
+    for s in Set {
+
+        /* Create a unique, but globally consistent, seed for the 
+           RNG by concatenating the set and the hash indices */
+
+        var set_idx_str = s: string;
+        var hash_idx_str = hash_idx: string;
+        var seed_str = prefix_str + idx_str;
+
+        gsl_rng_set(r, seed_str: uint(64));
 
         u_z = gsl_rng_uniform(r);
         g_1 = gsl_ran_gamma(r, 2.0, 1.0);
@@ -95,17 +109,23 @@ module MinHashCWSMsg
         a_z = (g_2 / (y_z * exp(g_1)));
 
         if a_z < min_a_z then
-            min_a_z = a_z;
+            min_az = a_z;
+            preimage = s;
       }
 
     // Return the preimage of the MinHash only
-
+    return preimage;
   }
 
-  proc Sample(A: [?A_Dom] uint(64), bool ZBit): [A_Dom] uint(64) {
+  proc GenerateSamples(A: [?A_Dom] uint(64), num_hashes: uint(32), zbit: bool): [A_Dom] uint(64) {
 
-
+    // Outer loop over hash indices
+        // Inner loop over sets
+            // Call either GetMinHash() or GetMinHash_ZBit()  
   }
+
+
+  //TODO: add knn lookup and survivor pairing/scoring routines
 
 
   /*
@@ -150,6 +170,6 @@ module MinHashCWSMsg
 
   proc registerMe() {
     use CommandMap;
-    registerFunction("Sample", MinHashCWSMsg);
+    registerFunction("GenerateSamples", MinHashCWSMsg);
   }
 }
