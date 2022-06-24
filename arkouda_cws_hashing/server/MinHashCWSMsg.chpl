@@ -59,7 +59,7 @@ module MinHashCWSMsg
         y_z = exp(g_1 * (t_z - u_z));
         a_z = (g_2 / (y_z * exp(g_1)));
 
-        if a_z < min_a_z then
+        if a_z < min_az then
             min_az = a_z;
             min_tz = t_z;
             preimage = s;
@@ -82,7 +82,7 @@ module MinHashCWSMsg
     var y_z: real(64) = 0.0;
     var a_z: real(64) = 0.0;
 
-    var min_a_z: real(64) = 0xffffffffffffffff: real(64);
+    var min_az: real(64) = 0xffffffffffffffff: real(64);
 
     var preimage: uint(32) = 0;
 
@@ -108,7 +108,7 @@ module MinHashCWSMsg
         y_z = exp(g_1 * (t_z - u_z));
         a_z = (g_2 / (y_z * exp(g_1)));
 
-        if a_z < min_a_z then
+        if a_z < min_az then
             min_az = a_z;
             preimage = s;
       }
