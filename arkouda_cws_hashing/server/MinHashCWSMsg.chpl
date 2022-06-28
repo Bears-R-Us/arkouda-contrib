@@ -37,7 +37,7 @@ module MinHashCWSMsg
 
     var preimage: uint(32) = 0;
 
-    var r = gsl_rng_alloc (gsl_rng_taus2);
+    var r = gsl_rng_alloc (gsl_rng_mt19937);
 
     // Loop over hashes
     for s in Set {
@@ -130,19 +130,22 @@ module MinHashCWSMsg
 
   /*
   Parse, execute, and respond to a foo message
-  :arg reqMsg: request containing (cmd,dtype,size)
+  :arg payload: request containing (cmd,dtype,size)
   :type reqMsg: string
   :arg st: SymTab to act on
   :type st: borrowed SymTab
   :returns: (string) response message
   */
 
-  proc MinHashCWSMsg(reqMsg: string, st: borrowed SymTab): string throws {
+  proc MinHashCWSMsg(payload: string, st: borrowed SymTab): string throws {
 
     var repMsg: string; // response message
 
     // split request into fields
-    var (cmd, name) = reqMsg.splitMsgToTuple(2);
+    var (cmd, name, num_hashes, zbit) = payload.splitMsgToTuple(4);
+
+    var zBit = zbit: bool;
+    var numHashes = num_hashes: uint(32);
 
     // get next symbol name
     var rname = st.nextName();
@@ -156,11 +159,17 @@ module MinHashCWSMsg
 
     select (gEnt.dtype) {
         when (DType.Int64) {
-            var e = toSymEntry(gEnt,int);
-            var ret = foo(e.a);
-            st.addEntry(rname, new shared SymEntry(ret));
+                if(zBit) {
+                  var e = toSymEntry(gEnt,int);
+                  var ret = GenerateSamples_ZBit(e.a, numHashes, zBit);
+                  st.addEntry(rname, new shared SymEntry(ret));
+                } else {
+                    var e = toSymEntry(gEnt,int);
+                    var ret = GenerateSamples(e.a, numHashes, zBit);
+                    st.addEntry(rname, new shared SymEntry(ret));
+                }
         }
-        otherwise {return notImplementedError("foo",gEnt.dtype);}
+        otherwise {return notImplementedError("GenerateSamples",gEnt.dtype);}
     }
 
     // response message
