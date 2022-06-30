@@ -22,7 +22,19 @@ module MinHashCWSMsg
   // LSH survivor output is likely to be sparse 
 
 
-  proc GetMinHash(S: [?S_Dom] uint(32), hash_idx: uint(32)): sample: (uint(32), real(64)) {
+  proc cantorPairing(setEltIdx: uint(64), hashIdx: uint(8)): uint(64): uint(64) {
+
+    var hashIdx64: uint(64) = hashIdx: uint(64);
+
+    var sum: uint(64) = setEltIdx + hashIdx64;
+
+    var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx64;
+
+    return result;
+  }
+
+
+  proc getMinHash(S: [?S_Dom] uint(64), hashIdx: uint(8)): (uint(64), real(64)) {
 
     var u_z: real(64) = 0.0;
     var g_1: real(64) = 0.0;
@@ -35,21 +47,19 @@ module MinHashCWSMsg
     var min_az: real(64) = 0xffffffffffffffff: real(64);
     var min_tz: real(64) = 0xffffffffffffffff: real(64);
 
-    var preimage: uint(32) = 0;
+    var preimage: uint(64) = 0;
 
     var r = gsl_rng_alloc (gsl_rng_mt19937);
 
     // Loop over hashes
-    for s in Set {
+    for s in S {
 
         /* Create a unique, but globally consistent, seed for the 
            RNG by concatenating the set and the hash indices */
 
-        var set_idx_str = s: string;
-        var hash_idx_str = hash_idx: string;
-        var seed_str = prefix_str + idx_str;
+        var seedIdx: uint(64) = cantorPairing(s, hashIdx);
 
-        gsl_rng_set(r, seed_str: uint(64));
+        gsl_rng_set(r, seedIdx);
 
         u_z = gsl_rng_uniform(r);
         g_1 = gsl_ran_gamma(r, 2.0, 1.0);
@@ -72,7 +82,7 @@ module MinHashCWSMsg
 
   /* Returns the "zero bit" version of the hash that omits t_z */
 
-  proc GetMinHash_ZBit(S: [?S_Dom] uint(32), hash_idx: uint(32)): sample: uint(32) {
+  proc getMinHash_ZBit(S: [?S_Dom] uint(64), hashIdx: uint(8)): uint(64) {
 
     var u_z: real(64) = 0.0;
     var g_1: real(64) = 0.0;
@@ -84,21 +94,19 @@ module MinHashCWSMsg
 
     var min_az: real(64) = 0xffffffffffffffff: real(64);
 
-    var preimage: uint(32) = 0;
+    var preimage: uint(64) = 0;
 
-    var r = gsl_rng_alloc (gsl_rng_taus2);
+    var r = gsl_rng_alloc (gsl_rng_mt19937);
 
     // Loop over hashes
-    for s in Set {
+    for s in S {
 
         /* Create a unique, but globally consistent, seed for the 
            RNG by concatenating the set and the hash indices */
 
-        var set_idx_str = s: string;
-        var hash_idx_str = hash_idx: string;
-        var seed_str = prefix_str + idx_str;
+        var seedIdx: uint(64) = cantorPairing(s, hashIdx);
 
-        gsl_rng_set(r, seed_str: uint(64));
+        gsl_rng_set(r, seedIdx);
 
         u_z = gsl_rng_uniform(r);
         g_1 = gsl_ran_gamma(r, 2.0, 1.0);
@@ -117,11 +125,20 @@ module MinHashCWSMsg
     return preimage;
   }
 
-  proc GenerateSamples(A: [?A_Dom] uint(64), num_hashes: uint(32), zbit: bool): [A_Dom] uint(64) {
+
+  proc getSamples(A: [?A_Dom] uint(64), numHashes: uint(8), zbit: bool): [A_Dom] uint(64), [A_Dom] real(64) {
 
     // Outer loop over hash indices
         // Inner loop over sets
-            // Call either GetMinHash() or GetMinHash_ZBit()  
+            // Call either GetMinHash() 
+  }
+
+
+  proc getSamples_ZBit(A: [?A_Dom] uint(64), numHashes: uint(8), zbit: bool): [A_Dom] uint(64) {
+
+    // Outer loop over hash indices
+        // Inner loop over sets
+            // Call either GetMinHash_ZBit()
   }
 
 
@@ -142,10 +159,11 @@ module MinHashCWSMsg
     var repMsg: string; // response message
 
     // split request into fields
-    var (cmd, name, num_hashes, zbit) = payload.splitMsgToTuple(4);
+    var (cmd, name, numHashes, zbit) = payload.splitMsgToTuple(4);
 
     var zBit = zbit: bool;
-    var numHashes = num_hashes: uint(32);
+
+    var numHashes = numHashes: uint(8);
 
     // get next symbol name
     var rname = st.nextName();
@@ -158,18 +176,27 @@ module MinHashCWSMsg
     if v {try! writeln("%s %s: %s".format(cmd,name,rname)); try! stdout.flush();}
 
     select (gEnt.dtype) {
-        when (DType.Int64) {
+
+        when (DType.uint64) {
+
                 if(zBit) {
+
                   var e = toSymEntry(gEnt,int);
-                  var ret = GenerateSamples_ZBit(e.a, numHashes, zBit);
+
+                  var ret = generateSamples_ZBit(e.a, numHashes, zBit);
+
                   st.addEntry(rname, new shared SymEntry(ret));
+
                 } else {
+
                     var e = toSymEntry(gEnt,int);
-                    var ret = GenerateSamples(e.a, numHashes, zBit);
+
+                    var ret = generateSamples(e.a, numHashes, zBit);
+
                     st.addEntry(rname, new shared SymEntry(ret));
                 }
         }
-        otherwise {return notImplementedError("GenerateSamples",gEnt.dtype);}
+        otherwise {return notImplementedError("generateSamples",gEnt.dtype);}
     }
 
     // response message
@@ -179,6 +206,6 @@ module MinHashCWSMsg
 
   proc registerMe() {
     use CommandMap;
-    registerFunction("GenerateSamples", MinHashCWSMsg);
+    registerFunction("generateSamples", MinHashCWSMsg);
   }
 }
