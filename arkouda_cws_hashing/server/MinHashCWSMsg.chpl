@@ -34,7 +34,13 @@ module MinHashCWSMsg
   }
 
 
-  proc getMinHash(S: [?S_Dom] uint(64), hashIdx: uint(8)): (uint(64), real(64)) {
+proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)): [?outD] (uint(64), real(64)) {
+
+/* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
+
+    var outD: domain(1) = {oD.first..numHashes*oD.last};
+
+    var minHashes: [outD] (uint(64),real(64));
 
     var u_z: real(64) = 0.0;
     var g_1: real(64) = 0.0;
@@ -51,8 +57,12 @@ module MinHashCWSMsg
 
     var r = gsl_rng_alloc (gsl_rng_mt19937);
 
+/* TODO: CSR-style loop over a segmented array */
+
     // Loop over hashes
-    for s in S {
+    coforall loc in Locales
+
+    forall z in S {
 
         /* Create a unique, but globally consistent, seed for the 
            RNG by concatenating the set and the hash indices */
@@ -65,24 +75,30 @@ module MinHashCWSMsg
         g_1 = gsl_ran_gamma(r, 2.0, 1.0);
         g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-        t_z = floor((log(u_z+1) / g_1) + u_z);
+        t_z = floor((log(weights[z]) / g_1) + u_z);
         y_z = exp(g_1 * (t_z - u_z));
         a_z = (g_2 / (y_z * exp(g_1)));
 
         if a_z < min_az then
             min_az = a_z;
             min_tz = t_z;
-            preimage = s;
+            preimage = setElts[z];
       }
 
     // Return the preimage of the MinHash and t_z
-    return (preimage, min_tz);
+    return minHashes;
   }
 
 
   /* Returns the "zero bit" version of the hash that omits t_z */
 
-  proc getMinHash_ZBit(S: [?S_Dom] uint(64), hashIdx: uint(8)): uint(64) {
+  proc getPreimages(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)): [?outD] uint(64) {
+
+/* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
+
+    var outD: domain(1) = {oD.first..numHashes*oD.last};
+
+    var preimages: [outD] uint(64);
 
     var u_z: real(64) = 0.0;
     var g_1: real(64) = 0.0;
@@ -99,7 +115,7 @@ module MinHashCWSMsg
     var r = gsl_rng_alloc (gsl_rng_mt19937);
 
     // Loop over hashes
-    for s in S {
+    forall z in S {
 
         /* Create a unique, but globally consistent, seed for the 
            RNG by concatenating the set and the hash indices */
@@ -112,33 +128,17 @@ module MinHashCWSMsg
         g_1 = gsl_ran_gamma(r, 2.0, 1.0);
         g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-        t_z = floor((log(u_z+1) / g_1) + u_z);
+        t_z = floor((log(weights[z]) / g_1) + u_z);
         y_z = exp(g_1 * (t_z - u_z));
         a_z = (g_2 / (y_z * exp(g_1)));
 
         if a_z < min_az then
             min_az = a_z;
-            preimage = s;
+            preimage = setElts[z];
       }
 
     // Return the preimage of the MinHash only
-    return preimage;
-  }
-
-
-  proc getSamples(A: [?A_Dom] uint(64), numHashes: uint(8), zbit: bool): [A_Dom] uint(64), [A_Dom] real(64) {
-
-    // Outer loop over hash indices
-        // Inner loop over sets
-            // Call either GetMinHash() 
-  }
-
-
-  proc getSamples_ZBit(A: [?A_Dom] uint(64), numHashes: uint(8), zbit: bool): [A_Dom] uint(64) {
-
-    // Outer loop over hash indices
-        // Inner loop over sets
-            // Call either GetMinHash_ZBit()
+    return preimages;
   }
 
 
@@ -154,58 +154,58 @@ module MinHashCWSMsg
   :returns: (string) response message
   */
 
-  proc MinHashCWSMsg(payload: string, st: borrowed SymTab): string throws {
 
-    var repMsg: string; // response message
+  proc WeightedJaccardLSH(payload: string, st: borrowed SymTab): string throws {
 
-    // split request into fields
-    var (cmd, name, numHashes, zbit) = payload.splitMsgToTuple(4);
+    var repMsg: string;
 
-    var zBit = zbit: bool;
+    var (offsets, elts, weights, numHashes, zbit) = payload.splitMsgToTuple(5);
 
-    var numHashes = numHashes: uint(8);
+    var zBit = try! zbit: bool;
+    var numHashes = try! numHashes: uint(8);
+    var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
+    var eltEnt: borrowed GenSymEntry = st.lookup(elts);
+    var weightEnt: borrowed GenSymEntry = st.lookup(weights);
 
-    // get next symbol name
-    var rname = st.nextName();
+    var attrName = st.nextName();
+    var attrMsg:string;
 
-    var gEnt: borrowed GenSymEntry = st.lookup(name);
+    if offsetEnt.dtype != DType.UInt64 then
+        return notImplementedError("WeightedJaccardLSH",offsetEnt.dtype);
+    
+    if eltEnt.dtype != DType.UInt64 then
+        return notImplementedError("WeightedJaccardLSH",eltEnt.dtype);
 
-    if (gEnt == nil) {return unknownSymbolError("set",name);}
+    if weightEnt.dtype != DType.Float64 then
+        return notImplementedError("WeightedJaccardLSH",weightEnt.dtype);
 
-    // if verbose print action
-    if v {try! writeln("%s %s: %s".format(cmd,name,rname)); try! stdout.flush();}
 
-    select (gEnt.dtype) {
+    var setOffsets = toSymEntry(offsetEnt,uint(64)); 
+    var setElts =  toSymEntry(eltEnt,uint(64));
+    var eltWeights = toSymEntry(weightEnt,real(64));
 
-        when (DType.uint64) {
 
-                if(zBit) {
+    if(zBit) {
+        var ret = getPreimages(setOffsets, setElts, eltWeights, numHashes);
+        var attrEntry = new shared SymEntry(ret);
+        st.addEntry(attrName, attrEntry);
+        attrMsg =  'created ' + st.attrib(attrName);
 
-                  var e = toSymEntry(gEnt,int);
-
-                  var ret = generateSamples_ZBit(e.a, numHashes, zBit);
-
-                  st.addEntry(rname, new shared SymEntry(ret));
-
-                } else {
-
-                    var e = toSymEntry(gEnt,int);
-
-                    var ret = generateSamples(e.a, numHashes, zBit);
-
-                    st.addEntry(rname, new shared SymEntry(ret));
-                }
-        }
-        otherwise {return notImplementedError("generateSamples",gEnt.dtype);}
+    } else { 
+        var ret = getMinHashes(setOffsets, setElts, eltWeights, numHashes);
+        var attrEntry = new shared SymEntry(ret);
+        st.addEntry(attrName, attrEntry);
+        attrMsg =  'created ' + st.attrib(attrName);
     }
 
+
     // response message
-    return try! "created " + st.attrib(rname);
+    return new MsgTuple(attrMsg, MsgType.NORMAL);
   }
 
 
   proc registerMe() {
     use CommandMap;
-    registerFunction("generateSamples", MinHashCWSMsg);
+    registerFunction("WeightedJaccardLSH", WeightedJaccardLSHMsg);
   }
 }
