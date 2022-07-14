@@ -6,6 +6,10 @@ module MinHashCWSMsg
   use MultiTypeSymEntry;
   use ServerErrorStrings;
   use MultiTypeSymbolTable;
+  use Message;
+  use Reflection;
+  use ServerErrors;
+  use Logging;
 
   require '-lgsl','-lgslcblas';
 
@@ -24,69 +28,69 @@ module MinHashCWSMsg
 
   proc cantorPairing(setEltIdx: uint(64), hashIdx: uint(8)): uint(64): uint(64) {
 
-    var hashIdx64: uint(64) = hashIdx: uint(64);
+      var hashIdx64: uint(64) = hashIdx: uint(64);
 
-    var sum: uint(64) = setEltIdx + hashIdx64;
+      var sum: uint(64) = setEltIdx + hashIdx64;
 
-    var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx64;
+      var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx64;
 
-    return result;
+      return result;
   }
 
 
-proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)): [?outD] (uint(64), real(64)) {
+  proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)): [?outD] (uint(64), real(64)) {
 
 /* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
 
-    var outD: domain(1) = {oD.first..numHashes*oD.last};
+      var outD: domain(1) = {oD.first..numHashes*oD.last};
 
-    var minHashes: [outD] (uint(64),real(64));
+      var minHashes: [outD] (uint(64),real(64));
 
-    var u_z: real(64) = 0.0;
-    var g_1: real(64) = 0.0;
-    var g_2: real(64) = 0.0;
+      var u_z: real(64) = 0.0;
+      var g_1: real(64) = 0.0;
+      var g_2: real(64) = 0.0;
 
-    var t_z: real(64) = 0.0;
-    var y_z: real(64) = 0.0;
-    var a_z: real(64) = 0.0;
+      var t_z: real(64) = 0.0;
+      var y_z: real(64) = 0.0;
+      var a_z: real(64) = 0.0;
 
-    var min_az: real(64) = 0xffffffffffffffff: real(64);
-    var min_tz: real(64) = 0xffffffffffffffff: real(64);
+      var min_az: real(64) = 0xffffffffffffffff: real(64);
+      var min_tz: real(64) = 0xffffffffffffffff: real(64);
 
-    var preimage: uint(64) = 0;
+      var preimage: uint(64) = 0;
 
-    var r = gsl_rng_alloc (gsl_rng_mt19937);
+      var r = gsl_rng_alloc (gsl_rng_mt19937);
 
 /* TODO: CSR-style loop over a segmented array */
 
-    // Loop over hashes
-    coforall loc in Locales
+      // Loop over hashes
+      coforall loc in Locales
 
-    forall z in S {
+      forall z in S {
 
-        /* Create a unique, but globally consistent, seed for the 
-           RNG by concatenating the set and the hash indices */
+          /* Create a unique, but globally consistent, seed for the 
+             RNG by concatenating the set and the hash indices */
 
-        var seedIdx: uint(64) = cantorPairing(s, hashIdx);
+          var seedIdx: uint(64) = cantorPairing(s, hashIdx);
 
-        gsl_rng_set(r, seedIdx);
+          gsl_rng_set(r, seedIdx);
 
-        u_z = gsl_rng_uniform(r);
-        g_1 = gsl_ran_gamma(r, 2.0, 1.0);
-        g_2  = gsl_ran_gamma(r, 2.0, 1.0);
+          u_z = gsl_rng_uniform(r);
+          g_1 = gsl_ran_gamma(r, 2.0, 1.0);
+          g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-        t_z = floor((log(weights[z]) / g_1) + u_z);
-        y_z = exp(g_1 * (t_z - u_z));
-        a_z = (g_2 / (y_z * exp(g_1)));
+          t_z = floor((log(weights[z]) / g_1) + u_z);
+          y_z = exp(g_1 * (t_z - u_z));
+          a_z = (g_2 / (y_z * exp(g_1)));
 
-        if a_z < min_az then
-            min_az = a_z;
-            min_tz = t_z;
-            preimage = setElts[z];
-      }
+          if a_z < min_az then
+              min_az = a_z;
+              min_tz = t_z;
+              preimage = setElts[z];
+        }
 
-    // Return the preimage of the MinHash and t_z
-    return minHashes;
+      // Return the preimage of the MinHash and t_z
+      return minHashes;
   }
 
 
@@ -96,49 +100,49 @@ proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?w
 
 /* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
 
-    var outD: domain(1) = {oD.first..numHashes*oD.last};
+      var outD: domain(1) = {oD.first..numHashes*oD.last};
 
-    var preimages: [outD] uint(64);
+      var preimages: [outD] uint(64);
 
-    var u_z: real(64) = 0.0;
-    var g_1: real(64) = 0.0;
-    var g_2: real(64) = 0.0;
+      var u_z: real(64) = 0.0;
+      var g_1: real(64) = 0.0;
+      var g_2: real(64) = 0.0;
 
-    var t_z: real(64) = 0.0;
-    var y_z: real(64) = 0.0;
-    var a_z: real(64) = 0.0;
+      var t_z: real(64) = 0.0;
+      var y_z: real(64) = 0.0;
+      var a_z: real(64) = 0.0;
 
-    var min_az: real(64) = 0xffffffffffffffff: real(64);
+      var min_az: real(64) = 0xffffffffffffffff: real(64);
 
-    var preimage: uint(64) = 0;
+      var preimage: uint(64) = 0;
 
-    var r = gsl_rng_alloc (gsl_rng_mt19937);
+      var r = gsl_rng_alloc (gsl_rng_mt19937);
 
-    // Loop over hashes
-    forall z in S {
+      // Loop over hashes
+      forall z in S {
 
-        /* Create a unique, but globally consistent, seed for the 
-           RNG by concatenating the set and the hash indices */
+          /* Create a unique, but globally consistent, seed for the 
+             RNG by concatenating the set and the hash indices */
 
-        var seedIdx: uint(64) = cantorPairing(s, hashIdx);
+          var seedIdx: uint(64) = cantorPairing(s, hashIdx);
 
-        gsl_rng_set(r, seedIdx);
+          gsl_rng_set(r, seedIdx);
 
-        u_z = gsl_rng_uniform(r);
-        g_1 = gsl_ran_gamma(r, 2.0, 1.0);
-        g_2  = gsl_ran_gamma(r, 2.0, 1.0);
+          u_z = gsl_rng_uniform(r);
+          g_1 = gsl_ran_gamma(r, 2.0, 1.0);
+          g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-        t_z = floor((log(weights[z]) / g_1) + u_z);
-        y_z = exp(g_1 * (t_z - u_z));
-        a_z = (g_2 / (y_z * exp(g_1)));
+          t_z = floor((log(weights[z]) / g_1) + u_z);
+          y_z = exp(g_1 * (t_z - u_z));
+          a_z = (g_2 / (y_z * exp(g_1)));
 
-        if a_z < min_az then
-            min_az = a_z;
-            preimage = setElts[z];
-      }
+          if a_z < min_az then
+              min_az = a_z;
+              preimage = setElts[z];
+        }
 
-    // Return the preimage of the MinHash only
-    return preimages;
+      // Return the preimage of the MinHash only
+      return preimages;
   }
 
 
@@ -155,57 +159,98 @@ proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?w
   */
 
 
-  proc WeightedJaccardLSH(payload: string, st: borrowed SymTab): string throws {
+  proc lshMinMaxZbit(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
 
-    var repMsg: string;
+      param pn = Reflection.getRoutineName();
 
-    var (offsets, elts, weights, numHashes, zbit) = payload.splitMsgToTuple(5);
+      var repMsg: string;
 
-    var zBit = try! zbit: bool;
-    var numHashes = try! numHashes: uint(8);
-    var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
-    var eltEnt: borrowed GenSymEntry = st.lookup(elts);
-    var weightEnt: borrowed GenSymEntry = st.lookup(weights);
+      var (offsets, elts, weights, numHashes) = payload.splitMsgToTuple(4);
 
-    var attrName = st.nextName();
-    var attrMsg:string;
+      var zBit = try! zbit: bool;
+      var numHashes = try! numHashes: uint(8);
+      var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
+      var eltEnt: borrowed GenSymEntry = st.lookup(elts);
+      var weightEnt: borrowed GenSymEntry = st.lookup(weights);
 
-    if offsetEnt.dtype != DType.UInt64 then
-        return notImplementedError("WeightedJaccardLSH",offsetEnt.dtype);
-    
-    if eltEnt.dtype != DType.UInt64 then
-        return notImplementedError("WeightedJaccardLSH",eltEnt.dtype);
-
-    if weightEnt.dtype != DType.Float64 then
-        return notImplementedError("WeightedJaccardLSH",weightEnt.dtype);
+      var attrName = st.nextName();
+      var attrMsg:string;
 
 
-    var setOffsets = toSymEntry(offsetEnt,uint(64)); 
-    var setElts =  toSymEntry(eltEnt,uint(64));
-    var eltWeights = toSymEntry(weightEnt,real(64));
+      select(offsetEnt.dtype, eltEnt.dtype, weightEnt.dtype) {
+
+          when(DType.UInt64, DType.UInt64, DType.Float64) {
+
+              var setOffsets = toSymEntry(offsetEnt,uint(64)); 
+              var setElts =  toSymEntry(eltEnt,uint(64));
+              var eltWeights = toSymEntry(weightEnt,real(64));
+
+              var ret = getPreimages(setOffsets, setElts, eltWeights, numHashes);
+              var attrEntry = new shared SymEntry(ret);
+              st.addEntry(attrName, attrEntry);
+              attrMsg =  'created ' + st.attrib(attrName);
+
+              return new MsgTuple(attrMsg, MsgType.NORMAL);
+
+          }
+          otherwise {
+
+              var errorMsg = notImplementedError("lshMinMaxZbit", offsetEnt.dtype);
+              dcLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);
+              return new MsgTuple(errorMsg, MsgType.ERROR);
+          }
+      }
+  }
 
 
-    if(zBit) {
-        var ret = getPreimages(setOffsets, setElts, eltWeights, numHashes);
-        var attrEntry = new shared SymEntry(ret);
-        st.addEntry(attrName, attrEntry);
-        attrMsg =  'created ' + st.attrib(attrName);
+  proc lshMinMaxZbit(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
 
-    } else { 
-        var ret = getMinHashes(setOffsets, setElts, eltWeights, numHashes);
-        var attrEntry = new shared SymEntry(ret);
-        st.addEntry(attrName, attrEntry);
-        attrMsg =  'created ' + st.attrib(attrName);
-    }
+      param pn = Reflection.getRoutineName();
+
+      var repMsg: string;
+
+      var (offsets, elts, weights, numHashes) = payload.splitMsgToTuple(4);
+
+      var zBit = try! zbit: bool;
+      var numHashes = try! numHashes: uint(8);
+      var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
+      var eltEnt: borrowed GenSymEntry = st.lookup(elts);
+      var weightEnt: borrowed GenSymEntry = st.lookup(weights);
+
+      var attrName = st.nextName();
+      var attrMsg:string;
 
 
-    // response message
-    return new MsgTuple(attrMsg, MsgType.NORMAL);
+      select(offsetEnt.dtype, eltEnt.dtype, weightEnt.dtype) {
+
+          when(DType.UInt64, DType.UInt64, DType.Float64) {
+
+              var setOffsets = toSymEntry(offsetEnt,uint(64));
+              var setElts =  toSymEntry(eltEnt,uint(64));
+              var eltWeights = toSymEntry(weightEnt,real(64));
+
+              var ret = getMinHashes(setOffsets, setElts, eltWeights, numHashes);
+              var attrEntry = new shared SymEntry(ret);
+              st.addEntry(attrName, attrEntry);
+              attrMsg =  'created ' + st.attrib(attrName);
+
+              // TODO: figure out how to return a tuple of pdarrays
+              return new MsgTuple(attrMsg, MsgType.NORMAL);
+
+          }
+          otherwise {
+
+              var errorMsg = notImplementedError("lshMinMaxZbit", offsetEnt.dtype);
+              dcLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);
+              return new MsgTuple(errorMsg, MsgType.ERROR);
+          }
+      }
   }
 
 
   proc registerMe() {
-    use CommandMap;
-    registerFunction("WeightedJaccardLSH", WeightedJaccardLSHMsg);
+      use CommandMap;
+      registerFunction("lshMinMaxZbit", lshMinMaxZbitMsg);
+      registerFunction("lshMinMax", lshMinMaxMsg);
   }
 }
