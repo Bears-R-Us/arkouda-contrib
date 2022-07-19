@@ -2,6 +2,23 @@
 
 `module_configuration.py` is used for installation of packages. This will handle packages that are client only and those that include server modules. The script is configured to print the commands required to run arkouda with your desired package.
 
+Using the `arkouda_distance_wserver` package as an example, here is how the `module_configuration.py` script should be ran:
+
+```
+$ python3 module_configuration.py -a /PATH/TO/arkouda -p /PATH/TO/arkouda-contrib/arkouda_distance_wserver/
+```
+where the argument supplied to the `-a` flag should be the absolute path to the Arkouda home directory and the argument supplied to the `-p` flag should be the absolute path to the `arkouda_distance_wserver` package in the arkouda-contrib repo.
+
+This will generate the commands needed to build the server with this functionality:
+
+```
+pip install -U /PATH/TO/arkouda-contrib/arkouda_distance_wserver/client
+cp /Users/ben.mcdonald/arkouda/ServerModules.cfg ~/TmpServerModules.cfg.1658262414
+ARKOUDA_SERVER_USER_MODULES=" /PATH/TO/arkouda-contrib/arkouda_distance_wserver/server/distanceMsg.chpl" ARKOUDA_CONFIG_FILE=~/TmpServerModules.cfg.1658262414 ARKOUDA_SKIP_CHECK_DEPS=true make -C /PATH/TO/arkouda
+```
+
+Now, running these commands will build the Arkouda server with the `arkouda_distance_wserver` module included.
+
 ## Pull the Package(s) from GitHub
 
 You can either clone the entire `arkouda-contrib` repository or use sparse-checkout to only checkout the packages you will be using.
