@@ -318,13 +318,11 @@ module Arr2DMsg {
     return new MsgTuple(repMsg, MsgType.NORMAL);
   }
 
-  proc registerMe() {
-    use CommandMap;
-    registerFunction("array2d", array2DMsg);
-    registerFunction("randint2d", randint2DMsg);
-    registerFunction("binopvv2d", binopvv2DMsg);
-    registerFunction("[int2d]", rowIndex2DMsg);
-    registerFunction("reshape1D", reshape1DMsg);
-    registerFunction("reshape2D", reshape2DMsg);
-  }
+  use CommandMap;
+  registerFunction("array2d", array2DMsg);
+  registerFunction("randint2d", randint2DMsg);
+  registerFunction("binopvv2d", binopvv2DMsg);
+  registerFunction("[int2d]", rowIndex2DMsg);
+  registerFunction("reshape1D", reshape1DMsg);
+  registerFunction("reshape2D", reshape2DMsg);
 }
