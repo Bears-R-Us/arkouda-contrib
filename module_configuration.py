@@ -43,7 +43,7 @@ def get_server_modules(cfg):
     mod_list = []
     with open(cfg) as f:
         for line in f.readlines():
-            m = line.split("#")[0].split("/")[-1].strip()
+            m = line.split("#")[0].strip()
             mod_list += [m] if m else []
     return mod_list
 
@@ -80,11 +80,8 @@ def configure_server_module(mod_path):
 
     # get all of the modules listed in the .cfg file
     mods = get_server_modules(mod_cfg)
-    ADD_TO_CONFIG += mods
-
-    # Get chpl files that will be added to arkouda
-    c_files = get_chpl_files(mod_path)
-    USER_MODS += c_files
+    for mod in mods:
+        ADD_TO_CONFIG.append(f" {mod_path}/server/{mod}.chpl")
 
 
 def validate_pkgs(pkg_list, ak_loc):
@@ -166,10 +163,7 @@ def create_commands(ak_loc, config_loc):
     tmp_cfg = f"{config_loc}/TmpServerModules.cfg.{int(time.time())}"
     print(f"cp {ak_cfg} {tmp_cfg}")
 
-    for c in ADD_TO_CONFIG:
-        print(f"echo {c} >> {tmp_cfg}")
-
-    ak_srv_user_mods = '"' + " ".join(USER_MODS) + '"'  # setup our ARKOUDA_SERVER_USER_MODULES
+    ak_srv_user_mods = '"' + " ".join(ADD_TO_CONFIG) + '"'  # setup our ARKOUDA_SERVER_USER_MODULES
     print(f"ARKOUDA_SERVER_USER_MODULES={ak_srv_user_mods} ARKOUDA_CONFIG_FILE={tmp_cfg} "
           f"ARKOUDA_SKIP_CHECK_DEPS=true make -C {ak_loc}")
 
@@ -202,7 +196,7 @@ def run(pkg_list, ak_loc, config_loc):
 
         install_client_pkg(client_path)
         if os.path.exists(server_path):
-            configure_server_module(pkg, ak_loc)
+            configure_server_module(pkg)
 
     create_commands(ak_loc, config_loc)
 
