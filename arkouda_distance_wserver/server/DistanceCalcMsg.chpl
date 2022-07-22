@@ -58,8 +58,6 @@ module DistanceCalcMsg{
         }
     }
 
-    proc registerMe() {
-        use CommandMap;
-        registerFunction("dot", dotProductMsg, getModuleName());
-    }
+    use CommandMap;
+    registerFunction("dot", dotProductMsg, getModuleName());
 }
