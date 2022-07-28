@@ -22,6 +22,6 @@ setup(
     install_requires=["h5py", "numpy"],
     python_requires=">=3.8",
     project_urls={
-        "Bug Reports": "https://github.com/Bears-R-Us/arkouda/issues",
+        "Bug Reports": "https://github.com/Bears-R-Us/arkouda-contrib/issues",
     },
 )
