@@ -39,7 +39,7 @@ module lshMinMax
   }
 
 
-  proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)): throws {
+  proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)) throws {
 
 /* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
 
