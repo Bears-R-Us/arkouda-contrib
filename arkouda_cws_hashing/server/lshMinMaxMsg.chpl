@@ -12,6 +12,13 @@ module lshMinMaxMsg
   use Logging;
 
 
+  /* An implementation of a locality-sensitive hashing scheme for the MinMax (i.e. weighted 
+     Jaccard) kernel originally described in "Consistent Weighted Sampling" (Manasse, McSherry
+     Talwar). The specific implementation is an equivalent version by Sergie Ioffe described 
+     in "Improved Consistent Sampling, Weighted Minhash, and L1 Sketching" that improves the
+     runtime of the hashing setp from expected constant time to constant time. */
+
+
   proc lshMinMaxMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
 
       param pn = Reflection.getRoutineName();
@@ -21,7 +28,7 @@ module lshMinMaxMsg
       var (offsets, elts, weights, zbit, numHashes) = payload.splitMsgToTuple(5);
 
       var zBit = try! zbit: bool;
-      # const zBit: bool = zbit.toLower() == "true";
+      // const zBit: bool = zbit.toLower() == "true";
       var numHashes = try! numHashes: uint(8);
       var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
       var eltEnt: borrowed GenSymEntry = st.lookup(elts);

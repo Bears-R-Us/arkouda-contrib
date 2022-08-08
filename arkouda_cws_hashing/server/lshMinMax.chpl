@@ -39,59 +39,90 @@ module lshMinMax
   }
 
 
-  proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), weights: [?wD] real(64), numHashes: uint(8)) throws {
+  /* Returns a tuple consisting of aligned arrays of length numHashes*numSets containing 
+     sampled set elements and hashes */
+
+  proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), 
+                    weights: [?sD] real(64), numHashes: uint(8)) throws {
 
 /* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
 
       var outD: domain(1) = {oD.first..numHashes*oD.last};
 
-      var minHashes: [outD] (uint(64),real(64));
 
-      var u_z: real(64) = 0.0;
-      var g_1: real(64) = 0.0;
-      var g_2: real(64) = 0.0;
+/* TODO: define segments of these locally within the innermost loop, then assemble them into
+         the global output vectors later to avoid unnecessary communication over the network */
 
-      var t_z: real(64) = 0.0;
-      var y_z: real(64) = 0.0;
-      var a_z: real(64) = 0.0;
+      var preimages: [outD] uint(64);
+      var minHashes: [outD] real(64);
 
-      var min_az: real(64) = 0xffffffffffffffff: real(64);
-      var min_tz: real(64) = 0xffffffffffffffff: real(64);
+      /* CSR-style loop over a segmented array. Outer loop is data parallel. */
 
-      var preimage: uint(64) = 0;
+      forall offsetIdx in offsets {
 
-      var r = gsl_rng_alloc (gsl_rng_mt19937);
+          /* Loop over hashes. Should be serial as parallel span is minimal */
 
-/* TODO: CSR-style loop over a segmented array */
+          for hashIdx in [0..numHashes-1] {
 
-      // Loop over hashes
-      coforall loc in Locales
+              var outIdx: uint(64) = offsetIdx*numHashes + hashIdx;
 
-      forall z in S {
+              var u_z: real(64) = 0.0;
+              var g_1: real(64) = 0.0;
+              var g_2: real(64) = 0.0;
 
-          /* Create a unique, but globally consistent, seed for the
-             RNG by concatenating the set and the hash indices */
+              var t_z: real(64) = 0.0;
+              var y_z: real(64) = 0.0;
+              var a_z: real(64) = 0.0;
 
-          var seedIdx: uint(64) = cantorPairing(s, hashIdx);
+              var min_az: real(64) = 0xffffffffffffffff: real(64);
+              var min_tz: real(64) = 0xffffffffffffffff: real(64);
 
-          gsl_rng_set(r, seedIdx);
+              var preimage: uint(64) = 0;
 
-          u_z = gsl_rng_uniform(r);
-          g_1 = gsl_ran_gamma(r, 2.0, 1.0);
-          g_2  = gsl_ran_gamma(r, 2.0, 1.0);
+              var r = gsl_rng_alloc (gsl_rng_mt19937);
 
-          t_z = floor((log(weights[z]) / g_1) + u_z);
-          y_z = exp(g_1 * (t_z - u_z));
-          a_z = (g_2 / (y_z * exp(g_1)));
 
-          if a_z < min_az then
-              min_az = a_z;
-              min_tz = t_z;
-              preimage = setElts[z];
-        }
+              /* Loop over set elements. Should be serial in most cases, but might
+                 benefit from parallelism for skewed distributions, e.g. such as
+                 adjacency lists of "power-law" graphs */
+
+              forall z in setElts[offsetIdx..offsetIdx+1] {
+
+                  /* Create a unique, but globally consistent, seed for the
+                     RNG by concatenating the set and the hash indices */
+
+                  var seedIdx: uint(64) = cantorPairing(z, hashIdx);
+
+                  gsl_rng_set(r, seedIdx);
+
+                  u_z = gsl_rng_uniform(r);
+                  g_1 = gsl_ran_gamma(r, 2.0, 1.0);
+                  g_2  = gsl_ran_gamma(r, 2.0, 1.0);
+
+                  t_z = floor((log(weights[z]) / g_1) + u_z);
+                  y_z = exp(g_1 * (t_z - u_z));
+                  a_z = (g_2 / (y_z * exp(g_1)));
+
+/* TODO: replace accesses to preimages and minHashes with local segments that will be 
+         read into the global output vectors (preimages and minHashes) later */
+ 
+                  if a_z < min_az then {
+                      min_az = a_z;
+                      min_tz = t_z;
+                      preimages[outIdx] = setElts[z];
+                      minHashes[outIdx] = t_z;
+                  }
+
+              } // end loop over current set 
+
+          } // end loop over hashes
+
+/* TODO: read local output into global output vectors (primages and minHashes)
+
+      } // end loop over set offsets
 
       // Return the preimage of the MinHash and t_z
-      return (preimages, hashes);
+      return (preimages, minHashes);
   }
 
 }
