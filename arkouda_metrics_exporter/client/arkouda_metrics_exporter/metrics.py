@@ -477,11 +477,6 @@ class ArkoudaMetrics:
             metric.value
         )
 
-    def _updateReportedTimestamp(self, value: datetime) -> None:
-        self.reportedTimestamp.labels(arkouda_server_name=self.arkoudaMetricsServerName).set(
-            value.timestamp() * 1000
-        )
-
     def _updateSystemMetrics(self, metric: Metric) -> None:
         metricName = metric.name
 
