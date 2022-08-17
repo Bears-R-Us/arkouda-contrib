@@ -388,7 +388,9 @@ class ArkoudaMetrics:
 
     def connect(self, timeout : int = 0) -> None:
         try:
-            ak.connect(self.arkoudaMetricsHost, self.arkoudaMetricsPort)
+            ak.connect(server=self.arkoudaMetricsHost, 
+                       port=self.arkoudaMetricsPort,
+                       timeout=timeout)
         except Exception as e:
             raise EnvironmentError(e)
 

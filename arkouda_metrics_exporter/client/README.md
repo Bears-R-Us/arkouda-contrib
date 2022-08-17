@@ -35,7 +35,7 @@ The following env variables are set to configure the arkouda_metrics_server:
 2. ARKOUDA_METRICS_SERVICE_PORT: Port number for Arkouda metrics service endpoint, defaults to 5556
 3. ARKOUDA_METRICS_SERVER_NAME: Name of Arkouda metrics server endpoint, defaults to arkouda-metrics
 4. METRICS_POLLING_INTERVAL: Polling interval in seconds for retrieving Arkouda metrics, defaults to 5
-5. METRICS_SCRAPE_PORT: Port number for the Prometheus scrape target
+5. METRICS_SCRAPE_PORT: Port number for the Prometheus scrape target, defaults to 5080
 
 ### Running arkouda_metrics_exporter
 
@@ -78,4 +78,24 @@ Corresponding example output from the Arkouda side is as follows:
 2022-08-15:06:52:33 [MetricsMsg] getSystemMetrics Line 275 DEBUG [Chapel] memoryUsed: 0 physicalMemory: 34359738368
 2022-08-15:06:52:33 [MetricsMsg] metricsMsg Line 431 DEBUG [Chapel] metrics [{"name":"total", "category":"NUM_REQUESTS", "scope":"GLOBAL", "timestamp":"2022-08-15T06:52:33.745847", "value":0.000000e+00}, {"name":"arkouda_memory_used_per_locale", "category":"SYSTEM", "scope":"LOCALE", "timestamp":"2022-08-15T06:52:33.745940", "value":0.000000e+00, "locale_num":0, "locale_name":"hokiegeek.local", "locale_hostname":"hokiegeek.local"}, {"name":"arkouda_percent_memory_used_per_locale", "category":"SYSTEM", "scope":"LOCALE", "timestamp":"2022-08-15T06:52:33.745944", "value":0.000000e+00, "locale_num":0, "locale_name":"hokiegeek.local", "locale_hostname":"hokiegeek.local"}]
 2022-08-15:06:52:33 [ServerDaemon] run Line 585 DEBUG [Chapel] awaiting message on port 5556
+```
+
+## Tests
+
+### Environment Variables
+
+The vast majority of the default env variables contained in the [pytest.ini](./pytest.ini) file are fine with the exception of ARKOUDA_HOME, which needs to be set for the specific user environment.
+
+The default arkouda_metrics_exporter unit test mode is FULL_STACK, meaning that an arkouda server is started up and torn down for each unit test. If it is preferred to execute unit tests against an existing Arkouda instance, set ARKOUDA_RUNNING_MODE to CLIENT. Important note: the arkouda_server startup command with metrics enabled, which is required to run the test harness, is as follows;
+
+```
+./arkouda_server --ServerDaemon.daemonTypes=ServerDaemonType.DEFAULT,ServerDaemonType.METRICS
+```
+
+### Running Unit Tests
+
+The arkouda_metrics_exporter unit tests are executed from the arkouda_metrics_exporter project home as follows:
+
+```
+pytest
 ```
