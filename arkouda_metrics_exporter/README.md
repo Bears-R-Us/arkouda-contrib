@@ -2,8 +2,8 @@
 
 The arkouda_metrics_exporter project provides a Prometheus metrics export capability to Arkouda via the ArkoudaMetrics class, which does the following:
 
-1. Polls the Arkouda metrics socket for metrics
-2. Updates corresponding Prometheus data structures
+1. Polls the Arkouda metrics socket for metrics generated in the [MetricsMsg module](https://github.com/Bears-R-Us/arkouda/blob/master/src/MetricsMsg.chpl)
+2. Updates corresponding Prometheus data structures cached in the ArkoudaMetrics object
 3. Provides a Prometheus scrape target
 
 The arkouda_metrics_exporter project leverages the Prometheus [prometheus-client](https://github.com/prometheus/client_python) for all Prometheus metrics as well as the embedded http_server to deliver the Prometheus scrape target.
@@ -11,7 +11,11 @@ The arkouda_metrics_exporter project leverages the Prometheus [prometheus-client
 
 ## Installation
 
-arkouda_metrics_exporter depends upon [arkouda](https://github.com/Bears-R-Us/arkouda) and [prometheus_client](https://pypi.org/project/prometheus-client/). Since there currently is no pypi Arkouda installer, an arkouda clone/code download followed by pip install precedes installing arkouda_metrics_exporter:
+### Arkouda
+
+arkouda_metrics_exporter depends upon [Arkouda](https://github.com/Bears-R-Us/arkouda) and [prometheus_client](https://pypi.org/project/prometheus-client/). Arkouda install instructions are located [here](https://github.com/Bears-R-Us/arkouda/blob/master/INSTALL.md)
+
+### arkouda_metrics_exporter
 
 ```
 git clone git@github.com:Bears-R-Us/arkouda.git
@@ -19,7 +23,7 @@ cd arkouda
 pip3 install -e .
 ```
 
-From the arkouda_metrics_server client folder, execute the following command:
+From the arkouda_metrics_exporter client folder, execute the following command:
 
 ```
 pip3 install -e .
@@ -29,12 +33,12 @@ pip3 install -e .
 
 ### Configuring arkouda_metrics_exporter
 
-The following env variables are set to configure the arkouda_metrics_server:
+The following env variables are set to configure the arkouda_metrics_exporter:
 
 1. ARKOUDA_METRICS_SERVICE_HOST: Arkouda server host (ip address, hostname, or Kubernetes service name), defaults to localhost
 2. ARKOUDA_METRICS_SERVICE_PORT: Port number for Arkouda metrics service endpoint, defaults to 5556
 3. ARKOUDA_METRICS_SERVER_NAME: Name of Arkouda metrics server endpoint, defaults to arkouda-metrics
-4. METRICS_POLLING_INTERVAL: Polling interval in seconds for retrieving Arkouda metrics, defaults to 5
+4. METRICS_POLLING_INTERVAL: Polling interval in seconds for retrieving Arkouda metrics, defaults to 
 5. METRICS_SCRAPE_PORT: Port number for the Prometheus scrape target, defaults to 5080
 
 ### Running arkouda_metrics_exporter
