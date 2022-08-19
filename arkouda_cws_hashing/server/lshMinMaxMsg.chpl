@@ -61,6 +61,7 @@ module lshMinMaxMsg
                   repMsg += "+created " + st.attrib(hashName);
               }
 
+              cwsLogger.error(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
               return new MsgTuple(repMsg, MsgType.NORMAL);
           }
           otherwise {
