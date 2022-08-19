@@ -12,6 +12,10 @@ module lshMinMaxMsg
   use Logging;
 
 
+  private config const logLevel = ServerConfig.logLevel;
+  const cwsLogger = new Logger(logLevel);
+
+
   /* An implementation of a locality-sensitive hashing scheme for the MinMax (i.e. weighted 
      Jaccard) kernel originally described in "Consistent Weighted Sampling" (Manasse, McSherry
      Talwar). The specific implementation is an equivalent version by Sergie Ioffe described 
@@ -23,13 +27,11 @@ module lshMinMaxMsg
 
       param pn = Reflection.getRoutineName();
 
-      var repMsg: string;
-
-      var (offsets, elts, weights, zbit, numHashes) = payload.splitMsgToTuple(5);
+      var (offsets, elts, weights, zbit, hashes) = payload.splitMsgToTuple(5);
 
       var zBit = try! zbit: bool;
       // const zBit: bool = zbit.toLower() == "true";
-      var numHashes = try! numHashes: uint(8);
+      var numHashes = try! hashes: uint(8);
       var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
       var eltEnt: borrowed GenSymEntry = st.lookup(elts);
       var weightEnt: borrowed GenSymEntry = st.lookup(weights);
@@ -59,12 +61,12 @@ module lshMinMaxMsg
                   repMsg += "+created " + st.attrib(hashName);
               }
 
-              return new MsgTuple(attrMsg, MsgType.NORMAL);
+              return new MsgTuple(repMsg, MsgType.NORMAL);
           }
           otherwise {
 
               var errorMsg = notImplementedError("cwsMinMaxZbit", offsetEnt.dtype);
-              dcLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);
+              cwsLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);
               return new MsgTuple(errorMsg, MsgType.ERROR);
           }
       }
