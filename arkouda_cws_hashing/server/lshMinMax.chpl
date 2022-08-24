@@ -27,13 +27,11 @@ module lshMinMax
   // LSH survivor output is likely to be sparse
 
 
-  proc cantorPairing(setEltIdx: uint(64), hashIdx: uint(8)): uint(64) {
+  proc cantorPairing(setEltIdx: uint(64), hashIdx: uint(64)): uint(64) {
 
-      var hashIdx64: uint(64) = hashIdx: uint(64);
+      var sum: uint(64) = setEltIdx + hashIdx;
 
-      var sum: uint(64) = setEltIdx + hashIdx64;
-
-      var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx64;
+      var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx;
 
       return result;
   }
@@ -43,7 +41,7 @@ module lshMinMax
      sampled set elements and hashes */
 
   proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), 
-                    weights: [sD] real(64), numHashes: uint(8)) throws {
+                    weights: [sD] real(64), numHashes: uint(64)) throws {
 
 /* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
 
