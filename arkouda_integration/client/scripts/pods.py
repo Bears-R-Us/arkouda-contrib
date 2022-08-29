@@ -8,13 +8,15 @@ def main(crt_file : str, key_file : str, k8s_host : str, invocation_method : str
                          app_name : str, namespace : str='default'):
     dao = KubernetesDao(crt_file,key_file,k8s_host)
 
-    if invocation_method == InvocationMethod.GET_POD_IPS:
+    pod_method = InvocationMethod(invocation_method)
+    print(pod_method)
+    if pod_method == InvocationMethod.GET_POD_IPS:
         print(
             dao.get_pod_ips(namespace=namespace, 
                         app_name=app_name, 
                         pretty_print=True)
         )
-    elif invocation_method == InvocationMethod.GET_PODS:
+    elif pod_method == InvocationMethod.GET_PODS:
         print(
             dao.get_pods(namespace=namespace, 
                          app_name=app_name, 
@@ -22,7 +24,7 @@ def main(crt_file : str, key_file : str, k8s_host : str, invocation_method : str
         )
     else:
         logger.error(
-            "method {} is not supported from the command line".format(invocation_method)
+            "{} is not supported from the command line".format(pod_method)
         )
 
 if __name__ == "__main__":
