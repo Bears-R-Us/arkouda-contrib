@@ -96,11 +96,7 @@ class KubernetesDao:
             if namespace:
                 pods = self.core_client.list_namespaced_pod(namespace=namespace)
                 if app_name:
-                    filteredPods = []
-                    for pod in pods.items:
-                        if self._is_named_pod(pod, app_name):
-                            filteredPods.append(pod)
-                    return filteredPods
+                    return [pod for pod in pods.items if self._is_named_pod(pod, app_name)]
                 else:
                     return [pod for pod in pods.items]
             else:
@@ -110,7 +106,7 @@ class KubernetesDao:
 
     def _is_named_pod(self, pod: V1Pod, app_name: str) -> bool:
         """
-        Indicates where the pod has an app name.
+        Indicates if the pod has an app name that matches the app_name param
 
         :return: boolean indicating if the pod has an app name
         :rtype: bool
