@@ -2,6 +2,10 @@ import argparse
 from enum import Enum
 from typing import List, Optional, Union
 
+# Set client mode to API to prevent splash message print
+import os
+os.environ['ARKOUDA_CLIENT_MODE'] = 'API'
+
 from kubernetes import client  # type: ignore
 from kubernetes.client import (  # type: ignore
     V1ObjectMeta,
