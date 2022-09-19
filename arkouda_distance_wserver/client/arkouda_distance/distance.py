@@ -7,7 +7,7 @@ import math
 
 @typechecked
 def dot(u: pdarray, v: pdarray):
-    repMsg = generic_msg(cmd='dot', args=f"{u.name} {v.name}")
+    repMsg = generic_msg(cmd='dot', args={"array": u, "vector": v})
     return parse_single_value(cast(str, repMsg))
 
 
