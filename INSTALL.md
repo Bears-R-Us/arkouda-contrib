@@ -58,8 +58,8 @@ git pull origin main
 ### Installation
 ```commandline
 # Dry Run - only prints commands
-python3 module_configuration.py --path <path to module> --ak <path to arkouda>
+python3 module_configuration.py --pkg_path <path to module> --ak_loc <path to arkouda>
 
 # Run the produced commands and install package
-python3 module_configuration.py --path <path to module> --ak <path to arkouda> | bash
+python3 module_configuration.py --pkg_path <path to module> --ak_loc <path to arkouda> | bash
 ```
