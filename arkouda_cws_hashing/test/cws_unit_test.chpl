@@ -32,7 +32,7 @@ var preimages: [0..29] int(64);
 var minHashes: [0..29] real(64);
 
 
-for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
+forall offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
 
     for hashIdx in 0..numHashes-1 {
  
@@ -67,7 +67,6 @@ for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
 
             t_z = floor((log(weight) / g_1) + u_z);
 
-writeln(t_z);
 
             y_z = exp(g_1 * (t_z - u_z));
             a_z = (g_2 / (y_z * exp(g_1)));
@@ -81,7 +80,7 @@ writeln(t_z);
 
         } // end loop over current set elements
 
-//        writeln("Index: ", outIdx, ", Set: ", offsetIdx, ", Hash: ", hashIdx, ", Preimage: ", preimages[outIdx], ", Minhash: ", minHashes[outIdx]);
+        writeln("Index: ", outIdx, ", Set: ", offsetIdx, ", Hash: ", hashIdx, ", Preimage: ", preimages[outIdx], ", Minhash: ", minHashes[outIdx]);
 
     } // end loop over hashes
 

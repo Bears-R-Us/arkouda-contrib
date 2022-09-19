@@ -27,9 +27,9 @@ module lshMinMax
   // LSH survivor output is likely to be sparse
 
 
-  proc cantorPairing(setEltIdx: uint(64), hashIdx: uint(64)): uint(64) {
+  proc cantorPairing(setEltIdx: int(64), hashIdx: int(64)): uint(64) {
 
-      var sum: uint(64) = setEltIdx + hashIdx;
+      var sum: int(64) = setEltIdx + hashIdx;
 
       var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx;
 
@@ -40,8 +40,8 @@ module lshMinMax
   /* Returns a tuple consisting of aligned arrays of length numHashes*numSets containing 
      sampled set elements and hashes */
 
-  proc getMinHashes(offsets: [?oD] uint(64), setElts: [?sD] uint(64), 
-                    weights: [sD] real(64), numHashes: uint(64)) throws {
+  proc getMinHashes(offsets: [?oD] int(64), setElts: [?sD] int(64), 
+                    weights: [sD] real(64), numHashes: int(64)) throws {
 
 /* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
 
@@ -51,18 +51,18 @@ module lshMinMax
 /* TODO: define segments of these locally within the innermost loop, then assemble them into
          the global output vectors later to avoid unnecessary communication over the network */
 
-      var preimages: [outD] uint(64);
+      var preimages: [outD] int(64);
       var minHashes: [outD] real(64);
 
       /* CSR-style loop over a segmented array. Outer loop is data parallel. */
 
-      forall offsetIdx in offsets {
+      forall offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
 
           /* Loop over hashes. Should be serial as parallel span is minimal */
 
-          for hashIdx in [0..numHashes-1] {
+          for hashIdx in 0..numHashes-1 {
 
-              var outIdx: uint(64) = offsetIdx*numHashes + hashIdx;
+              var outIdx: int(64) = offsetIdx*numHashes + hashIdx;
 
               var u_z: real(64) = 0.0;
               var g_1: real(64) = 0.0;
@@ -74,8 +74,6 @@ module lshMinMax
 
               var min_az: real(64) = 0xffffffffffffffff: real(64);
               var min_tz: real(64) = 0xffffffffffffffff: real(64);
-
-              var preimage: uint(64) = 0;
 
               var r = gsl_rng_alloc (gsl_rng_mt19937);
 
@@ -89,7 +87,7 @@ module lshMinMax
                   /* Create a unique, but globally consistent, seed for the
                      RNG by concatenating the set and the hash indices */
 
-                  var seedIdx: uint(64) = cantorPairing(z, hashIdx);
+                  var seedIdx: uint(64) = cantorPairing(z, hashIdx): uint(64);
 
                   gsl_rng_set(r, seedIdx);
 
@@ -107,7 +105,7 @@ module lshMinMax
                   if a_z < min_az then {
                       min_az = a_z;
                       min_tz = t_z;
-                      preimages[outIdx] = setElts[z];
+                      preimages[outIdx] = z;
                       minHashes[outIdx] = t_z;
                   }
 

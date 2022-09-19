@@ -31,7 +31,7 @@ module lshMinMaxMsg
 
       var zBit = try! zbit: bool;
       // const zBit: bool = zbit.toLower() == "true";
-      var numHashes = try! hashes: uint(64);
+      var numHashes = try! hashes: int(64);
       var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
       var eltEnt: borrowed GenSymEntry = st.lookup(elts);
       var weightEnt: borrowed GenSymEntry = st.lookup(weights);
@@ -43,8 +43,8 @@ module lshMinMaxMsg
 
           when(DType.UInt64, DType.UInt64, DType.Float64) {
 
-              var setOffsets = toSymEntry(offsetEnt,uint(64)); 
-              var setElts =  toSymEntry(eltEnt,uint(64));
+              var setOffsets = toSymEntry(offsetEnt,int(64)); 
+              var setElts =  toSymEntry(eltEnt,int(64));
               var eltWeights = toSymEntry(weightEnt,real(64));
 
               var (preimages, hashes) = getMinHashes(setOffsets, setElts, eltWeights, numHashes);
