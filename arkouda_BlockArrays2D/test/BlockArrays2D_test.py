@@ -3,6 +3,14 @@ import arkouda as ak
 import arkouda_BlockArrays2D as ak2D
 
 class Array2DTest(ArkoudaTest):
+    def test_create(self):
+        a2di = ak2D.array2D(0, 2, 2, dtype=ak.int64)
+        self.assertTrue((a2di[0] == ak.array([0,0], dtype=ak.int64)).all())
+        self.assertTrue((a2di[1] == ak.array([0,0], dtype=ak.int64)).all())
+        a2df = ak2D.array2D(0.5, 2, 2, dtype=ak.float64)
+        self.assertTrue((a2df[0] == ak.array([0.5,0.5], dtype=ak.float64)).all())
+        self.assertTrue((a2df[1] == ak.array([0.5,0.5], dtype=ak.float64)).all())
+
     def test_reshape(self):
         a = ak.array([1,2,3,4])
         a2d = ak2D.reshape(a, (2, 2))
