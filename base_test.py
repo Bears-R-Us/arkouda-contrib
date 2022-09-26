@@ -36,7 +36,7 @@ class ArkoudaTest(unittest.TestCase):
         if TestRunningMode.CLASS_SERVER == ArkoudaTest.test_running_mode:
             try:
                 nl = get_arkouda_numlocales()
-                ArkoudaTest.server, _, _ = start_arkouda_server(numlocales=nl, port=ArkoudaTest.port)
+                ArkoudaTest.server, _, _ = start_arkouda_server(numlocales=nl, host=ArkoudaTest.server, port=ArkoudaTest.port)
                 print('Started arkouda_server in TEST_CLASS mode with host: {} port: {} locales: {}'. \
                       format(ArkoudaTest.server, ArkoudaTest.port, nl))
             except Exception as e:
