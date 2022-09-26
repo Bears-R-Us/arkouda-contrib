@@ -42,7 +42,7 @@ class pdarray2D(pdarray):
                 # Interpret negative key as offset from end of array
                 key += self.size
             if (key >= 0 and key < self.size):
-                repMsg = generic_msg(cmd="[int2d]", args="{} {}".format(self.name, key))
+                repMsg = generic_msg(cmd="[int2d]", args={"name": self.name, "key": key})
                 return create_pdarray(repMsg)
             else:
                 raise IndexError("[int] {} is out of bounds with size {}".format(orig_key,self.size))
@@ -84,8 +84,7 @@ class pdarray2D(pdarray):
             if self.size != other.size:
                 raise ValueError("size mismatch {} {}".format(self.size,other.size))
             cmd = "binopvv2d"
-            args= "{} {} {}".format(op, self.name, other.name)
-            repMsg = generic_msg(cmd=cmd,args=args)
+            repMsg = generic_msg(cmd=cmd, args={"op": op, "a": self.name, "b": other.name})
             return create_pdarray2D(repMsg)
         # pdarray binop scalar
         dt = resolve_scalar_dtype(other)
@@ -111,7 +110,7 @@ def create_pdarray2D(repMsg : str) -> pdarray2D:
                   "itemsize: {}").format(name, mydtype, size, ndim, shape, itemsize))
     return pdarray2D(name, dtype(mydtype), size, ndim, shape, itemsize)
 
-def array2D(val, m, n) -> Union[pdarray, Strings]:
+def array2D(val, m, n, dtype: Union[np.dtype, type, str] = float64) -> Union[pdarray, Strings]:
     """
     Generate a 2D pdarray that is of size `m x n` and initialized to the
     value `val`.
@@ -124,17 +123,20 @@ def array2D(val, m, n) -> Union[pdarray, Strings]:
         The `m` dimension of the array to create
     n : int_scalars
         The `n` dimension of the array to create
+    dtype: all_scalars
+        Resulting array type, default float64
 
     Returns
     -------
     pdarray
-        A pdarray instance stored on arkouda server
+        array of the requested size (m,n) and dtype filled with `fill_value`
         
     Raises
     ------
     TypeError
         Raised if a is not a pdarray, np.ndarray, or Python Iterable such as a
-        list, array, tuple, or deque
+        list, array, tuple, or deque, or if the supplied dtype is not supported,
+        or if the size parameter is neither an int nor a str that is parseable to an int.
 
     See Also
     --------
@@ -161,16 +163,10 @@ def array2D(val, m, n) -> Union[pdarray, Strings]:
     args = ""
     from arkouda.client import maxTransferBytes
     # Only rank 2 arrays currently supported
-    if isinstance(val, bool):
-        args = f"bool {val} {m} {n}"
-    elif isinstance(val, int):
-        args = f"int64 {val} {m} {n}"
-    elif isinstance(val, float):
-        args = f"float64 {val} {m} {n}"
 
-    rep_msg = generic_msg(cmd='array2d', args=args)
+
+    rep_msg = generic_msg(cmd='array2d', args={"dtype": cast(np.dtype, dtype).name, "val": val, "m": m, "n": n})
     return create_pdarray2D(rep_msg)
-
 
 def randint2D(low : numeric_scalars, high : numeric_scalars, 
               m : int_scalars, n : int_scalars, dtype=int64, seed : int_scalars=None) -> pdarray:
@@ -232,8 +228,7 @@ def randint2D(low : numeric_scalars, high : numeric_scalars,
     lowstr = NUMBER_FORMAT_STRINGS[dtype.name].format(low)
     highstr = NUMBER_FORMAT_STRINGS[dtype.name].format(high)
 
-    repMsg = generic_msg(cmd='randint2d', args='{} {} {} {} {} {}'.\
-                         format(dtype.name, lowstr, highstr, m, n, seed))
+    repMsg = generic_msg(cmd='randint2d', args={"dtype": cast(np.dtype, dtype).name, "low": lowstr, "high": highstr, "m": m, "n": n, "seed": seed})
     return create_pdarray2D(repMsg)
 
 def reshape(obj : pdarray, newshape : Union[numeric_scalars, tuple]) -> pdarray:
@@ -294,11 +289,11 @@ def reshape(obj : pdarray, newshape : Union[numeric_scalars, tuple]) -> pdarray:
             n = int(initial_size/m)
         if m*n != initial_size:
             raise ValueError("size mismatch, 2D dimensions must result in array of equivalent size: {} != {}".format(obj.size,m*n))
-        rep_msg = generic_msg(cmd='reshape2D', args=f"{obj.name} {m} {n}")
+        rep_msg = generic_msg(cmd='reshape2D', args={"name": obj.name, "m": m, "n": n})
         return create_pdarray2D(rep_msg)
     else:
         if newshape == -1 or newshape == initial_size:
-            rep_msg = generic_msg(cmd='reshape1D', args=f"{obj.name}")
+            rep_msg = generic_msg(cmd='reshape1D', args={"name": obj.name})
             return create_pdarray2D(rep_msg)
         else:
             raise ValueError("size mismatch, resizing to 1D must either be -1 or array size: provided: {} array size: {}".format(newshape, obj.size))
