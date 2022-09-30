@@ -17,40 +17,31 @@ module Arr2DMsg {
   private config const logLevel = ServerConfig.logLevel;
   const randLogger = new Logger(logLevel);
 
-  proc array2DMsg(cmd: string, args: string, st: borrowed SymTab): MsgTuple throws {
-    var (dtypeBytes, val, mStr, nStr) = args.splitMsgToTuple(" ", 4);
-    var dtype = DType.UNDEF;
-    var m: int;
-    var n: int;
+  proc array2DMsg(cmd: string, args: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
+    var msgArgs = parseMessageArgs(args, argSize);
+    var val = msgArgs.get("val");
+    var dtype = val.getDType();
+    var m: int = msgArgs.get("m").getIntValue();
+    var n: int = msgArgs.get("n").getIntValue();
     var rname:string = "";
-
-    try {
-      dtype = str2dtype(dtypeBytes);
-      m = mStr: int;
-      n = nStr: int;
-    } catch {
-      var errorMsg = "Error parsing/decoding either dtypeBytes, m, or n";
-      gsLogger.error(getModuleName(), getRoutineName(), getLineNumber(), errorMsg);
-      return new MsgTuple(errorMsg, MsgType.ERROR);
-    }
 
     overMemLimit(2*m*n);
 
     if dtype == DType.Int64 {
       var entry = new shared SymEntry2D(m, n, int);
-      var localA: [{0..#m, 0..#n}] int = val:int;
+      var localA: [{0..#m, 0..#n}] int = val.getIntValue();
       entry.a = localA;
       rname = st.nextName();
       st.addEntry(rname, entry);
     } else if dtype == DType.Float64 {
       var entry = new shared SymEntry2D(m, n, real);
-      var localA: [{0..#m, 0..#n}] real = val:real;
+      var localA: [{0..#m, 0..#n}] real = val.getRealValue();
       entry.a = localA;
       rname = st.nextName();
       st.addEntry(rname, entry);
     } else if dtype == DType.Bool {
       var entry = new shared SymEntry2D(m, n, bool);
-      var localA: [{0..#m, 0..#n}] bool = if val == "True" then true else false;
+      var localA: [{0..#m, 0..#n}] bool = val.getBoolValue();
       entry.a = localA;
       rname = st.nextName();
       st.addEntry(rname, entry);
@@ -68,21 +59,21 @@ module Arr2DMsg {
     return new MsgTuple(msg, msgType);
   }
 
-  proc randint2DMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
+  proc randint2DMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
     param pn = Reflection.getRoutineName();
     var repMsg: string; // response message
-    // split request into fields
-    var (dtypeStr,aMinStr,aMaxStr,mStr,nStr,seed) = payload.splitMsgToTuple(6);
-    var dtype = str2dtype(dtypeStr);
-    var m = mStr:int;
-    var n = nStr:int;
+    var msgArgs = parseMessageArgs(payload, argSize);
+    var dtype = str2dtype(msgArgs.getValueOf("dtype"));
+    const m = msgArgs.get("m").getIntValue();
+    const n = msgArgs.get("n").getIntValue();
+    const seed = msgArgs.getValueOf("seed");
     var rname = st.nextName();
 
     select (dtype) {
       when (DType.Int64) {
         overMemLimit(8*m*n);
-        var aMin = aMinStr:int;
-        var aMax = aMaxStr:int;
+        var aMin = msgArgs.get("low").getIntValue();
+        var aMax = msgArgs.get("high").getIntValue();
 
         var entry = new shared SymEntry2D(m, n, int);
         var localA: [{0..#m, 0..#n}] int;
@@ -92,8 +83,8 @@ module Arr2DMsg {
       }
       when (DType.Float64) {
         overMemLimit(8*m*n);
-        var aMin = aMinStr:real;
-        var aMax = aMaxStr:real;
+        var aMin = msgArgs.get("low").getRealValue();
+        var aMax = msgArgs.get("high").getRealValue();
 
         var entry = new shared SymEntry2D(m, n, real);
         var localA: [{0..#m, 0..#n}] real;
@@ -121,16 +112,15 @@ module Arr2DMsg {
     return new MsgTuple(repMsg, MsgType.NORMAL);
   }
 
-  proc binopvv2DMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
+  proc binopvv2DMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
     param pn = Reflection.getRoutineName();
     var repMsg: string; // response message
-
-    // split request into fields
-    var (op, aname, bname) = payload.splitMsgToTuple(3);
+    var msgArgs = parseMessageArgs(payload, argSize);
 
     var rname = st.nextName();
-    var left: borrowed GenSymEntry = getGenericTypedArrayEntry(aname, st);
-    var right: borrowed GenSymEntry = getGenericTypedArrayEntry(bname, st);
+    var left: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("array"), st);
+    var right: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("other"), st);
+    const op = msgArgs.getValueOf("op");
 
     use Set;
     var boolOps: set(string);
@@ -235,15 +225,16 @@ module Arr2DMsg {
     return (tab.getBorrowed(name):borrowed GenSymEntry): SymEntry2D(t);
   }
 
-  proc rowIndex2DMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
+  proc rowIndex2DMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
     param pn = Reflection.getRoutineName();
     var repMsg: string; // response message
     var (name, rowNumStr) = payload.splitMsgToTuple(2); // split request into fields
-    var row = try! rowNumStr:int;
+    var msgArgs = parseMessageArgs(payload, argSize);
+    var row = msgArgs.get("row").getIntValue();
 
     // get next symbol name
     var rname = st.nextName();
-    var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(name, st);
+    var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("obj"), st);
 
     proc getRowHelper(type t) throws {
       var e = toSymEntry2D(gEnt, t);
@@ -270,13 +261,13 @@ module Arr2DMsg {
     }
   }
 
-  proc reshape1DMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
+  proc reshape1DMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
     param pn = Reflection.getRoutineName();
     var repMsg: string; // response message
-    var (name) = payload.splitMsgToTuple(1); // split request into fields
+    var msgArgs = parseMessageArgs(payload, argSize);
     
     var rname = st.nextName();
-    var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(name, st);
+    var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("obj"), st);
     
     if gEnt.ndim == 1 {
       var inputArr = toSymEntry(gEnt, int);
@@ -292,16 +283,16 @@ module Arr2DMsg {
     return new MsgTuple(repMsg, MsgType.NORMAL);
   }
 
-  proc reshape2DMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
+  proc reshape2DMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
     param pn = Reflection.getRoutineName();
     var repMsg: string; // response message
-    var (name, mStr, nStr) = payload.splitMsgToTuple(3); // split request into fields
+    var msgArgs = parseMessageArgs(payload, argSize);
 
-    var m = mStr:int;
-    var n = nStr:int;
+    var m = msgArgs.get("m").getIntValue();
+    var n = msgArgs.get("n").getIntValue();
     
     var rname = st.nextName();
-    var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(name, st);
+    var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("obj"), st);
     if gEnt.ndim == 1 {
       var inputArr = toSymEntry(gEnt, int);
 
