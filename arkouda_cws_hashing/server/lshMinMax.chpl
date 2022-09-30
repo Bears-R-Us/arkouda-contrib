@@ -43,8 +43,6 @@ module lshMinMax
   proc getMinHashes(offsets: [?oD] int(64), setElts: [?sD] int(64), 
                     weights: [sD] real(64), numHashes: int(64)) throws {
 
-/* TODO: return domain is wrong! Must be expanded by the number of hashes per set element */
-
       var outD: domain(1) = {oD.first..numHashes*oD.last};
 
 

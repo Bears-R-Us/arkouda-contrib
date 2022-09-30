@@ -32,10 +32,12 @@ module lshMinMaxMsg
       var zBit = try! zbit: bool;
       // const zBit: bool = zbit.toLower() == "true";
       var numHashes = try! hashes: int(64);
-      var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
-      var eltEnt: borrowed GenSymEntry = st.lookup(elts);
-      var weightEnt: borrowed GenSymEntry = st.lookup(weights);
-
+//      var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
+//      var eltEnt: borrowed GenSymEntry = st.lookup(elts);
+//      var weightEnt: borrowed GenSymEntry = st.lookup(weights);
+      var offsetEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(offsets, st);
+      var eltEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(elts, st);
+      var weightEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(weights, st);
       var repMsg:string;
 
 
@@ -66,16 +68,13 @@ module lshMinMaxMsg
           }
           otherwise {
 
-              var errorMsg = notImplementedError("cwsMinMaxZbit", offsetEnt.dtype);
+              var errorMsg = notImplementedError("lshMinMax", offsetEnt.dtype);
               cwsLogger.error(getModuleName(),getRoutineName(),getLineNumber(),errorMsg);
               return new MsgTuple(errorMsg, MsgType.ERROR);
           }
       }
   }
 
-
-  proc registerMe() {
-      use CommandMap;
-      registerFunction("lshMinMax", lshMinMaxMsg);
-  }
+  use CommandMap;
+  registerFunction("lshMinMax", lshMinMaxMsg, getModuleName());
 }
