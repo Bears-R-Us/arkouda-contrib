@@ -29,8 +29,7 @@ module lshMinMaxMsg
 
       var (offsets, elts, weights, zbit, hashes) = payload.splitMsgToTuple(5);
 
-      var zBit = try! zbit: bool;
-      // const zBit: bool = zbit.toLower() == "true";
+      const zBit: bool = zbit.toLower() == "true";
       var numHashes = try! hashes: int(64);
 //      var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
 //      var eltEnt: borrowed GenSymEntry = st.lookup(elts);
@@ -43,13 +42,13 @@ module lshMinMaxMsg
 
       select(offsetEnt.dtype, eltEnt.dtype, weightEnt.dtype) {
 
-          when(DType.UInt64, DType.UInt64, DType.Float64) {
+          when(DType.Int64, DType.Int64, DType.Float64) {
 
               var setOffsets = toSymEntry(offsetEnt,int(64)); 
               var setElts =  toSymEntry(eltEnt,int(64));
               var eltWeights = toSymEntry(weightEnt,real(64));
 
-              var (preimages, hashes) = getMinHashes(setOffsets, setElts, eltWeights, numHashes);
+              var (preimages, hashes) = getMinHashes(setOffsets.a, setElts.a, eltWeights.a, numHashes);
 
               var pmgName = st.nextName();
               var pmgEntry = new shared SymEntry(preimages);

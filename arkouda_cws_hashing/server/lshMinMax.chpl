@@ -27,11 +27,11 @@ module lshMinMax
   // LSH survivor output is likely to be sparse
 
 
-  proc cantorPairing(setEltIdx: int(64), hashIdx: int(64)): uint(64) {
+  proc cantorPairing(setEltIdx: int(64), hashIdx: int(64)): real(64) {
 
       var sum: int(64) = setEltIdx + hashIdx;
 
-      var result: uint(64) = (0.5 * sum * (sum + 1)) + hashIdx;
+      var result: real(64) = (0.5 * sum * (sum + 1)) + hashIdx;
 
       return result;
   }
@@ -40,7 +40,8 @@ module lshMinMax
   /* Returns a tuple consisting of aligned arrays of length numHashes*numSets containing 
      sampled set elements and hashes */
 
-  proc getMinHashes(offsets: [?oD] int(64), setElts: [?sD] int(64), 
+
+  proc getMinHashes(offsets: [?oD] int(64), setElts: [?sD] int(64),
                     weights: [sD] real(64), numHashes: int(64)) throws {
 
       var outD: domain(1) = {oD.first..numHashes*oD.last};
@@ -54,7 +55,7 @@ module lshMinMax
 
       /* CSR-style loop over a segmented array. Outer loop is data parallel. */
 
-      forall offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
+      for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
 
           /* Loop over hashes. Should be serial as parallel span is minimal */
 
@@ -80,7 +81,7 @@ module lshMinMax
                  benefit from parallelism for skewed distributions, e.g. such as
                  adjacency lists of "power-law" graphs */
 
-              forall z in setElts[offsetIdx..offsetIdx+1] {
+              for z in setElts[offsetIdx..offsetIdx+1] {
 
                   /* Create a unique, but globally consistent, seed for the
                      RNG by concatenating the set and the hash indices */
