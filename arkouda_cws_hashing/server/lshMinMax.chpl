@@ -44,7 +44,7 @@ module lshMinMax
   proc getMinHashes(offsets: [?oD] int(64), setElts: [?sD] int(64),
                     weights: [sD] real(64), numHashes: int(64)) throws {
 
-      var outD: domain(1) = {oD.first..numHashes*oD.last};
+      var outD: domain(1) = {oD.first..numHashes*oD.last-1};
 
 
 /* TODO: define segments of these locally within the innermost loop, then assemble them into
@@ -100,13 +100,16 @@ module lshMinMax
 
 /* TODO: replace accesses to preimages and minHashes with local segments that will be 
          read into the global output vectors (preimages and minHashes) later */
- 
+/* 
                   if a_z < min_az then {
                       min_az = a_z;
                       min_tz = t_z;
                       preimages[outIdx] = z;
                       minHashes[outIdx] = t_z;
                   }
+*/
+		  preimages[outIdx] = z;
+		  minHashes[outIdx] = u_z;
 
               } // end loop over current set 
 
