@@ -11,6 +11,7 @@ module lshMinMax
   use ServerErrors;
   use Logging;
 
+
   require '-lgsl','-lgslcblas';
 
   extern {
@@ -57,6 +58,9 @@ module lshMinMax
 
       for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
 
+             var setStart: int(64) = offsets[offsetIdx];
+             var setFinal: int(64) = offsets[offsetIdx+1];
+
           /* Loop over hashes. Should be serial as parallel span is minimal */
 
           for hashIdx in 0..numHashes-1 {
@@ -76,12 +80,14 @@ module lshMinMax
 
               var r = gsl_rng_alloc (gsl_rng_mt19937);
 
+	      var segDom: domain(1) = {setStart..setFinal-1};
+
 
               /* Loop over set elements. Should be serial in most cases, but might
                  benefit from parallelism for skewed distributions, e.g. such as
                  adjacency lists of "power-law" graphs */
 
-              for z in setElts[offsetIdx..offsetIdx+1] {
+	      for (z,w) in zip(setElts[segDom], weights[segDom]) {
 
                   /* Create a unique, but globally consistent, seed for the
                      RNG by concatenating the set and the hash indices */
@@ -94,22 +100,19 @@ module lshMinMax
                   g_1 = gsl_ran_gamma(r, 2.0, 1.0);
                   g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-                  t_z = floor((log(weights[z]) / g_1) + u_z);
+                  t_z = floor((log(w) / g_1) + u_z);
                   y_z = exp(g_1 * (t_z - u_z));
                   a_z = (g_2 / (y_z * exp(g_1)));
 
 /* TODO: replace accesses to preimages and minHashes with local segments that will be 
          read into the global output vectors (preimages and minHashes) later */
-/* 
+
                   if a_z < min_az then {
                       min_az = a_z;
                       min_tz = t_z;
                       preimages[outIdx] = z;
                       minHashes[outIdx] = t_z;
                   }
-*/
-		  preimages[outIdx] = z;
-		  minHashes[outIdx] = u_z;
 
               } // end loop over current set 
 
