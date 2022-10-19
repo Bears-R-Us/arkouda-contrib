@@ -499,7 +499,8 @@ class ArkoudaMetrics:
 
     def _initializeServerInfo(self) -> None:
         info = json.loads(
-            client.generic_msg(cmd="metrics", args=str(MetricCategory.SERVER_INFO)),
+            client.generic_msg(cmd="metrics",
+                               args={'category':str(MetricCategory.SERVER_INFO)}),
             object_hook=lambda x: Namespace(**x),
         )
 
@@ -560,7 +561,8 @@ class ArkoudaMetrics:
 
     def fetch(self) -> None:
         metrics = json.loads(
-            client.generic_msg(cmd="metrics", args=str(MetricCategory.ALL)),
+            client.generic_msg(cmd="metrics",
+                               args={'category':str(MetricCategory.ALL)}),
             object_hook=self.asMetric,
         )
 
