@@ -20,79 +20,73 @@ module lshMinMax
   }
 
 
-  // TODO: adapt 3D grid from 2.5D communication-avoiding matmul
-  // of Demmel and Solomonik to load-balance pair construction
-  // among LSH survivors analogous to Burkhardt's Toeplitz
-  // load-balancing strategy for all-pairs exact Jaccard similarity?
-  // Note that this was developed for dense matrices, and the
-  // LSH survivor output is likely to be sparse
 
+  proc cantorPairing(setEltIdx: int, hashIdx: int): real {
 
-  proc cantorPairing(setEltIdx: int(64), hashIdx: int(64)): real(64) {
+      var sum = setEltIdx + hashIdx;
 
-      var sum: int(64) = setEltIdx + hashIdx;
-
-      var result: real(64) = (0.5 * sum * (sum + 1)) + hashIdx;
+      var result = (0.5 * sum * (sum + 1)) + hashIdx;
 
       return result;
   }
 
 
-  /* Returns a tuple consisting of aligned arrays of length numHashes*numSets containing 
-     sampled set elements and hashes */
 
-
-  proc getMinHashes(offsets: [?oD] int(64), setElts: [?sD] int(64),
-                    weights: [sD] real(64), numHashes: int(64)) throws {
+  proc getMinHashes(offsets: [?oD] int, setElts: [?sD] int,
+                    weights: [sD] real, numHashes: int) throws {
 
       var outD: domain(1) = {oD.first..numHashes*oD.last-1};
 
+      var preimages: [outD] int;
+      var minHashes: [outD] real;
 
-/* TODO: define segments of these locally within the innermost loop, then assemble them into
-         the global output vectors later to avoid unnecessary communication over the network */
+      var setIds: [offsets.domain] int;
+      var setSizes: [offsets.domain] int;
 
-      var preimages: [outD] int(64);
-      var minHashes: [outD] real(64);
+      const maxIdx = offsets.domain.high;
+
+
+      forall (i, o, s, l) in zip(offsets.domain, offsets, setIds, setSizes) {
+
+	  if i == maxIdx {
+              l = setElts.size - o;
+          } else {
+              l = offsets[i+1] - o;
+          }
+
+          s = i;
+      }
+
 
       /* CSR-style loop over a segmented array. Outer loop is data parallel. */
 
-      for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
+      forall (o, s, l) in zip(offsets, setIds, setSizes) {
 
-             var setStart: int(64) = offsets[offsetIdx];
-             var setFinal: int(64) = offsets[offsetIdx+1];
 
           /* Loop over hashes. Should be serial as parallel span is minimal */
 
           for hashIdx in 0..numHashes-1 {
 
-              var outIdx: int(64) = offsetIdx*numHashes + hashIdx;
+              var outIdx = s*numHashes + hashIdx;
 
-              var u_z: real(64) = 0.0;
-              var g_1: real(64) = 0.0;
-              var g_2: real(64) = 0.0;
+              var u_z, g_1, g_2, t_z, y_z, a_z = 0.0;
 
-              var t_z: real(64) = 0.0;
-              var y_z: real(64) = 0.0;
-              var a_z: real(64) = 0.0;
-
-              var min_az: real(64) = 0xffffffffffffffff: real(64);
-              var min_tz: real(64) = 0xffffffffffffffff: real(64);
+              var min_az: real = 0xffffffffffffffff: real;
+              var min_tz: real = 0xffffffffffffffff: real;
 
               var r = gsl_rng_alloc (gsl_rng_mt19937);
-
-	      var segDom: domain(1) = {setStart..setFinal-1};
 
 
               /* Loop over set elements. Should be serial in most cases, but might
                  benefit from parallelism for skewed distributions, e.g. such as
                  adjacency lists of "power-law" graphs */
 
-	      for (z,w) in zip(setElts[segDom], weights[segDom]) {
+	      for z in o..#l {
 
                   /* Create a unique, but globally consistent, seed for the
                      RNG by concatenating the set and the hash indices */
 
-                  var seedIdx: uint(64) = cantorPairing(z, hashIdx): uint(64);
+                  var seedIdx: uint = cantorPairing(setElts[z], hashIdx): uint;
 
                   gsl_rng_set(r, seedIdx);
 
@@ -100,25 +94,21 @@ module lshMinMax
                   g_1 = gsl_ran_gamma(r, 2.0, 1.0);
                   g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-                  t_z = floor((log(w) / g_1) + u_z);
+                  t_z = floor((log(weights[z]) / g_1) + u_z);
                   y_z = exp(g_1 * (t_z - u_z));
                   a_z = (g_2 / (y_z * exp(g_1)));
 
-/* TODO: replace accesses to preimages and minHashes with local segments that will be 
-         read into the global output vectors (preimages and minHashes) later */
 
-                  if a_z < min_az then {
+                  if a_z < min_az {
                       min_az = a_z;
                       min_tz = t_z;
-                      preimages[outIdx] = z;
+                      preimages[outIdx] = setElts[z];
                       minHashes[outIdx] = t_z;
                   }
 
               } // end loop over current set 
 
           } // end loop over hashes
-
-/* TODO: read local output into global output vectors (primages and minHashes) */
 
       } // end loop over set offsets
 

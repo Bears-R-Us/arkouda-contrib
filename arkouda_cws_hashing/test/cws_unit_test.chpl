@@ -8,56 +8,59 @@ extern {
 }
 
 
-proc cantorPairing(setEltIdx: int(64), hashIdx: int(64)): real(64) {
+proc cantorPairing(setEltIdx: int, hashIdx: int): real {
 
-    var sum: int(64) = setEltIdx + hashIdx;
+    var sum = setEltIdx + hashIdx;
 
-    var result: real(64) = (0.5 * sum * (sum + 1)) + hashIdx;
+    var result = 0.5 * sum * (sum + 1) + hashIdx;
 
     return result;
 }
 
 
-var offsets: [0..10] int(64) = [0, 3, 10, 15, 27, 31, 38, 40, 44, 49, 50];
+var offsets: [0..9] int(64) = [0, 3, 10, 15, 27, 31, 38, 40, 44, 49];
 var setElts: [0..49] int(64) = [3, 4, 1, 3, 7, 8, 2, 1, 8, 4, 2, 5, 6, 9, 2, 5, 3, 2, 8, 8, 9, 1, 5, 3, 9, 3, 3, 3, 1, 8, 1, 6, 9, 9, 8, 7, 3, 5, 1, 1, 3, 8, 8, 6, 4, 6, 5, 1, 7, 1];
 var weights: [0..49] real(64) = [0.333333, 0.25, 1.0, 0.333333, 0.142857, 0.125, 0.5, 1.0, 0.125, 0.25, 0.5, 0.2, 0.166667, 0.111111, 0.5, 0.2, 0.333333, 0.5, 0.125, 0.125, 0.111111, 1.0, 0.2, 0.333333, 0.111111, 0.333333, 0.333333, 0.333333, 1.0, 0.125, 1.0, 0.166667, 0.111111, 0.111111, 0.125, 0.142857, 0.333333, 0.2, 1.0, 1.0, 0.333333, 0.125, 0.125, 0.166667, 0.25, 0.166667, 0.2, 1.0, 0.142857, 1.0];
 
 
-var numHashes: int(64) = 3; 
+var numHashes: int = 3; 
 
-var preimages: [0..29] int(64);
-var minHashes: [0..29] real(64);
+var preimages: [0..29] int;
+var minHashes: [0..29] real;
+
+var setIds: [offsets.domain] int;
+var setSizes: [offsets.domain] int;
+
+const maxIdx = offsets.domain.high;
+
+forall (i, o, s, l) in zip(offsets.domain, offsets, setIds, setSizes) {
+
+  if i == maxIdx {
+      l = setElts.size - o;
+  } else {
+      l = offsets[i+1] - o;  
+  }
+
+  s = i;
+}
 
 
-for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
-
-    var setStart: int(64) = offsets[offsetIdx];
-    var setFinal: int(64) = offsets[offsetIdx+1];
+forall (o, s, l) in zip(offsets, setIds, setSizes) {
 
     for hashIdx in 0..numHashes-1 {
 
-        var outIdx: int(64) = offsetIdx*numHashes + hashIdx;
+        var outIdx = s*numHashes + hashIdx;
 
-        var u_z: real(64) = 0.0;
-        var g_1: real(64) = 0.0;
-        var g_2: real(64) = 0.0;
+        var u_z, g_1, g_2, t_z, y_z, a_z = 0.0;
 
-        var t_z: real(64) = 0.0;
-        var y_z: real(64) = 0.0;
-        var a_z: real(64) = 0.0;
-
-        var min_az: real(64) = 0xffffffffffffffff: real(64);
-        var min_tz: real(64) = 0xffffffffffffffff: real(64);
+        var min_az: real = 0xffffffffffffffff: real;
+        var min_tz: real = 0xffffffffffffffff: real;
 
         var r = gsl_rng_alloc (gsl_rng_mt19937);
 
-        var segDom: domain(1) = {setStart..setFinal-1};
+	for z in o..#l {
 
-	for (z,w) in zip(setElts[segDom], weights[segDom]) {
-
-            //writeln("Hash: ", hashIdx, ", Set: ", offsetIdx, ", Element: ", z, ", Weight: ", w);
-
-            var seedIdx: uint(64) = cantorPairing(z, hashIdx): uint(64);
+            var seedIdx: uint = cantorPairing(setElts[z], hashIdx): uint;
 
             gsl_rng_set(r, seedIdx);
 
@@ -65,21 +68,25 @@ for offsetIdx in {offsets.domain.first..offsets.domain.last-1} {
             g_1 = gsl_ran_gamma(r, 2.0, 1.0);
             g_2  = gsl_ran_gamma(r, 2.0, 1.0);
 
-            t_z = floor((log(w) / g_1) + u_z);
+            t_z = floor((log(weights[z]) / g_1) + u_z);
             y_z = exp(g_1 * (t_z - u_z));
             a_z = (g_2 / (y_z * exp(g_1)));
 
             if a_z < min_az then {
                 min_az = a_z;
                 min_tz = t_z;
-                preimages[outIdx] = z;
+                preimages[outIdx] = setElts[z];
                 minHashes[outIdx] = t_z;
             }
 
         } // end loop over current set elements
 
-        writeln("Index: ", outIdx, ", Set: ", offsetIdx, ", Hash: ", hashIdx, ", Preimage: ", preimages[outIdx], ", Minhash: ", minHashes[outIdx]);
+//        writeln("Index: ", outIdx, ", Set: ", s, ", Hash: ", hashIdx, ", Preimage: ", preimages[outIdx], ", Minhash: ", minHashes[outIdx]);
 
     } // end loop over hashes
 
 } // end loop over current set
+
+for i in preimages.domain.first..preimages.domain.last {
+  writeln("Index: ", i, ", Preimage: ", preimages[i], ", MinHash: ", minHashes[i]);
+}

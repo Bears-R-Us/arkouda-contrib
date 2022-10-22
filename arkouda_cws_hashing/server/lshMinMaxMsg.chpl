@@ -23,20 +23,30 @@ module lshMinMaxMsg
      runtime of the hashing setp from expected constant time to constant time. */
 
 
-  proc lshMinMaxMsg(cmd: string, payload: string, st: borrowed SymTab): MsgTuple throws {
+  proc lshMinMaxMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
 
       param pn = Reflection.getRoutineName();
 
-      var (offsets, elts, weights, zbit, hashes) = payload.splitMsgToTuple(5);
+      var msgArgs = parseMessageArgs(payload, argSize);
 
-      const zBit: bool = zbit.toLower() == "true";
-      var numHashes = try! hashes: int(64);
-//      var offsetEnt: borrowed GenSymEntry = st.lookup(offsets);
-//      var eltEnt: borrowed GenSymEntry = st.lookup(elts);
-//      var weightEnt: borrowed GenSymEntry = st.lookup(weights);
+      const offsets = msgArgs.getValueOf("offsets");
+      const elts = msgArgs.getValueOf("elts");
+      const weights = msgArgs.getValueOf("weights");
+      const zBit = msgArgs.get("zbit").getBoolValue();
+      var numHashes = msgArgs.get("hashes").getIntValue();
+
       var offsetEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(offsets, st);
       var eltEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(elts, st);
       var weightEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(weights, st);
+
+
+//      var (offsets, elts, weights, zbit, hashes) = payload.splitMsgToTuple(5);
+//      const zBit: bool = zbit.toLower() == "true";
+//      var numHashes = try! hashes: int;
+//      var offsetEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(offsets, st);
+//      var eltEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(elts, st);
+//      var weightEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(weights, st);
+
       var repMsg:string;
 
 
@@ -44,9 +54,9 @@ module lshMinMaxMsg
 
           when(DType.Int64, DType.Int64, DType.Float64) {
 
-              var setOffsets = toSymEntry(offsetEnt,int(64)); 
-              var setElts =  toSymEntry(eltEnt,int(64));
-              var eltWeights = toSymEntry(weightEnt,real(64));
+              var setOffsets = toSymEntry(offsetEnt,int); 
+              var setElts =  toSymEntry(eltEnt,int);
+              var eltWeights = toSymEntry(weightEnt,real);
 
               var (preimages, hashes) = getMinHashes(setOffsets.a, setElts.a, eltWeights.a, numHashes);
 

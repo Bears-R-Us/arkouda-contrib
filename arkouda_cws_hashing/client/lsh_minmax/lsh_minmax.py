@@ -8,7 +8,12 @@ import math
 
 @typechecked
 def lshMinMax(offsets: pdarray, elts: pdarray, weights: pdarray, zbit: bool, hashes: int(64)) -> Union[Strings, Tuple]:
-    repMsg = generic_msg(cmd='lshMinMax', args=f"{offsets.name} {elts.name} {weights.name} {zbit} {hashes}")
+    repMsg = generic_msg(cmd='lshMinMax',
+                         args={"offsets": offsets,
+                               "elts": elts,
+                               "weights": weights,
+                               "zbit": zbit,
+                               "hashes": hashes})
     if zbit:
         arrays = repMsg.split("+", maxsplit=1)
         return create_pdarray(arrays[0]), create_pdarray(arrays[1])
