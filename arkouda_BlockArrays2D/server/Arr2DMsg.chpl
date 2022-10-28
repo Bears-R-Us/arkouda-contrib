@@ -310,10 +310,10 @@ module Arr2DMsg {
   }
 
   use CommandMap;
-  registerFunction("array2d", array2DMsg);
-  registerFunction("randint2d", randint2DMsg);
-  registerFunction("binopvv2d", binopvv2DMsg);
-  registerFunction("[int2d]", rowIndex2DMsg);
-  registerFunction("reshape1D", reshape1DMsg);
-  registerFunction("reshape2D", reshape2DMsg);
+  registerFunction("array2d", array2DMsg, getModuleName());
+  registerFunction("randint2d", randint2DMsg, getModuleName());
+  registerFunction("binopvv2d", binopvv2DMsg, getModuleName());
+  registerFunction("[int2d]", rowIndex2DMsg, getModuleName());
+  registerFunction("reshape1D", reshape1DMsg, getModuleName());
+  registerFunction("reshape2D", reshape2DMsg, getModuleName());
 }
