@@ -39,14 +39,6 @@ module lshMinMaxMsg
       var eltEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(elts, st);
       var weightEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(weights, st);
 
-
-//      var (offsets, elts, weights, zbit, hashes) = payload.splitMsgToTuple(5);
-//      const zBit: bool = zbit.toLower() == "true";
-//      var numHashes = try! hashes: int;
-//      var offsetEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(offsets, st);
-//      var eltEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(elts, st);
-//      var weightEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(weights, st);
-
       var repMsg:string;
 
 
@@ -65,7 +57,7 @@ module lshMinMaxMsg
               st.addEntry(pmgName, pmgEntry);
               repMsg =  "created " + st.attrib(pmgName);
 
-              if(zBit) {
+              if(zBit == false) {
                   var hashName = st.nextName();
                   var hashEntry = new shared SymEntry(hashes);
                   st.addEntry(hashName, hashEntry);

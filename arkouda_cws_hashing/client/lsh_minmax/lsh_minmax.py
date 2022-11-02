@@ -14,7 +14,7 @@ def lshMinMax(offsets: pdarray, elts: pdarray, weights: pdarray, zbit: bool, has
                                "weights": weights,
                                "zbit": zbit,
                                "hashes": hashes})
-    if zbit:
+    if zbit == False:
         arrays = repMsg.split("+", maxsplit=1)
         return create_pdarray(arrays[0]), create_pdarray(arrays[1])
     else:
