@@ -1,789 +1,417 @@
-#import pdb
-from . import gen_ranges, expand
-
+from argparse import ArgumentError, ArgumentTypeError
 import arkouda as ak
-import scipy as sp
 
-# I am pretty sure it is obvious that my exception-catching is 
-# the work of an ameteur - I welcome any change that would clean
-# this up.
-# (The same could probably be said of my organization, here.
-# I'm don't think I've been incredibly consistent with how I
-# split things up, and for this I apologize, dear reader.)
+class sparse_matrix:
+    """ The parent class for COO, CSR, and CSC sparse matrix formats. 
+    This class should not be used on its own in lieu of one of those three. """
 
-class _sparse_matrix(object):
-    ''' 
-    Base sparse matrix class - users should instantiate
-    sparse matrices using any of the following:
-    - ak_csr: Sparse matrix in Compressed Sparse Row format
-    - ak_csc: Sparse matrix in Compressed Sparse Column format
-    - ak_coo: Sparse matrix in COOrdinate Ordered format
+    _binop_list = ["+",
+                   "-",
+                   "*"]
 
-    for further details on each format, examine the respective subclass
+    def __repr__(self):
+        return f"V: {self.values}, C: {self.columns}, R: {self.rows}"
 
-    contains common functionality, attributes for
-    specific sparse matrix subclasses.
-    '''
-    def __init__(self, row_inds, col_inds, values, shape=None):
-        ''' 
-        Should only ever be called internally.
-        Handles the common portion of CSR, CSC matrix initialization.
-        '''
+    def _binop(self, other, binop):
+        # Supported types for arithmetic operations
+        is_pdarray = issubclass(type(other), ak.pdarray)
+        is_sparse_matrix = issubclass(type(other), sparse_matrix)
+        is_int = issubclass(type(other), int)
+        is_float = issubclass(type(other), float)
 
-        # If no shape is provided, assume shape based on the largest
-        # indices provided by the user
-        if shape != None:
-            try:
-                assert((row_inds.max() < shape[0]) 
-                        and (col_inds.max() < shape[1]))
-            except AssertionError:
-                error_msg = "index out of bounds of provided shape: "
-                error_msg1 = f"row: {row_inds.max()} {shape[0]} "
-                error_msg2 = f"col: {col_inds.max()} {shape[1]}"
-                raise AttributeError(error_msg+error_msg1+error_msg2)
-
-            self.shapetype = 'defined'
-            self.shape = shape
+        if not is_pdarray and not is_int and not is_float and not is_sparse_matrix:
+            return NotImplemented
+        elif binop not in self._binop_list:
+            return ValueError(f"Operator {binop} not supported.")
         else:
-            self.shapetype = 'implicit'
-            dim_row = self.gb_rep.unique_keys[0].max() + 1 
-            dim_col = self.gb_rep.unique_keys[1].max() + 1
-            self.shape = (dim_row, dim_col)
-
-        # Core attributes for CSR, CSC formats:
-        # data = nonzero values of the matrix
-        # indices = col/row index of each nonzero value for
-        #           CSR, CSC respectively
-        # ind_ptr = 'pointers' indicating the beginning and end
-        #           of each row, col for CSR, CSC, respectively
-        self.data = self.gb_rep.sum(values)[1]
-        self.indices = self.gb_rep.unique_keys[1]
-        self.ind_ptr = self._get_ptrs()
-
-        self.nnz = self.data.size
-
-        return
-
-    @classmethod
-    def frommatrix(self, matrix, values):
-        ''' For creating a matrix based off of another matrix, but with
-            differing values. (i.e. if you wanted to scale the matrix)
-        '''
-
-        try:
-            assert(isinstance(matrix, _sparse_matrix))
-        except AssertionError:
-            error_str = "Ensure argument 'matrix' is a sparse matrix object"
-            raise TypeError(error_str)
-        try:
-            assert(len(values) == matrix.nnz)
-        except AssertionError:
-            error_str = f"size mismatch b/n values array, matrix nnz: "
-            error_str1 = f"{len(values)} {matrix.nnz}"
-            raise ValueError(error_str + error_str1)
+            if binop == "+":
+                if is_int:
+                    return self.plus_scalar(other)
+                elif is_float:
+                    return self.plus_scalar(other)
+                elif is_pdarray:
+                    return self.plus_vector(other)
+                elif is_sparse_matrix:
+                    return "Base sparse_matrix class provided. Please use a specific format (COO, CSC, CSR)"
+            elif binop == "-":
+                if is_int:
+                    return self.sub_scalar(other)
+                elif is_float:
+                    return self.sub_scalar(other)
+                elif is_pdarray:
+                    return self.sub_vector(other)
+                elif is_sparse_matrix:
+                    return "Base sparse_matrix class provided. Please use a specific format (COO, CSC, CSR)"
+            elif binop == "*":
+                if is_int:
+                    return self.mul_scalar(other)
+                elif is_float:
+                    return self.mul_scalar(other)
+                elif is_pdarray:
+                    return self.mul_vector(other)
+                elif is_sparse_matrix:
+                    return "Base sparse_matrix class provided. Please use a specific format (COO, CSC, CSR)"
 
 
-        self.gb_rep = matrix.gb_rep
+    def _binop_r(self, other, binop):
+        # Supported types for arithmetic operations
+        is_pdarray = issubclass(type(other), ak.pdarray)
+        is_sparse_matrix = issubclass(type(other), sparse_matrix)
+        is_int = issubclass(type(other), int)
+        is_float = issubclass(type(other), float)
 
-        self.primary_gb = matrix.primary_gb
-        self.off_gb = matrix.off_gb
+        if not is_pdarray and not is_int and not is_float and not is_sparse_matrix:
+            return NotImplemented
+        elif binop not in self._binop_list:
+            return ValueError(f"Operator {binop} not supported.")
+        else:
+            if binop == "+":
+                if is_int:
+                    return self.plus_scalar(other)
+                elif is_float:
+                    return self.plus_scalar(other)
+                elif is_pdarray:
+                    return self.plus_vector(other)
+                elif is_sparse_matrix:
+                    return "Base sparse_matrix class provided. Please use a specific format (COO, CSC, CSR)"
+            elif binop == "*":
+                if is_int:
+                    return self.mul_scalar(other)
+                elif is_float:
+                    return self.mul_scalar(other)
+                elif is_pdarray:
+                    return self.mul_vector(other)
+                elif is_sparse_matrix:
+                    return "Base sparse_matrix class provided. Please use a specific format (COO, CSC, CSR)"
 
-        self.shape = matrix.shape
-        self.shapetype = matrix.shapetype
-
-        self.data = values
-        return self
-
+    # Arithmetic operations (specific functionality added in subclasses) ---------------------------
     def __add__(self, other):
-        ''' 
-        Converts matrices to COO format for a simpler addition.
-        Returns a CSR matrix.
-        '''
-        try:
-            assert(isinstance(other, _sparse_matrix))
-        except AssertionError:
-            error_str = "Operand is not a sparse matrix object"
-            raise TypeError(error_str)
-        try:
-            assert(self.shape == other.shape)
-        except AssertionError:
-            error_str = f"Matrix shape mismatch: {self.shape} {other.shape}"
-            raise ValueError(error_str)
+        return self._binop(other, "+")
 
-
-        return self.to_coo() + other.to_coo()
+    def __radd__(self, other):
+        return self._binop_r(other, "+")
 
     def __sub__(self, other):
+        return self._binop(other, "-")
 
-        # Saves memory by avoiding a copy, but editing the 
-        # values array directly feels janky/is dangerous
-        # the try/except should mitigate that danger, hopefully.
-
-        other.data = other.data * -1
-        try:
-            result = self + other
-        except Exception as e:
-            # catch any exception here that would break
-            # the code and cause values to remain inverted,
-            # fix values before allowing code to break.
-            other.data = other.data * -1
-            raise e
-
-        other.data = other.data * -1
-
-        return result
+    def __rsub__(self, other):
+        return self._binop_r(other, "-")
 
     def __mul__(self, other):
-        ''' 
-        switch function pointing to different multiplication options
-        '''
-        if type(other) == ak.pdarray:
-            # vector multiplication
-            return self.to_csr()._dense_vector_mul(other)
-        elif isinstance(other, _sparse_matrix):
-            # sparse matrix multiplication
-            return self.to_csc()._spm_mul(other.to_csr())
-        else:
-            # scalar multiplication
-            # NOTE: if you don't *need* to create a new matrix,
-            # it'd be more memory friendly to just scale it yourself:
-            # e.g. example_matrix.data = example_matrix.data * 3
-            return self._scalar_mul(other)
-        return
+        return self._binop(other, "*")
 
     def __rmul__(self, other):
-        ''' 
-        Should only be relevant for scalar multiplication and vector
-        multiplication.
-        Assuming arkouda pdarrays are returning NotImplemented for unknown
-        operations again, then this would take care of a vector-matrix
-        multiplication (rather than a matrix-vector multiplication).
-        '''
-        if type(other) == ak.pdarray():
-            # Would be a relatively simple implementation -
-            # as it stands though, not set up.
-            return NotImplemented
-            #return self.to_csc()._dense_vector_rmul(other)
-        else:
-            # See above note on scalar multiplication
-            return self._scalar_mul(other)
+        return self._binop_r(other, "*")
+
+    def plus_scalar(self, scalar):
         return
 
-    def __eq__(self, other):
-        ''' 
-        Compares self against other by checking values, indices.
-        Does not work across formats, e.g. CSC to CSR
-        '''
-
-        if type(self) == type(other):
-            if self.shape != other.shape:
-                error_str = "shape mismatch between matrices:"
-                error_str1 = f" {self.shape}, {other.shape}"
-                raise AttributeError(error_str+error_str1)
-
-            if isinstance(self, ak_coo):
-                # Truly comparing COO matrices would require
-                # a couple of things: 
-                # 1) squishing the values to emulate csr/csc
-                #    matrices, s.t. there's common truth
-                # 2) sorting the arrays s.t. they can be compared
-                # This implementation is kinda lazy and likely slower
-                # than it could be, but it should work.
-                return self.to_csr() == other.to_csr()
-
-            elif isinstance(self, _sparse_matrix):
-                uks_0 = self.gb_rep.unique_keys[0]
-                uks_1 = self.gb_rep.unique_keys[1]
-                uko_0 = other.gb_rep.unique_keys[0]
-                uko_1 = other.gb_rep.unique_keys[1]
-
-                return ((uks_0 == uko_0).all() 
-                        and (uks_1 == uko_1).all() 
-                        and (self.data == other.data).all())
-        else:
-            error_str1 = f'object {type(self)} is not of '
-            error_str2 = f'same type as object {type(other)}.'
-            raise TypeError(error_str1 + error_str2)
-
+    def sub_scalar(self, scalar):
         return
 
-    def _scalar_mul(self, other):
-        ''' 
-        Assumes 'other' is a scalar object - allows arkouda to deny
-        invalid operations.
-        '''
-        if isinstance(self, ak_csr):
-            return ak_csr.frommatrix(self, values=(self.data*other))
+    def mul_scalar(self, scalar):
+        return
 
-        elif isinstance(self, ak_csc):
-            return ak_csc.frommatrix(self, values=(self.data*other))
+    def plus_vector(self, vector):
+        return
 
-        elif isinstance(self, ak_coo):
-            return ak_coo.frommatrix(self, values=(self.data*other))
+    def sub_vector(self, vector):
+        return
 
-    def to_scipy_sparse(self, values, row, col, shape, sparse_format='csr'):
-        ''' 
-        Returns scipy sparse matrix representation of the sparse matrix object.
-        Supports Compressed Sparse Row (CSR), compressed Sparse Column (CSC) and
-        COOrdinate list (COO) formats.
-        TODO: Add size checks.
-        '''
-        # Cutoff for matrices that are too large?
-        # Need a good idea of where too large is, first
+    def mul_vector(self, vector):
+        return
 
-        if sparse_format == 'csr':
-            return sp.sparse.csr_matrix(
-                    (values.to_ndarray(),(row.to_ndarray(), col.to_ndarray())), 
-                    shape=shape
-                    )
-        elif sparse_format == 'csc':
-            return sp.sparse.csc_matrix(
-                    (values.to_ndarray(),(row.to_ndarray(), col.to_ndarray())), 
-                    shape=shape
-                    )
-        elif sparse_format == 'coo':
-            return sp.sparse.coo_matrix(
-                    (values.to_ndarray(),(row.to_ndarray(), col.to_ndarray())), 
-                    shape=shape
-                    )
-        else:
-            error_msg = (f'{sparse_format} is not a valid sparse matrix format.')
-            raise RuntimeError(error_msg)
 
-    def mat_mul(self, other, verbose=True):
-        ''' 
-        A function that can run matrix multiplication in verbose mode.
-        At present, this only serves to print to screen the number of
-        multiplication operations in a given matrix multiply, but can be
-        expanded to provide other information, such as attributes of resulting
-        matrix, etc. if desired.
-        '''
-        if isinstance(other, _sparse_matrix):
-            return self.to_csc()._spm_mul(other.to_csr(), verbose)
-        else:
-            raise TypeError(f'operand is not a sparse matrix: {other}')
+class coo(sparse_matrix):
+    """ Coordinate Format (COO) """
 
-    def _get_ptrs(self):
-        ''' 
-        creates the row/col 'pointers' for csr, csc
-        '''
-        segs_and_nnz = ak.concatenate([self.primary_gb.segments, ak.array([len(self.data)])])
+    def __init__(self, values=None, columns=None, rows=None, shape=None, dense_matrix=None):
+        self.values = None
+        self.columns = None
+        self.rows = None
+        self.shape = None
         
-        diffs = segs_and_nnz[1:] - segs_and_nnz[:-1]
-        
-        # making zeros arrays 1 larger so the first element can be 0
-        if isinstance(self, ak_csr):
-            ind_ptr = ak.zeros(self.shape[0]+1, ak.int64)
-        if isinstance(self, ak_csc):
-            ind_ptr = ak.zeros(self.shape[1]+1, ak.int64)
-        
-        ind_ptr[self.primary_gb.unique_keys+1] = diffs
-        
-        # Creates row/col-long segments vectors
-        ind_ptr = ak.cumsum(ind_ptr)
-
-        return ind_ptr
-        
-    def jaccard(self):
-        '''
-        Compute the Jaccard index for the rows of a binary matrix
-        '''
-
-        if (self.data == 1).all():
-            M = self.to_csr()
-            row_sums = M.ind_ptr[1:]-M.ind_ptr[:-1]
-
-            if (row_sums == 0).any():
-                raise RuntimeError(f'{self} contains empty rows.')
+        # Build from existing matrix
+        if dense_matrix:
+            v, x, y = [], [], []
+            for row in range(len(dense_matrix)):
+                for col in range(len(dense_matrix[0])):
+                    if dense_matrix[row][col] != 0:
+                        v.append(dense_matrix[row][col])
+                        x.append(col)
+                        y.append(row)
+            self.values = ak.array(v)
+            self.columns = ak.array(x)
+            self.rows = ak.array(y)
+            if shape == None:
+                self.shape = (len(dense_matrix[0]), len(dense_matrix))
             else:
-                M = M.to_coo()
-                tshape = []
-                tshape.append(M.shape[1])
-                tshape.append(M.shape[0])
-                MT = ak_csr(M.col_inds,M.row_inds,M.data,tshape)
-
-                J = (M*MT).to_coo()
-                J.data = J.data / (row_sums[J.row_inds]+row_sums[J.col_inds]-J.data)
-                return J
-
+                self.shape = shape
+        # Build from provided data arrays
+        elif values is not None and columns is not None and rows is not None:
+            self.values = ak.array(values)
+            self.columns = ak.array(columns)
+            self.rows = ak.array(rows)
+            if shape == None:
+                self.shape = (len(columns), len(rows))
+            else:
+                self.shape = shape
         else:
-            raise TypeError(f'{self} is not a binary, sparse matrix.')
+            return None
 
-
-class ak_csr(_sparse_matrix):
-    ''' 
-    Sparse matrix in Compressed Sparse Row format:
-
-    Instantiated with the following arguments:
-
-    row_inds | pdarray 
-        required argument, row indices of the nonzero values 
-        of the matrix.
-    col_inds | pdarray 
-        required argument, col indices of the nonzero values 
-        of the matrix.
-    values | pdarray  
-        required argument, nonzero values of the matrix.
-    shape | 2-tuple  
-        optional argument, tuple of ints representing the 
-        dimensions of the matrix.
-
-    Attributes:
-    -----------
-    shape | 2-tuple 
-        shape/dimensions of the matrix.
-    nnz | int
-        number of stored values, including explicit zeros.
-    data | pdarray
-        CSR format data array of the matrix, stores values
-    indices | pdarray
-        CSR format array of the COLUMN indices of nonzero values
-    ind_ptr | pdarray
-        CSR format array of the ROW pointers for the matrix
-
-    gb_rep | ak.GroupBy
-        Multi-level GroupBy representation of the matrix. 
-        Organized by ROW, then COLUMN. Used internally.
-    primary_gb | ak.GroupBy
-        Single-level GroupBy on ROW indices. Used internally.
-    off_gb | ak.GroupBy
-        Single-level GroupBy on COLUMN indices. Used internally.
-
-    Notes:
-    ------
-    - [Default return format for all matrix operations] -
-
-    Effectively immutable - adding or subtracting specific
-    points from the matrix is impossible, please use COO
-    for those shenanigans. 
-     - Notable exception being that you're encouraged to 
-       scale your matrix's values directly (rather than 
-       creating a new, scaled object with the * operator) 
-       if you anticipate running low on memory.
-
-    Duplicate entries in the matrix are summed together upon
-    instantiation.
-    
-    Houses the _dense_vector_mul function. Recommended format for 
-    a matrix if you plan to be doing a number of multiplications by 
-    a dense vector, as it will not need to convert to another format.
-
-    Recommended format for the right-hand matrix in a matrix
-    multiplication.
-    '''
-
-    def __init__(self, row_inds, col_inds, values, shape=None):
-
-        try:
-            assert(len(row_inds) == len(col_inds) == len(values))
-        except AssertionError:
-            error_msg = "Size mismatch in input arrays: "
-            error_msg1 = f"row_inds: {row_inds}, col_inds: {col_inds}"
-            error_msg2 = f"values: {values}"
-            raise AttributeError(error_msg+error_msg1+error_msg2)
-
-        # GroupBy object representing the CSR format sparse matrix
-        self.gb_rep = ak.GroupBy([row_inds, col_inds])
-        # GroupBy on primary indices (row)
-        self.primary_gb = ak.GroupBy(self.gb_rep.unique_keys[0])
-        self.off_gb = ak.GroupBy(self.gb_rep.unique_keys[1])
-
-        _sparse_matrix.__init__(self, row_inds, col_inds, values, shape)
-
-        return
-
-
-    def to_csr(self):
-        ''' 
-        Returns 'self' to keep it consistent with the other to_*
-        calls that return a matrix object.
-        '''
+    # Format conversion functions ---------------------------------------------------
+    def to_coo(self):
         return self
 
-    def to_csc(self):
-        ''' 
-        converts matrix to CSC format.
-        '''
-        row_inds = self.gb_rep.unique_keys[0]
-        col_inds = self.gb_rep.unique_keys[1]
-        return ak_csc(row_inds=row_inds, col_inds=col_inds,
-                            values=self.data, shape=self.shape)
-
-    def to_coo(self):
-        ''' 
-        converts matrix to COO format.
-        '''
-        row_inds = self.gb_rep.unique_keys[0]
-        col_inds = self.gb_rep.unique_keys[1]
-        return ak_coo(row_inds=row_inds, col_inds=col_inds,
-                            values=self.data, shape=self.shape)
-
-    def _dense_vector_mul(self, other):
-        ''' 
-        other: ak.pdarray
-        other is treated as a dense vector in this implementation.
-        '''
-
-        try: 
-            assert len(other) == self.shape[1]
-        except AssertionError:
-            print(f'size mismatch b/n vector, matrix: {len(other)} {self.shape[1]}')
-            raise
-
-        dot_products = (self.data * other[self.gb_rep.unique_keys[1]])
-        sum_results = self.primary_gb.sum(dot_products)[1]
-        #pdb.set_trace()
-
-        complete_result = ak.zeros(self.shape[0], other.dtype.name)
-        complete_result[self.primary_gb.unique_keys] = sum_results
-
-        return complete_result
-
-    def to_scipy_sparse(self, sparse_format='csr'):
-        ''' 
-        Supported formats: 'csr', 'csc', 'coo'
-
-        child function to normalize values before passing
-        them to _sparse_matrix's to_scipy_sparse for
-        conversion.
-        '''
-        values = self.data
-        row = self.gb_rep.unique_keys[0]
-        col = self.gb_rep.unique_keys[1]
-        shape=self.shape
-
-        return _sparse_matrix.to_scipy_sparse(
-                self,
-                values=values, 
-                row=row, 
-                col=col, 
-                shape=shape, 
-                sparse_format=sparse_format
-                )
-
-class ak_csc(_sparse_matrix):
-    '''
-    Sparse matrix in Compressed Sparse Column format:
-
-    Instantiated with the following arguments:
-
-    row_inds | pdarray 
-        required argument, row indices of the nonzero values 
-        of the matrix.
-    col_inds | pdarray 
-        required argument, col indices of the nonzero values 
-        of the matrix.
-    values | pdarray  
-        required argument, nonzero values of the matrix.
-    shape | 2-tuple  
-        optional argument, tuple of ints representing the 
-        dimensions of the matrix.
-
-    Attributes:
-    -----------
-    shape | 2-tuple 
-        shape/dimensions of the matrix.
-    nnz | int
-        number of stored values, including explicit zeros.
-    data | pdarray
-        CSC format data array of the matrix, stores values
-    indices | pdarray
-        CSC format array of the ROW indices of nonzero values
-    ind_ptr | pdarray
-        CSC format array of the COLUMN pointers for the matrix
-
-    gb_rep | ak.GroupBy
-        Multi-level GroupBy representation of the matrix. 
-        Organized by COLUMN, then ROW. Used internally.
-    primary_gb | ak.GroupBy
-        Single-level GroupBy on COLUMN indices. Used internally.
-    off_gb | ak.GroupBy
-        Single-level GroupBy on ROW indices. Used internally.
-
-    Notes:
-    ------
-
-    Duplicate entries in the matrix are summed together upon
-    instantiation.
-    
-    Effectively immutable - adding or subtracting specific
-    points from the matrix is impossible, please use COO
-    for those shenanigans. 
-     - Notable exception being that you're encouraged to 
-       scale your matrix's values directly (rather than 
-       creating a new, scaled object with the * operator) 
-       if you anticipate running low on memory.
-
-    Houses the _spm_mul function. Recommended format for the
-    left-hand matrix in a matrix multiplication.
-
-    Will house the operational _dense_vector_rmul function
-    when it actually works/becomes relevant, and as such
-    is the recommended format for performing a vector-matrix
-    multiplication (as opposed to a matrix-vector multiplication)
-    '''
-
-    def __init__(self, row_inds, col_inds, values, shape=None):
-
-        try:
-            assert(len(row_inds) == len(col_inds) == len(values))
-        except AssertionError:
-            error_msg = "Size mismatch in input arrays: "
-            error_msg1 = f"row_inds: {row_inds}, col_inds: {col_inds}"
-            error_msg2 = f"values: {values}"
-            raise AttributeError(error_msg+error_msg1+error_msg2)
-
-        # GroupBy object representing the CSC format sparse matrix
-        self.gb_rep = ak.GroupBy([col_inds, row_inds])
-
-        self.primary_gb = ak.GroupBy(self.gb_rep.unique_keys[0])
-        self.off_gb = ak.GroupBy(self.gb_rep.unique_keys[1])
-
-        _sparse_matrix.__init__(self, row_inds, col_inds, values, shape)
-
-        return
-
     def to_csr(self):
-        ''' 
-        converts matrix to CSR format.
-        '''
-        row_inds = self.gb_rep.unique_keys[1]
-        col_inds = self.gb_rep.unique_keys[0]
-        return ak_csr(row_inds=row_inds, col_inds=col_inds,
-                            values=self.data, shape=self.shape)
+        return csr(self.values, self.columns, self.rows, self.shape)
 
     def to_csc(self):
-        '''
-        returns self for consistency w/other to_* functions
-        '''
-        return self
+        return csc(self.values, self.columns, self.rows, self.shape)
 
-    def to_coo(self):
-        ''' 
-        converts matrix to a COO format.
-        '''
-        row_inds = self.gb_rep.unique_keys[1]
-        col_inds = self.gb_rep.unique_keys[0]
-        return ak_coo(row_inds=row_inds, col_inds=col_inds,
-                            values=self.data, shape=self.shape)
-
-    def to_scipy_sparse(self, sparse_format='csr'):
-        ''' 
-         Supported formats: 'csr', 'csc', 'coo'
-
-        child function to normalize values before passing
-        them to _sparse_matrix's to_scipy_sparse for
-        conversion.
-        '''
-
-        values = self.data
-        row = self.gb_rep.unique_keys[1]
-        col = self.gb_rep.unique_keys[0]
-        shape=self.shape
-
-        return _sparse_matrix.to_scipy_sparse(
-                self,
-                values=values, 
-                row=row, 
-                col=col, 
-                shape=shape, 
-                sparse_format=sparse_format
-                )
-
-
-    def _spm_mul(self, other, verbose=False):
-        ''' 
-        sparse matrix-matrix multiplication.
-
-        '''
-
-        # Check to make sure sizes line up before we do anything expensive
-        try:
-            assert(self.shape[1] == other.shape[0])
-        except AssertionError:
-            error_msg = f'array size mismatch: {self.shape[1]} {other.shape[0]}'
-            raise AttributeError(error_msg)
-
-        #pdb.set_trace()
-
-        starts = other.ind_ptr[self.gb_rep.unique_keys[0]]
-        ends = other.ind_ptr[self.gb_rep.unique_keys[0]+1]
-        
-        fullsize = (ends-starts).sum()
-        # prints the number of multiplies, for debugging purposes.
-        if verbose:
-            print(fullsize)
-
-        fullsegs, zfilter, ranges = gen_ranges(starts, ends)
-        fullBdom = other.gb_rep.unique_keys[1][ranges]
-        fullAdom = expand(self.gb_rep.unique_keys[1], fullsegs, fullsize, zfilter)
-
-        fullBval = other.data[ranges]
-        fullAval = expand(self.data, fullsegs, fullsize, zfilter)
-
-        fullprod = fullAval * fullBval
-        proddomGB = ak.GroupBy([fullAdom, fullBdom])
-        result = proddomGB.sum(fullprod)
-        
-        return ak_csr(
-                result[0][0], 
-                result[0][1], 
-                shape=(self.shape[0], other.shape[1]), 
-                values=result[1]
-                )
-        
-
-
-class ak_coo(_sparse_matrix):
-    '''
-    Sparse matrix in COOrdinate Ordered format:
-
-    Instantiated with the following arguments:
-
-    row_inds | pdarray 
-        required argument, row indices of the nonzero values 
-        of the matrix.
-    col_inds | pdarray 
-        required argument, col indices of the nonzero values 
-        of the matrix.
-    values | pdarray  
-        required argument, nonzero values of the matrix.
-    shape | 2-tuple  
-        optional argument, tuple of ints representing the 
-        dimensions of the matrix.
-
-    Attributes:
-    -----------
-    shape | 2-tuple 
-        shape/dimensions of the matrix.
-    nnz | int
-        number of stored values, including explicit zeros.
-    data | pdarray
-        COO format data array of the matrix, stores values
-    row_inds | pdarray
-        COO format array of row indices of nonzero values
-    col_inds | pdarray
-        COO format array of col indices of nonzero values
-
-    Notes:
-    ------
-
-    Duplicate entries are ALLOWED in this format. They will
-    be summed together upon conversion to any other supported
-    format, however.
+    # Arithmetic operation functions ---------------------------------------------------
+    def plus_scalar(self, scalar):
+        self_copy = coo(self.values, self.columns, self.rows, self.shape)
+        self_copy.values = self_copy.values + scalar
+        return self_copy
     
-    Format most suited to adding/subtracting entries to the
-    matrix. No inbuilt-method currently exists (you'd have
-    to edit the row_inds, col_inds, data arrays directly)
-    but could (and should) be added in the future.
+    def sub_scalar(self, scalar):
+        self_copy = coo(self.values, self.columns, self.rows, self.shape)
+        self_copy.values = self.values - scalar
+        return self_copy
 
-    Isn't the optimal format for doing just about any arithmetic
-    operations - I'm far from an expert, but I'd primarily use
-    COO if I were interested in adding and subtracting
-    entries to/from the matrix.
-    '''
+    def mul_scalar(self, scalar):
+        self_copy = coo(self.values, self.columns, self.rows, self.shape)
+        self_copy.values = self.values * scalar
+        return self_copy
 
-    def __init__(self, row_inds, col_inds, values, shape=None):
-        
-        ''' 
-        Doesn't use the _sparse_matrix __init__ function, as
-        it doesn't share the same structure as CSC, CSR.
-        '''
-        try:
-            assert(len(row_inds) == len(col_inds) == len(values))
-        except AssertionError:
-            error_msg = "Size mismatch in input arrays: "
-            error_msg1 = f"row_inds: {row_inds}, col_inds: {col_inds}"
-            error_msg2 = f"values: {values}"
-            raise AttributeError(error_msg+error_msg1+error_msg2)
+    def plus_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        self_copy = coo(self.values, self.columns, self.rows, self.shape)
+        self_copy.values = self.values + vector[self.columns]
+        return self_copy
 
-        self.row_inds = row_inds
-        self.col_inds = col_inds
-        self.data = values
-        self.nnz = len(self.data)
+    def sub_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        self_copy = coo(self.values, self.columns, self.rows, self.shape)
+        self_copy.values = self.values - vector[self.columns]
+        return self_copy
 
-        if shape != None:
-            self.shapetype = 'defined'
-            self.shape = shape
+    def mul_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        self_copy = coo(self.values, self.columns, self.rows, self.shape)
+        self_copy.values = self.values * vector[self.columns]
+        return self_copy
+
+    def dot(self, input):
+        """ Dot product method for CSR class. Must provide additional matrix of any format to multiply in parameters. """
+        if issubclass(type(input), ak.pdarray):
+            temp_csr = self.to_csr()
+            return temp_csr.vector_matrix_dot(input)
+        if issubclass(type(input), ak.pdarray):
+            temp_csr = self.to_csr()
+            return temp_csr.matrix_matrix_dot(input)
         else:
-            self.shapetype = 'implicit'
-            dim_row = row_inds.max() + 1
-            dim_col = col_inds.max() + 1
-            self.shape = (dim_row, dim_col)
+            raise ArgumentTypeError
 
-        return
+    def matrix_matrix_dot(self, matrix):
+        return "Matrix/Matrix dot product not implemented yet"
 
 
-    def __add__(self, other):
-        ''' 
-        Returns a csr matrix for now, can change later.
-        Addition occurs simply by creating a new matrix
-        and relying on the groupby to appropriately sum
-        the values.
 
-        TODO: this doesn't work if we ever wanted the
-        addition to result in a new COO matrix. Gonna
-        need to create something that *does* work.
-        '''
+class csr(sparse_matrix):
+    """ Compressed Sparse Row """
+
+    def __init__(self, values, columns, rows, shape):
+        self.old_columns = columns
+        self.old_rows = rows
+
+        self.gb_row_col = ak.GroupBy([rows, columns])
+        self.gb_row = ak.GroupBy(rows)
+        self.values = values
+        self.columns = columns
+        self.gb_row_val = ak.GroupBy([rows, values])
+        self.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+
+        self.shape = shape
         
-        # Test to confirm self.shape == other.shape
-        try:
-            assert self.shape == other.shape
-        except AssertionError:
-            error_msg = "Matrices must be of same shape:"
-            error_msg1 = f" {self.shape} {other.shape}"
-            raise AttributeError(error_msg+error_msg1)
+        segs = ak.concatenate([self.gb_row_val_uk.segments, ak.array([len(self.values)])])
+        diffs = segs[1:] - segs[:-1]
+        ind_ptr = ak.zeros(shape[1] + 1, ak.int64)
+        ind_ptr[self.gb_row_val_uk.unique_keys + 1] = diffs
+        ind_ptr = ak.cumsum(ind_ptr)
+        for i in range(shape[1] - (len(ind_ptr) - 1)):
+            ind_ptr = ak.concatenate([ind_ptr, ind_ptr[-1:]])
+        self.rows = ind_ptr
 
-        full_rows = ak.concatenate([self.row_inds, other.row_inds])
-        full_cols = ak.concatenate([self.col_inds, other.col_inds])
-        full_values = ak.concatenate([self.data, other.data])
-        return ak_csr(row_inds=full_rows, col_inds=full_cols,
-                values=full_values, shape = self.shape)
-    
-    def to_csr(self):
-        '''
-        Converts matrix to CSR format.
-        NOTE: This will sum together any duplicate entries of
-        the matrix.
-        '''
-        return ak_csr(row_inds=self.row_inds, col_inds=self.col_inds,
-                values=self.data, shape=self.shape)
-
-    def to_csc(self):
-        '''
-        Converts matrix to CSC format.
-        NOTE: This will sum together any duplicate entries of
-        the matrix.
-        '''
-        return ak_csc(row_inds=self.row_inds, col_inds=self.col_inds,
-                values=self.data, shape=self.shape)
-
-
+    # Format conversion functions ---------------------------------------------------
     def to_coo(self):
-        '''
-        Returns self for consistency with other to_* methods.
-        '''
+        return coo(values=self.values, columns=self.gb_row_col.unique_keys[1], rows=self.gb_row_col.unique_keys[0], shape=self.shape)
+
+    def to_csr(self):
         return self
 
-    def to_scipy_sparse(self, sparse_format='csr'):
-        ''' 
-        Supported formats: 'csr', 'csc', 'coo'
+    def to_csc(self):
+        return csc(values=self.values, columns=self.gb_row_col.unique_keys[1], rows=self.gb_row_col.unique_keys[0], shape=self.shape)
 
-        child function to normalize values before passing
-        them to _sparse_matrix's to_scipy_sparse for
-        conversion.
-        '''
+    # Arithmetic operation functions ---------------------------------------------------
+    def plus_scalar(self, scalar):
+        self_copy = csr(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values + scalar
+        self_copy.gb_row_val = ak.GroupBy([self.old_rows, self.values])
+        self_copy.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+        return self_copy
 
-        values = self.data
-        row = self.row_inds
-        col = self.col_inds
-        shape=self.shape
+    def sub_scalar(self, scalar):
+        self_copy = csr(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values - scalar
+        self_copy.gb_row_val = ak.GroupBy([self.old_rows, self.values])
+        self_copy.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+        return self_copy
 
-        return _sparse_matrix.to_scipy_sparse(
-                self,
-                values=values, 
-                row=row, 
-                col=col, 
-                shape=shape, 
-                sparse_format=sparse_format
-                )
+    def mul_scalar(self, scalar):
+        self_copy = csr(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values * scalar
+        self_copy.gb_row_val = ak.GroupBy([self.old_rows, self.values])
+        self_copy.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+        return self_copy
+
+    def plus_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        self_copy = csr(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values + vector[self.columns]
+        self_copy.gb_row_val = ak.GroupBy([self.old_rows, self.values])
+        self_copy.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+        return self_copy
+
+    def sub_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        self_copy = csr(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values - vector[self.columns]
+        self_copy.gb_row_val = ak.GroupBy([self.old_rows, self.values])
+        self_copy.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+        return self_copy
+
+    def mul_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        self_copy = csr(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values * vector[self.columns]
+        self_copy.gb_row_val = ak.GroupBy([self.old_rows, self.values])
+        self_copy.gb_row_val_uk = ak.GroupBy(self.gb_row_val.unique_keys[0])
+        return self_copy
+
+    def dot(self, input):
+        """ Dot product method for CSR class. Must provide additional matrix of any format to multiply in parameters. """
+        if str(type(input)) == "<class 'arkouda.pdarrayclass.pdarray'>":
+            return self.vector_matrix_dot(input)
+        if str(type(input)) == "<class ''>":
+            return self.matrix_matrix_dot(input)
+        else:
+            print(type(input))
+
+    def vector_matrix_dot(self, vector):
+        vec = vector[self.columns]
+        return self.gb_row.aggregate(vec * self.values, "sum")[1]
+
+    def matrix_matrix_dot(self, matrix):
+        return "Matrix/Matrix dot product not implemented yet"
+
+        
+
+class csc(sparse_matrix):
+    """ Compressed Sparse Column """
+
+    def __init__(self, values, columns, rows, shape):
+        self.old_values = values
+        self.old_columns = columns
+        self.old_rows = rows
+
+        self.gb_row_col = ak.GroupBy([rows, columns])
+        self.gb_col_row = ak.GroupBy([columns, rows])
+        self.gb_col_row_uk = ak.GroupBy(self.gb_col_row.unique_keys[0])
+        self.values = values[self.gb_col_row.permutation]
+        self.rows = rows[self.gb_col_row.permutation]
+
+        self.shape = shape
+
+        segs = ak.concatenate([self.gb_col_row_uk.segments, ak.array([len(self.values)])])
+        diffs = segs[1:] - segs[:-1]
+        ind_ptr = ak.zeros(shape[0] + 1, ak.int64)
+        ind_ptr[self.gb_col_row_uk.unique_keys + 1] = diffs
+        ind_ptr = ak.cumsum(ind_ptr)
+        for i in range(shape[0] - (len(ind_ptr) - 1)):
+            ind_ptr = ak.concatenate([ind_ptr, ind_ptr[-1:]])
+        self.columns = ind_ptr
+    
+    # Format conversion functions ---------------------------------------------------
+    def to_coo(self):
+        return coo(values=self.old_values, columns=self.gb_row_col.unique_keys[1], rows=self.gb_row_col.unique_keys[0], shape=self.shape)
+
+    def to_csr(self):
+        return csr(values=self.old_values, columns=self.gb_row_col.unique_keys[1], rows=self.gb_row_col.unique_keys[0], shape=self.shape)
+
+    def to_csc(self):
+        return self
+
+    # Arithmetic operation functions ---------------------------------------------------
+    def plus_scalar(self, scalar):
+        self_copy = csc(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values + scalar
+        self_copy.old_values = self.old_values + scalar
+        return self_copy
+
+    def sub_scalar(self, scalar):
+        self_copy = csc(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values - scalar
+        self_copy.old_values = self.old_values - scalar
+        return self_copy
+
+    def mul_scalar(self, scalar):
+        self_copy = csc(self.values, self.old_columns, self.old_rows, self.shape)
+        self_copy.values = self.values * scalar
+        self_copy.old_values = self.old_values * scalar
+        return self_copy
+
+    def plus_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        temp_convert = self.to_csr()
+        temp_convert.values = temp_convert.values + vector[temp_convert.columns]
+        self_copy = temp_convert.to_csc()
+        return self_copy
+
+    def sub_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        temp_convert = self.to_csr()
+        temp_convert.values = temp_convert.values - vector[temp_convert.columns]
+        self_copy = temp_convert.to_csc()
+        return self_copy
+
+    def mul_vector(self, vector):
+        if len(vector) != self.shape[0]:
+            return "Size of provided vector does not match number of columns of matrix."
+        temp_convert = self.to_csr()
+        temp_convert.values = temp_convert.values * vector[temp_convert.columns]
+        self_copy = temp_convert.to_csc()
+        return self_copy
+
+    def dot(self, input):
+        """ Dot product method for CSR class. Must provide additional matrix of any format to multiply in parameters. """
+        if str(type(input)) == "<class 'arkouda.pdarrayclass.pdarray'>":
+            temp_csr = self.to_csr()
+            return temp_csr.vector_matrix_dot(input)
+        if str(type(input)) == "<class ''>":
+            temp_csr = self.to_csr()
+            return temp_csr.matrix_matrix_dot(input)
+        else:
+            raise ArgumentTypeError
+
+    def matrix_matrix_dot(self, matrix):
+        return "Matrix/Matrix dot product not implemented yet"
