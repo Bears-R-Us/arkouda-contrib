@@ -7,18 +7,15 @@ from typing import cast, Tuple, Union
 import math
 
 @typechecked
-def lshMinMax(offsets: pdarray, elts: pdarray, weights: pdarray, zbit: bool, hashes: int(64)) -> Union[Strings, Tuple]:
-    repMsg = cast(str, 
-		  generic_msg(cmd='lshMinMax',
-                              args={"offsets": offsets,
-                                    "elts": elts,
-                                    "weights": weights,
-                                    "zbit": zbit,
-                                    "hashes": hashes}
-        )
-    )
+def lshMinMax(offsets: pdarray, elts: pdarray, weights: pdarray, zbit: bool, hashes: int(64)) -> Union[pdarray, Tuple]:
+    repMsg = generic_msg(cmd='lshMinMax',
+                         args={"offsets": offsets,
+                               "elts": elts,
+                               "weights": weights,
+                               "zbit": zbit,
+                               "hashes": hashes})
     if zbit == False:
-        arrays = repMsg.split("+", maxsplit=2)
-        return Strings.from_return_msg("+".join(arrays[0:2])), create_pdarray(arrays[2])
+        arrays = repMsg.split("+", maxsplit=1)
+        return create_pdarray(arrays[0]), create_pdarray(arrays[1])
     else:
-        return Strings.from_return_msg(repMsg)
+        return create_pdarray(repMsg)

@@ -55,7 +55,7 @@ module lshMinMaxMsg
 
 	      const pmgName: string = st.nextName();
 	      st.addEntry(pmgName, new shared SymEntry(preimages));
-	      repMsg = "created %s+created bytes.size %t".format(st.attrib(pmgName), preimages.size);
+	      repMsg = "created %s".format(st.attrib(pmgName));
 
 /*	      
               var pmgName = st.nextName();
