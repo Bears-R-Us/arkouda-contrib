@@ -52,16 +52,29 @@ module lshMinMaxMsg
 
               var (preimages, hashes) = getMinHashes(setOffsets.a, setElts.a, eltWeights.a, numHashes);
 
+
+	      const pmgName: string = st.nextName();
+	      st.addEntry(pmgName, new shared SymEntry(preimages));
+	      repMsg = "created %s+created bytes.size %t".format(st.attrib(pmgName), preimages.size);
+
+/*	      
               var pmgName = st.nextName();
               var pmgEntry = new shared SymEntry(preimages);
               st.addEntry(pmgName, pmgEntry);
               repMsg =  "created " + st.attrib(pmgName);
+*/	
+
 
               if(zBit == false) {
+/*
                   var hashName = st.nextName();
                   var hashEntry = new shared SymEntry(hashes);
-                  st.addEntry(hashName, hashEntry);
+		  st.addEntry(hashName, hashEntry);
                   repMsg += "+created " + st.attrib(hashName);
+*/
+		  const hashName: string = st.nextName();
+		  st.addEntry(hashName, new shared SymEntry(hashes));
+                  repMsg += "+created %s".format(st.attrib(hashName));
               }
 
               cwsLogger.error(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
