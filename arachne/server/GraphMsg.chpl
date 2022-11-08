@@ -1,37 +1,17 @@
 module GraphMsg {
+    use IO;
     use Reflection;
-    use ServerErrors;
+    use Set;
+    use Time; 
+    
+    use ArgSortMsg;
+    use AryUtil;
+    use GraphArray;
     use Logging;
     use Message;
-    use SegmentedString;
-    use ServerErrorStrings;
-    use ServerConfig;
     use MultiTypeSymbolTable;
     use MultiTypeSymEntry;
-    use RandArray;
-    use IO;
-
-    use SymArrayDmap;
-    use Random;
-    use RadixSortLSD;
-    use Set;
-    use DistributedBag;
-    use ArgSortMsg;
-    use Time;
-    use CommAggregation;
-    use Sort;
-    use Map;
-    use DistributedDeque;
-    use GraphArray;
-
-    use List; 
-    use LockFreeStack;
-    use Atomics;
-    use IO.FormattedIO; 
-    use AryUtil;
-
-    use ReplicatedDist;
-    use ReplicatedVar;
+    use ServerConfig;
     
     private config const logLevel = LogLevel.DEBUG;
     const smLogger = new Logger(logLevel);
@@ -956,7 +936,6 @@ module GraphMsg {
       var DegreeSortS=msgArgs.getValueOf("DegreeSortFlag");
       var RCMS=msgArgs.getValueOf("RCMFlag");
       var RwriteS=msgArgs.getValueOf("WriteFlag");
-      var AlignedArrayS=msgArgs.getValueOf("AlignedFlag");
 
 
       var Ne:int =(NeS:int);
@@ -969,7 +948,6 @@ module GraphMsg {
       var DegreeSortFlag:bool=false;
       var RemapVertexFlag:bool=false;
       var WriteFlag:bool=false;
-      var AlignedArray:int=(AlignedArrayS:int);
       outMsg="read file ="+FileName;
       smLogger.info(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
       timer.start();
@@ -1092,9 +1070,6 @@ module GraphMsg {
       // currently we ignore the weight.
 
       readLinebyLine(); 
-      if (RemapVertexFlag) {
-          vertex_remap(src,dst,Nv);
-      }
       timer.stop();
       
 

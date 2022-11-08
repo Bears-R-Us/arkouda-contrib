@@ -1,6 +1,7 @@
 module GraphArray {
-    use Logging;
     use Map;
+    
+    use Logging;
     use MultiTypeSymEntry;
     use MultiTypeSymbolTable;
 
