@@ -1,0 +1,41 @@
+FROM chapel/chapel-gasnet-smp:1.27.0
+
+# hack needed for Kubernetes deployment
+RUN export CHPL_GASNET_MORE_CFG_OPTIONS=--enable-force-posix-realtime
+WORKDIR $CHPL_HOME
+RUN touch third-party/gasnet/Makefile
+RUN make -j
+
+# get env variables for arkouda download and install
+ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ENV ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+
+RUN apt-get update && apt install unzip libcurl4-openssl-dev -y
+
+WORKDIR /opt
+
+# Download desired Arkouda distro, move to common /opt/arkouda dir
+RUN chmod 777 /opt && \
+    wget $ARKOUDA_DOWNLOAD_URL && \
+    unzip $ARKOUDA_DISTRO_NAME.zip && \
+    mv /opt/arkouda-$ARKOUDA_BRANCH_NAME /opt/arkouda
+
+WORKDIR /opt/arkouda
+
+RUN make install-deps && make
+
+# Install python client
+RUN pip3 install -e .[dev]
+
+# Install jupyterlab
+RUN pip3 install jupyterlab
+
+# Add startup script and set as entrypoint
+ADD scripts/start-smp-arkouda-full-stack.sh /opt/start-arkouda-full-stack.sh
+ENTRYPOINT sh /opt/start-arkouda-full-stack.sh
+
+EXPOSE 5555
