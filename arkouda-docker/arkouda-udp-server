@@ -1,0 +1,69 @@
+FROM hokiegeek2/chapel-gasnet-udp:1.27.0
+
+# Download Arkouda
+ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ENV ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+
+# Install dependencies
+RUN sudo apt-get update && sudo apt upgrade -y && \
+    sudo apt-get install unzip libcurl4-openssl-dev cmake -y
+
+WORKDIR /opt
+
+# Download desired Arkouda distro, move to commont /opt/arkouda dir
+RUN sudo chmod 777 /opt && \
+    wget $ARKOUDA_DOWNLOAD_URL && \
+    unzip $ARKOUDA_DISTRO_NAME.zip && \
+    mv /opt/arkouda-$ARKOUDA_BRANCH_NAME /opt/arkouda
+
+WORKDIR /opt/arkouda
+
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install -e .[dev]
+
+ENV SSH_SERVERS=0.0.0.0
+ENV GASNET_MASTERIP=0.0.0.0
+
+RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+
+RUN make install-deps && \
+    sudo chown -R ubuntu:ubuntu /opt && \
+    sudo service ssh start && make
+
+EXPOSE 5555
+EXPOSE 5000-65000/udp
+
+ARG ARKOUDA_INTEGRATION_DOWNLOAD_URL=${ARKOUDA_INTEGRATION_DOWNLOAD_URL}
+ENV ARKOUDA_INTEGRATION_DOWNLOAD_URL=${ARKOUDA_INTEGRATION_DOWNLOAD_URL}
+ARG ARKOUDA_INTEGRATION_DISTRO_NAME=${ARKOUDA_INTEGRATION_DISTRO_NAME}
+ENV ARKOUDA_INTEGRATION_DISTRO_NAME=${ARKOUDA_INTEGRATION_DISTRO_NAME}
+
+WORKDIR /opt
+
+# Install arkouda_integration from arkouda-contrib repo
+RUN wget $ARKOUDA_INTEGRATION_DOWNLOAD_URL && \
+    unzip $ARKOUDA_INTEGRATION_DISTRO_NAME.zip && \
+    mv /opt/arkouda-contrib-$ARKOUDA_INTEGRATION_DISTRO_NAME /opt/arkouda-contrib
+
+WORKDIR /opt/arkouda-contrib/arkouda_integration/client
+RUN python3 -m pip install -e .
+WORKDIR /opt
+
+# Remove unneeded files
+RUN rm -rf ~/.ssh/ && \
+    sudo rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip && \
+    sudo rm -rf /opt/$ARKOUDA_INTEGRATION_DISTRO_NAME.zip
+
+WORKDIR /opt/arkouda
+RUN sudo rm -rf benchmarks converter examples *.md pictures pydoc resources runs src test tests toys
+
+WORKDIR /opt
+ADD scripts/start-arkouda-server.sh /opt/arkouda/start-arkouda-server.sh
+ADD scripts/start-arkouda-locale.sh /opt/arkouda/start-arkouda-locale.sh
+ENTRYPOINT sh /opt/arkouda/start-arkouda-server.sh
+
