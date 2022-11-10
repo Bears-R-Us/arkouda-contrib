@@ -67,7 +67,7 @@ docker build --build-arg CHPL_VERSION=$CHPL_VERSION -f chapel-gasnet-udp -t hoki
 
 ## Background
 
-The arkouda-udp-server image delivers as GASNET udp configuration that enables deployment of multi-locale Arkouda across 1..n machines that communicate via GASNET/udp.
+The arkouda-udp-server image delivers a GASNET udp configuration that enables deployment of multi-locale Arkouda across 1..n machines that communicate via GASNET/udp.
 
 ## Building arkouda-udp-server
 
