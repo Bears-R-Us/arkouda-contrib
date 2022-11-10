@@ -8,7 +8,6 @@ module BFSMsg {
     use ServerConfig;
     use MultiTypeSymbolTable;
     use MultiTypeSymEntry;
-    //use RandArray;
     use IO;
 
 
@@ -19,7 +18,6 @@ module BFSMsg {
     use ArgSortMsg;
     use Time;
     use CommAggregation;
-    //use Sort;
     use Map;
     use DistributedDeque;
 
