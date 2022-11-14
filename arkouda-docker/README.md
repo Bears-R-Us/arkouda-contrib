@@ -56,7 +56,7 @@ docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME \
 export ARKOUDA_IMAGE_REPO=hokiegeek2
 export ARKOUDA_VERSION=v20221013
 
-docker run -it --rm -p 5555:5555 hokiegeek2/arkouda-smp-server:$ARKOUDA_VERSION
+docker run -it --rm -p 5555:5555 $ARKOUDA_IMAGE_REPO/arkouda-smp-server:$ARKOUDA_VERSION
 ```
 
 # chapel-gasnet-udp
@@ -89,6 +89,7 @@ export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/t
 export ARKOUDA_BRANCH_NAME=2022.10.13
 export ARKOUDA_INTEGRATION_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
 export ARKOUDA_INTEGRATION_DISTRO_NAME=main
+export ARKOUDA_IMAGE_REPO=hokiegeek2
 
 docker build --build-arg CHAPEL_UDP_IMAGE=$CHAPEL_UDP_IMAGE \
              --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME \
@@ -96,5 +97,5 @@ docker build --build-arg CHAPEL_UDP_IMAGE=$CHAPEL_UDP_IMAGE \
              --build-arg ARKOUDA_INTEGRATION_DISTRO_NAME=$ARKOUDA_INTEGRATION_DISTRO_NAME \
              --build-arg ARKOUDA_BRANCH_NAME=$ARKOUDA_BRANCH_NAME \
              --build-arg ARKOUDA_INTEGRATION_DOWNLOAD_URL=$ARKOUDA_INTEGRATION_DOWNLOAD_URL \
-             -f arkouda-udp-server -t hokiegeek2/arkouda-udp-server:$ARKOUDA_DISTRO_NAME .
+             -f arkouda-udp-server -t $ARKOUDA_IMAGE_REPO/arkouda-udp-server:$ARKOUDA_DISTRO_NAME .
 ```
