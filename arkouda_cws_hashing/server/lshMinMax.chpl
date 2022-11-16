@@ -65,7 +65,7 @@ module lshMinMax
 
           /* Loop over hashes. Should be serial as parallel span is minimal */
 
-          for hashIdx in 0..numHashes-1 {
+          coforall hashIdx in 0..numHashes-1 {
 
               var outIdx = s*numHashes + hashIdx;
 
