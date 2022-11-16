@@ -23,17 +23,16 @@ module lshMinMaxMsg
      runtime of the hashing setp from expected constant time to constant time. */
 
 
-  proc lshMinMaxMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
+  proc lshMinMaxMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
 
       param pn = Reflection.getRoutineName();
-
-      var msgArgs = parseMessageArgs(payload, argSize);
 
       const offsets = msgArgs.getValueOf("offsets");
       const elts = msgArgs.getValueOf("elts");
       const weights = msgArgs.getValueOf("weights");
-      const zBit = msgArgs.get("zbit").getBoolValue();
-      var numHashes = msgArgs.get("hashes").getIntValue();
+
+      const zBit: bool = msgArgs.get("zbit").getBoolValue();
+      const numHashes: int = msgArgs.get("hashes").getIntValue();
 
       var offsetEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(offsets, st);
       var eltEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(elts, st);
