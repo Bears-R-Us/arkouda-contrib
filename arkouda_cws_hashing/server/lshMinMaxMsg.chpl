@@ -56,21 +56,7 @@ module lshMinMaxMsg
 	      st.addEntry(pmgName, new shared SymEntry(preimages));
 	      repMsg = "created %s".format(st.attrib(pmgName));
 
-/*	      
-              var pmgName = st.nextName();
-              var pmgEntry = new shared SymEntry(preimages);
-              st.addEntry(pmgName, pmgEntry);
-              repMsg =  "created " + st.attrib(pmgName);
-*/	
-
-
               if(zBit == false) {
-/*
-                  var hashName = st.nextName();
-                  var hashEntry = new shared SymEntry(hashes);
-		  st.addEntry(hashName, hashEntry);
-                  repMsg += "+created " + st.attrib(hashName);
-*/
 		  const hashName: string = st.nextName();
 		  st.addEntry(hashName, new shared SymEntry(hashes));
                   repMsg += "+created %s".format(st.attrib(hashName));
