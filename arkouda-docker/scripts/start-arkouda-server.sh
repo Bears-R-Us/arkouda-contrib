@@ -13,6 +13,6 @@ export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scr
 export SSH_SERVERS="$MY_IP $LOCALE_IPS"
 
 /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-	                                         --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION
+	                                         --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
                                                  --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
                                                  --logLevel=${LOG_LEVEL:-LogLevel.INFO}
