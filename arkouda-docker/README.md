@@ -74,10 +74,11 @@ While arkouda-smp-server extends [chapel-gasnet-smp](https://hub.docker.com/r/ch
 ## Building chapel-gasnet-udp
 
 ```
+export CHPL_BASE_IMAGE=ubuntu:22.04
 export CHPL_VERSION=1.28.0
 export CHAPEL_UDP_IMAGE_REPO=bearsrus
 
-docker build --build-arg CHPL_VERSION=$CHPL_VERSION -f chapel-gasnet-udp -t $CHAPEL_UDP_IMAGE_REPO/chapel-gasnet-udp:$CHPL_VERSION .
+docker build --build-arg CHPL_BASE_IMAGE=$CHPL_BASE_IMAGE --build-arg CHPL_VERSION=$CHPL_VERSION -f chapel-gasnet-udp -t $CHAPEL_UDP_IMAGE_REPO/chapel-gasnet-udp:$CHPL_VERSION .
 ```
 
 # arkouda-udp-server
