@@ -101,6 +101,9 @@ module GraphArray {
             assignableTypes.add(this.entryType);
             this.graph = segGraph;
         }
+        override proc getSizeEstimate(): int {
+            return 1;
+        }
     }
 
     /**
