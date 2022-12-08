@@ -1,4 +1,5 @@
-FROM chapel/chapel-gasnet-smp:1.27.0
+ARG CHAPEL_SMP_IMAGE
+FROM $CHAPEL_SMP_IMAGE
 
 # hack needed for Kubernetes deployment
 RUN export CHPL_GASNET_MORE_CFG_OPTIONS=--enable-force-posix-realtime
