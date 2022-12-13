@@ -7,46 +7,69 @@ from arkouda.logger import getArkoudaLogger
 from arkouda.dtypes import int64 as akint
 
 __all__ = ["Graph",
-           "read_edgelist",
-           "bfs_edges"
+           "DiGraph",
+           "read_known_edgelist",
+           "read_edge_list",
+           "bfs_layers"
            ]
 
 class Graph:
-    """
-    This is a double index graph data structure based graph representation. The graph data resides on the
-    arkouda server. The user should not call this class directly;
-    rather its instances are created by other arkouda functions.
+    """Base class for undirected graphs. 
+
+    This is the double index graph data structure based graph representation. The graph data resides 
+    on the arkouda server. The user should not call this class directly; rather its instances are 
+    created by other arachne functions.
+
+    Graphs hold undirected edges. Self loops and multiple edges are not allowed.
+
+    Nodes currently are only allowed to be integers. They may contain optional key/value attributes.
+
+    Edges are represented as links between nodes. They may contain optinal key/value attributes. 
+
+    Parameters
+    ----------
+    None
+
     Attributes
     ----------
     n_vertices : int
-        The starting indices for each string
+        The number of vertices in the graph. 
     n_edges : int
-        The starting indices for each string
+        The number of edges in the graph.
     directed : int
-        The graph is directed (True) or undirected (False)
+        The graph is directed (True) or undirected (False).
     weighted : int
-        The graph is weighted (True) or not
+        The graph is weighted (True) or unweighted (False).
     name : string
-        The graph name in Chapel
+        The name of the graph in the backend Chapel server. 
     logger : ArkoudaLogger
-        Used for all logging operations
+        Used for all logging operations.
+
+    See Also
+    --------
+    DiGraph
         
     Notes
     -----
     """
 
     def __init__(self, *args) -> None:
-        """
-        Initializes the Graph instance by setting all instance
+        """Initializes the Graph instance by setting all instance
         attributes, some of which are derived from the array parameters.
         
         Parameters
         ----------
-        n_vertices  : must provide args[0]
-        n_edges     : must provide args[1]
-        directed    : must provide args[2]
-        weighted    : must provide args[3]
-        name        : must provide args[4]
+        n_vertices
+            Must be provided in args[0].
+        n_edges
+            Must be provided in args[1].
+        weighted
+            Must be provided in args[3].
+        name
+            Must be provided in args[4].
+        directed
+            Defaults to 0 since Graph is inherently undirected. If needed,
+            should be found in args[2].
         
             
         Returns
@@ -56,21 +79,19 @@ class Graph:
         Raises
         ------
         RuntimeError
-            Raised if there's an error converting a Numpy array or standard
-            Python array to either the offset_attrib or bytes_attrib   
+            Raised if there's an error from the server to create a graph.  
         ValueError
-            Raised if there's an error in generating instance attributes 
-            from either the offset_attrib or bytes_attrib parameter 
+            Raised if not enough arguments are passed to generate the graph. 
         """
         try:
             if len(args) < 5:
                 raise ValueError
             self.n_vertices = int (cast(int, args[0]))
             self.n_edges = int(cast(int, args[1]))
-            self.directed = int(cast(int, args[2]))
             self.weighted = int(cast(int, args[3]))
-            oriname=cast(str, args[4])
+            oriname = cast(str, args[4])
             self.name = oriname.strip()
+            self.directed = 0
         except Exception as e:
             raise RuntimeError(e)
 
@@ -78,39 +99,151 @@ class Graph:
         self.logger = getArkoudaLogger(name=__class__.__name__)  # type: ignore
 
     def __iter__(self):
-        raise NotImplementedError('Graph does not support iteration')
+        """Currently, we do not provide a mechanism for iterating over arrays. The best workaround
+        is to create an array of size n-1 where each element stores the index of the element
+        location as an integeer. WARNING: This may create a very large array that Python may not be able to
+        handle at the frontend.
+        """
+        raise NotImplementedError("Graph does not support iteration. It is derived from\\
+                                   Arkouda's pdarrays which also do not support iteration.")
 
-    def __size__(self) -> int:
-        return self.n_vertices
+    def __len__(self) -> int:
+        """Returns the number of vertices in the graph. Use: 'len(G)'.
 
-@typechecked
-def read_edgelist(Ne: int, Nv: int, Ncol: int, directed: int, filename: str,\
-                    RemapFlag:int=1, DegreeSortFlag:int=0, RCMFlag:int=0, WriteFlag:int=0, BuildAlignedArray:int=0) -> Graph:
-    """
-        This function is used for creating a graph from a file.
-        The file should like this
-          1   5
-          13  9
-          7   6 
-        This file means the edges are <1,5>,<13,9>,<7,6>. If additional column is added, it is the weight
-        of each edge.
-        Ne : the total number of edges of the graph
-        Nv : the total number of vertices of the graph
-        Ncol: how many column of the file. Ncol=2 means just edges (so no weight and weighted=0) 
-              and Ncol=3 means there is weight for each edge (so weighted=1). 
-        directed: 0 means undirected graph and 1 means directed graph
-        filename: the file that has the edge list
-        RemapFlag: if the vertex ID is larger than the total number of vertices, we will relabel the vertex ID
-        DegreeSortFlag: we will let small vertex ID be the vertex whose degree is small
-        RCMFlag: we will remap the vertex ID based on the RCM algorithm
-        WriteFlag: we will output the final edge list src->dst array as a new input file.
-        BuildAlignedArray: using the Edge-Vertex-Locale aligned mapping instead of the default distribution
         Returns
         -------
-        Graph
-            The Graph class to represent the data
+        n_vertices: int.
+            The number of vertices in the graph.
+        """
+        return self.n_vertices
+
+class DiGraph:
+    """Base class for directed graphs. Inherits from Graph.
+
+    This is the double index graph data structure based graph representation. The graph data resides 
+    on the arkouda server. The user should not call this class directly; rather its instances are 
+    created by other arachne functions.
+
+    Graphs hold undirected edges. Self loops and multiple edges are not allowed.
+
+    Nodes currently are only allowed to be integers. They may contain optional key/value attributes.
+
+    Edges are represented as directed links between nodes. They may contain optional key/value 
+    attributes. 
+
+    Parameters
+    ----------
+    None
+
+    Attributes
+    ----------
+    n_vertices : int
+        The number of vertices in the graph. 
+    n_edges : int
+        The number of edges in the graph.
+    directed : int
+        The graph is directed (True) or undirected (False).
+    weighted : int
+        The graph is weighted (True) or unweighted (False).
+    name : string
+        The name of the graph in the backend Chapel server. 
+    logger : ArkoudaLogger
+        Used for all logging operations.
+
+    See Also
+    --------
+    Graph
+        
+    Notes
+    -----
+    """
+
+    def __init__(self, *args) -> None:
+        """Initializes the Graph instance by setting all instance
+        attributes, some of which are derived from the array parameters.
+        
+        Parameters
+        ----------
+        n_vertices
+            Must be provided in args[0].
+        n_edges
+            Must be provided in args[1].
+        weighted
+            Must be provided in args[3].
+        name
+            Must be provided in args[4].
+        directed
+            Defaults to 1 since DiGraph is inherently directed. If needed,
+            should be found in args[2].
+         
+        Returns
+        -------
+        None
+        
+        Raises
+        ------
+        RuntimeError
+            Raised if there's an error from the server to create a graph.   
+        ValueError
+            Raised if not enough arguments are passed to generate the graph. 
+        """
+        try:
+            if len(args) < 5:
+                raise ValueError
+            self.n_vertices = int (cast(int, args[0]))
+            self.n_edges = int(cast(int, args[1]))
+            self.weighted = int(cast(int, args[3]))
+            oriname = cast(str, args[4])
+            self.name = oriname.strip()
+            self.directed = 1
+        except Exception as e:
+            raise RuntimeError(e)
+
+        self.dtype = akint
+        self.logger = getArkoudaLogger(name=__class__.__name__)
+
+@typechecked
+def read_known_edgelist(ne: int, nv: int, path: str, weight: bool = False, comments: str = "#",\
+                        filetype: str = "txt", create_using: Union[Graph, DiGraph] = Graph)\
+                        -> Union[Graph, DiGraph]:
+    """ This function is used for creating a graph from a file containing an edge list. To save 
+        time, this method exists for when the number of edges and vertices are known a priori. 
+        
+        The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
+            1       5
+            13      9
+            7       6 
+        This file givs the edges of the graph which are <1,5>, <13,9>, <7,6> in this case. If an 
+        additional column is added, it is the weight of each edge. We assume the graph is unweighted 
+        unless stated otherwise. 
+
+        Parameters
+        ----------
+        ne
+            The total number of edges of the graph.
+        nv
+            The total number of vertices of the graph.
+        path
+            Absolute path to where the file is stored. 
+        weight
+            True if the graph is to be weighted, False otherwise. 
+        comments
+            If a line in the file starts with this string, the line is ignored and not read. 
+        filetype:
+            Exists to read an mtx file differently without needing to modify the mtx file before
+            reading it in. If reading an mtx file change to mtx.
+        create_using:
+            Specify the type of graph to be created. If just undirected, do not change, change if
+            reading in a directed graph. 
+
+        Returns
+        -------
+        Graph | DiGraph
+            The Graph or DiGraph object to represent the edge list data. 
+        
         See Also
         --------
+        
         Notes
         -----
         
@@ -118,28 +251,91 @@ def read_edgelist(Ne: int, Nv: int, Ncol: int, directed: int, filename: str,\
         ------  
         RuntimeError
         """
-    cmd = "segmentedGraphFile"
-    #args = "{} {} {} {} {} {} {} {} {} {}".format(Ne, Nv, Ncol, directed, filename, \
-    #        RemapFlag, DegreeSortFlag, RCMFlag, WriteFlag,BuildAlignedArray)
-    args = {"NumOfEdges":Ne, "NumOfVertices":Nv, "NumOfColumns":Ncol,\
-             "Directed":directed, "FileName":filename, \
-            "RemapFlag":RemapFlag, "DegreeSortFlag":DegreeSortFlag,\
-            "RCMFlag":RCMFlag, "WriteFlag":WriteFlag,"AlignedFlag":BuildAlignedArray}
+    cmd = "readKnownEdgeList"
+    args = { "NumOfEdges" : ne, 
+             "NumOfVertices" : nv,
+             "Path": path,
+             "Weighted" : weight,
+             "Comments" : comments,
+             "FileType" : filetype,
+             "CreateUsing": create_using.__class__.__name__}
     repMsg = generic_msg(cmd=cmd, args=args)
 
-    return Graph(*(cast(str, repMsg).split('+')))
+    if create_using is Graph:
+        return Graph(*(cast(str, repMsg).split('+')))
+    else:
+        return DiGraph(*(cast(str, repMsg).split('+')))
 
 @typechecked
-def bfs_edges(graph: Graph, root: int, rcm_flag:int) -> pdarray:
-    """
-        This function is generating the breadth-first search vertices sequences in given graph
-        starting from the given root vertex
+def read_edgelist(ne: int, nv: int, path: str, weight: bool = False, comments: str = "#",\
+                  filetype: str = "txt", create_using: Union[Graph, DiGraph] = Graph)\
+                  -> Union[Graph, DiGraph]:
+    """ This function is used for creating a graph from a file containing an edge list.
+        
+        The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
+            1       5
+            13      9
+            7       6 
+        This file givs the edges of the graph which are <1,5>, <13,9>, <7,6> in this case. If an 
+        additional column is added, it is the weight of each edge. We assume the graph is unweighted 
+        unless stated otherwise. 
+
+        Parameters
+        ----------
+        path
+            Absolute path to where the file is stored. 
+        weight
+            True if the graph is to be weighted, False otherwise. 
+        comments
+            If a line in the file starts with this string, the line is ignored and not read. 
+        filetype:
+            Exists to read an mtx file differently without needing to modify the mtx file before
+            reading it in. If reading an mtx file change to mtx.
+        create_using:
+            Specify the type of graph to be created. If just undirected, do not change, change if
+            reading in a directed graph. 
+
+        Returns
+        -------
+        Graph | DiGraph
+            The Graph or DiGraph object to represent the edge list data. 
+        
+        See Also
+        --------
+        
+        Notes
+        -----
+        
+        Raises
+        ------  
+        RuntimeError
+        """
+    cmd = "readKnownEdgeList"
+    args = { "Path": path,
+             "Weighted" : weight,
+             "Comments" : comments,
+             "FileType" : filetype,
+             "CreateUsing": create_using.__class__.__name__}
+    repMsg = generic_msg(cmd=cmd, args=args)
+
+    if create_using is Graph:
+        return Graph(*(cast(str, repMsg).split('+')))
+    else:
+        return DiGraph(*(cast(str, repMsg).split('+')))
+
+@typechecked
+def bfs_layers(graph: Graph, source: int) -> pdarray:
+    """ This function generates the breadth-first search sequence of the vertices in a given graph
+        starting from the given source vertex.
+        
         Returns
         -------
         pdarray
-            The bfs vertices results
+            The depth of each vertex in relation to the source vertex. 
+        
         See Also
         --------
+        
         Notes
         -----
         
@@ -148,13 +344,9 @@ def bfs_edges(graph: Graph, root: int, rcm_flag:int) -> pdarray:
         RuntimeError
         """
     cmd = "segmentedGraphBFS"
-    DefaultRatio = -0.9
-    #args = "{} {} {} {} {} {} {} {}".format(
-    #    rcm_flag, graph.n_vertices, graph.n_edges,
-    #    graph.directed, graph.weighted, graph.name, root, DefaultRatio)
-    args = {"RCMFlag":RCMFlag,"NumOfVertices":graph.n_vertices,"NumOfEdges":graph.n_edges,\
+    args = {"NumOfVertices":graph.n_vertices,"NumOfEdges":graph.n_edges,\
              "Directed":graph.directed,"Weighted": graph.weighted,\
-             "GraphName":graph.name,"Root":root,"Ratio":DefaultRatio}
+             "GraphName":graph.name,"Source":source}
 
     repMsg = generic_msg(cmd=cmd, args=args)
     return create_pdarray(repMsg)
