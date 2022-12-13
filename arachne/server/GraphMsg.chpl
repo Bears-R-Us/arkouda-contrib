@@ -359,37 +359,36 @@ module GraphMsg {
     *
     * returns: message back to Python.
     */
-    proc segGraphPreProcessingMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
-        var NeS = msgArgs.getValueOf("NumOfEdges");
-        var NvS = msgArgs.getValueOf("NumOfVertices");
-        var ColS = msgArgs.getValueOf("NumOfColumns");
-        var DirectedS = msgArgs.getValueOf("Directed");
-        var FileName = msgArgs.getValueOf("FileName");
-        var SkipLineS = msgArgs.getValueOf("SkipLines");
-        var RemapVertexS = msgArgs.getValueOf("RemapFlag");
-        var DegreeSortS = msgArgs.getValueOf("DegreeSortFlag");
-        var RCMS = msgArgs.getValueOf("RCMFlag");
-        var RwriteS = msgArgs.getValueOf("WriteFlag");
-        var AlignedArrayS = msgArgs.getValueOf("AlignedFlag");
+    proc readKnownEdgeListMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+        // Parse the message from Python to extract needed data. 
+        var neS = msgArgs.getValueOf("NumOfEdges");
+        var nvS = msgArgs.getValueOf("NumOfVertices");
+        var pathS = msgArgs.getValueOf("Path");
+        var weightS = msgArgs.getValueOf("Weighted");
+        var directedS = msgArgs.getValueOf("CreateUsing");
+        var commentsS = msgArgs.getValueOf("Comments");
+        var filetypeS = msgArgs.getValueOf("FileType");
 
-        var Ne:int = (NeS:int);
-        var Nv:int = (NvS:int);
+        // Convert parsed message to needed data types for Chapel operations.
+        var ne:int = (neS:int);
+        var nv:int = (nvS:int);
+        var path:string = (pathS:string);
      
-        var NumCol = ColS:int;
-        var DirectedFlag:bool = false;
-        var WeightedFlag:bool = false;
+        writeln(neS);
+        writeln(nvS);
+        writeln(pathS);
+        writeln(weightS);
+        writeln(directedS);
+        writeln(commentsS);
+        writeln(filetypeS);
 
-        var SkipLineNum:int = (SkipLineS:int);
+        var repMsg:string;
         var timer:Timer;
-        var RCMFlag:bool = false;
-        var DegreeSortFlag:bool = false;
-        var RemapVertexFlag:bool = false;
-        var WriteFlag:bool = false;
-        var AlignedArray:int = (AlignedArrayS:int);
-        outMsg = "read file =" + FileName;
+
+        outMsg = "path of read file = " + path;
         smLogger.info(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
 
-
+        /*
         timer.start();
     
         var NewNe,NewNv:int;
@@ -422,7 +421,6 @@ module GraphMsg {
         var start_i,neighborR, start_iR,depth, v_weight: [vertexD] int;
 
         var linenum:int=0;
-        var repMsg: string;
 
         var tmpmindegree:int = start_min_degree;
 
@@ -630,14 +628,15 @@ module GraphMsg {
                 }
             }
         timer.stop();
-        outMsg="PreProcessing  File takes " + timer.elapsed():string;
+        */
+        outMsg="Building graph from known edge file takes " + timer.elapsed():string;
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-        repMsg =  "PreProcessing success"; 
+        repMsg = "readKnownEdgeList SUCCESS."; 
         return new MsgTuple(repMsg, MsgType.NORMAL);
     } // end of segGraphPreProcessingMsg
 
     // directly read a graph from given file and build the SegGraph class in memory
-    proc segGraphFileMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+    proc readEdgeListMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
         var NeS=msgArgs.getValueOf("NumOfEdges");
         var NvS=msgArgs.getValueOf("NumOfVertices");
         var ColS=msgArgs.getValueOf("NumOfColumns");
@@ -845,6 +844,6 @@ module GraphMsg {
     } // end of segGraphFileMsg
 
     use CommandMap;
-    registerFunction("segmentedGraphFile",segGraphFileMsg,getModuleName());
-    registerFunction("segmentedGraphPreProcessing", segGraphPreProcessingMsg,getModuleName());
+    registerFunction("readKnownEdgeList", readKnownEdgeListMsg, getModuleName());
+    registerFunction("readEdgeList", readEdgeListMsg, getModuleName());
 }

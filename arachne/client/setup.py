@@ -1,5 +1,4 @@
 from os import path
-
 from setuptools import setup
 
 here = path.abspath(path.dirname(__file__))
@@ -11,7 +10,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 setup(
     name="arachne",
     version="0.0.1",
-    description="Graph functionality in Chapel to use with Arkouda.",
+    description="Graph functionality in Chapel for use with Arkouda.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["arachne"],

@@ -207,50 +207,52 @@ def read_known_edgelist(ne: int, nv: int, path: str, weight: bool = False, comme
                         filetype: str = "txt", create_using: Union[Graph, DiGraph] = Graph)\
                         -> Union[Graph, DiGraph]:
     """ This function is used for creating a graph from a file containing an edge list. To save 
-        time, this method exists for when the number of edges and vertices are known a priori. 
-        
-        The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
-            1       5
-            13      9
-            7       6 
-        This file givs the edges of the graph which are <1,5>, <13,9>, <7,6> in this case. If an 
-        additional column is added, it is the weight of each edge. We assume the graph is unweighted 
-        unless stated otherwise. 
+    time, this method exists for when the number of edges and vertices are known a priori. We also
+    assume that the graph, by nature, does not have self-loops nor multiple edges. TODO: this 
+    should be used after a preprocessing() method! 
+    
+    The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
+        1       5
+        13      9
+        7       6 
+    This file givs the edges of the graph which are <1,5>, <13,9>, <7,6> in this case. If an 
+    additional column is added, it is the weight of each edge. We assume the graph is unweighted 
+    unless stated otherwise. 
 
-        Parameters
-        ----------
-        ne
-            The total number of edges of the graph.
-        nv
-            The total number of vertices of the graph.
-        path
-            Absolute path to where the file is stored. 
-        weight
-            True if the graph is to be weighted, False otherwise. 
-        comments
-            If a line in the file starts with this string, the line is ignored and not read. 
-        filetype:
-            Exists to read an mtx file differently without needing to modify the mtx file before
-            reading it in. If reading an mtx file change to mtx.
-        create_using:
-            Specify the type of graph to be created. If just undirected, do not change, change if
-            reading in a directed graph. 
+    Parameters
+    ----------
+    ne
+        The total number of edges of the graph.
+    nv
+        The total number of vertices of the graph.
+    path
+        Absolute path to where the file is stored. 
+    weight
+        True if the graph is to be weighted, False otherwise. 
+    comments
+        If a line in the file starts with this string, the line is ignored and not read. 
+    filetype:
+        Exists to read an mtx file differently without needing to modify the mtx file before
+        reading it in. If reading an mtx file change to mtx.
+    create_using:
+        Specify the type of graph to be created. If just undirected, do not change, change if
+        reading in a directed graph. 
 
-        Returns
-        -------
-        Graph | DiGraph
-            The Graph or DiGraph object to represent the edge list data. 
-        
-        See Also
-        --------
-        
-        Notes
-        -----
-        
-        Raises
-        ------  
-        RuntimeError
-        """
+    Returns
+    -------
+    Graph | DiGraph
+        The Graph or DiGraph object to represent the edge list data. 
+    
+    See Also
+    --------
+    
+    Notes
+    -----
+    
+    Raises
+    ------  
+    RuntimeError
+    """
     cmd = "readKnownEdgeList"
     args = { "NumOfEdges" : ne, 
              "NumOfVertices" : nv,
@@ -267,50 +269,49 @@ def read_known_edgelist(ne: int, nv: int, path: str, weight: bool = False, comme
         return DiGraph(*(cast(str, repMsg).split('+')))
 
 @typechecked
-def read_edgelist(ne: int, nv: int, path: str, weight: bool = False, comments: str = "#",\
-                  filetype: str = "txt", create_using: Union[Graph, DiGraph] = Graph)\
-                  -> Union[Graph, DiGraph]:
+def read_edgelist(path: str, weight: bool = False, comments: str = "#", filetype: str = "txt",\
+                  create_using: Union[Graph, DiGraph] = Graph) -> Union[Graph, DiGraph]:
     """ This function is used for creating a graph from a file containing an edge list.
         
-        The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
-            1       5
-            13      9
-            7       6 
-        This file givs the edges of the graph which are <1,5>, <13,9>, <7,6> in this case. If an 
-        additional column is added, it is the weight of each edge. We assume the graph is unweighted 
-        unless stated otherwise. 
+    The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
+        1       5
+        13      9
+        7       6 
+    This file givs the edges of the graph which are <1,5>, <13,9>, <7,6> in this case. If an 
+    additional column is added, it is the weight of each edge. We assume the graph is unweighted 
+    unless stated otherwise. 
 
-        Parameters
-        ----------
-        path
-            Absolute path to where the file is stored. 
-        weight
-            True if the graph is to be weighted, False otherwise. 
-        comments
-            If a line in the file starts with this string, the line is ignored and not read. 
-        filetype:
-            Exists to read an mtx file differently without needing to modify the mtx file before
-            reading it in. If reading an mtx file change to mtx.
-        create_using:
-            Specify the type of graph to be created. If just undirected, do not change, change if
-            reading in a directed graph. 
+    Parameters
+    ----------
+    path
+        Absolute path to where the file is stored. 
+    weight
+        True if the graph is to be weighted, False otherwise. 
+    comments
+        If a line in the file starts with this string, the line is ignored and not read. 
+    filetype:
+        Exists to read an mtx file differently without needing to modify the mtx file before
+        reading it in. If reading an mtx file change to mtx.
+    create_using:
+        Specify the type of graph to be created. If just undirected, do not change, change if
+        reading in a directed graph. 
 
-        Returns
-        -------
-        Graph | DiGraph
-            The Graph or DiGraph object to represent the edge list data. 
-        
-        See Also
-        --------
-        
-        Notes
-        -----
-        
-        Raises
-        ------  
-        RuntimeError
-        """
-    cmd = "readKnownEdgeList"
+    Returns
+    -------
+    Graph | DiGraph
+        The Graph or DiGraph object to represent the edge list data. 
+    
+    See Also
+    --------
+    
+    Notes
+    -----
+    
+    Raises
+    ------  
+    RuntimeError
+    """
+    cmd = "readEdgeList"
     args = { "Path": path,
              "Weighted" : weight,
              "Comments" : comments,
@@ -344,9 +345,12 @@ def bfs_layers(graph: Graph, source: int) -> pdarray:
         RuntimeError
         """
     cmd = "segmentedGraphBFS"
-    args = {"NumOfVertices":graph.n_vertices,"NumOfEdges":graph.n_edges,\
-             "Directed":graph.directed,"Weighted": graph.weighted,\
-             "GraphName":graph.name,"Source":source}
+    args = { "NumOfVertices":graph.n_vertices,
+             "NumOfEdges":graph.n_edges,
+             "Directed":graph.directed,
+             "Weighted": graph.weighted,
+             "GraphName":graph.name,
+             "Source":source}
 
     repMsg = generic_msg(cmd=cmd, args=args)
     return create_pdarray(repMsg)
