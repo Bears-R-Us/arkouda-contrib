@@ -24,7 +24,7 @@ module lshMinMax
 
       type eltType;
 
-      var value: eltType;
+      var value: eltType = (max(real), 0, 0.0);
 
       proc identity {
 	  if eltType == (real, int, real) then return (max(real), 0, 0.0);
