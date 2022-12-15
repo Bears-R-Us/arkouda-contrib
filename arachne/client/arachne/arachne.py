@@ -9,7 +9,7 @@ from arkouda.dtypes import int64 as akint
 __all__ = ["Graph",
            "DiGraph",
            "read_known_edgelist",
-           "read_edge_list",
+           "read_edgelist",
            "bfs_layers"
            ]
 
@@ -96,7 +96,7 @@ class Graph:
             raise RuntimeError(e)
 
         self.dtype = akint
-        self.logger = getArkoudaLogger(name=__class__.__name__)  # type: ignore
+        self.logger = getArkoudaLogger(name=__class__.__name__)
 
     def __iter__(self):
         """Currently, we do not provide a mechanism for iterating over arrays. The best workaround
@@ -104,8 +104,8 @@ class Graph:
         location as an integeer. WARNING: This may create a very large array that Python may not be able to
         handle at the frontend.
         """
-        raise NotImplementedError("Graph does not support iteration. It is derived from\\
-                                   Arkouda's pdarrays which also do not support iteration.")
+        raise NotImplementedError("""Graph does not support iteration. It is derived from
+                                   Arkouda's pdarrays which also do not support iteration.""")
 
     def __len__(self) -> int:
         """Returns the number of vertices in the graph. Use: 'len(G)'.
@@ -117,7 +117,7 @@ class Graph:
         """
         return self.n_vertices
 
-class DiGraph:
+class DiGraph(Graph):
     """Base class for directed graphs. Inherits from Graph.
 
     This is the double index graph data structure based graph representation. The graph data resides 
@@ -203,9 +203,8 @@ class DiGraph:
         self.logger = getArkoudaLogger(name=__class__.__name__)
 
 @typechecked
-def read_known_edgelist(ne: int, nv: int, path: str, weight: bool = False, comments: str = "#",\
-                        filetype: str = "txt", create_using: Union[Graph, DiGraph] = Graph)\
-                        -> Union[Graph, DiGraph]:
+def read_known_edgelist(ne: int, nv: int, path: str, weighted: bool = False, directed: bool = False, 
+                        comments: str = "#", filetype: str = "txt") -> Union[Graph, DiGraph]:
     """ This function is used for creating a graph from a file containing an edge list. To save 
     time, this method exists for when the number of edges and vertices are known a priori. We also
     assume that the graph, by nature, does not have self-loops nor multiple edges. TODO: this 
@@ -253,24 +252,24 @@ def read_known_edgelist(ne: int, nv: int, path: str, weight: bool = False, comme
     ------  
     RuntimeError
     """
-    cmd = "readKnownEdgeList"
+    cmd = "readKnownEdgelist"
     args = { "NumOfEdges" : ne, 
              "NumOfVertices" : nv,
              "Path": path,
-             "Weighted" : weight,
+             "Weighted" : weighted,
+             "Directed": directed,
              "Comments" : comments,
-             "FileType" : filetype,
-             "CreateUsing": create_using.__class__.__name__}
+             "FileType" : filetype}
     repMsg = generic_msg(cmd=cmd, args=args)
 
-    if create_using is Graph:
+    if not directed:
         return Graph(*(cast(str, repMsg).split('+')))
     else:
         return DiGraph(*(cast(str, repMsg).split('+')))
 
 @typechecked
-def read_edgelist(path: str, weight: bool = False, comments: str = "#", filetype: str = "txt",\
-                  create_using: Union[Graph, DiGraph] = Graph) -> Union[Graph, DiGraph]:
+def read_edgelist(path: str, weighted: bool = False, directed: bool = False, comments: str = "#",\
+                  filetype: str = "txt") -> Union[Graph, DiGraph]:
     """ This function is used for creating a graph from a file containing an edge list.
         
     The file typically looks as below delimited by whitespaces. TODO: add more delimitations.
@@ -311,15 +310,15 @@ def read_edgelist(path: str, weight: bool = False, comments: str = "#", filetype
     ------  
     RuntimeError
     """
-    cmd = "readEdgeList"
+    cmd = "readEdgelist"
     args = { "Path": path,
-             "Weighted" : weight,
+             "Weighted" : weighted,
+             "Directed": directed,
              "Comments" : comments,
-             "FileType" : filetype,
-             "CreateUsing": create_using.__class__.__name__}
+             "FileType" : filetype}
     repMsg = generic_msg(cmd=cmd, args=args)
 
-    if create_using is Graph:
+    if not directed:
         return Graph(*(cast(str, repMsg).split('+')))
     else:
         return DiGraph(*(cast(str, repMsg).split('+')))

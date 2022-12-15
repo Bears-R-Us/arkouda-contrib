@@ -359,13 +359,13 @@ module GraphMsg {
     *
     * returns: message back to Python.
     */
-    proc readKnownEdgeListMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+    proc readKnownEdgelistMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
         // Parse the message from Python to extract needed data. 
         var neS = msgArgs.getValueOf("NumOfEdges");
         var nvS = msgArgs.getValueOf("NumOfVertices");
         var pathS = msgArgs.getValueOf("Path");
-        var weightS = msgArgs.getValueOf("Weighted");
-        var directedS = msgArgs.getValueOf("CreateUsing");
+        var weightedS = msgArgs.getValueOf("Weighted");
+        var directedS = msgArgs.getValueOf("Directed");
         var commentsS = msgArgs.getValueOf("Comments");
         var filetypeS = msgArgs.getValueOf("FileType");
 
@@ -373,16 +373,293 @@ module GraphMsg {
         var ne:int = (neS:int);
         var nv:int = (nvS:int);
         var path:string = (pathS:string);
-     
-        writeln(neS);
-        writeln(nvS);
-        writeln(pathS);
-        writeln(weightS);
-        writeln(directedS);
-        writeln(commentsS);
-        writeln(filetypeS);
 
-        var repMsg:string;
+        var weighted:bool; 
+        weightedS = weightedS.toLower();
+        weighted = (weightedS:bool);
+
+        var directed:bool;
+        directedS = directedS.toLower();
+        directed = (directedS:bool);
+
+        var comments:string = (commentsS:string);
+        var filetype:string = (filetypeS:string);
+     
+        // Ensure messages were convertd properly.
+        writeln("Num edges: ", ne);
+        writeln("Num vertices: ", nv);
+        writeln("Path to file: ", path);
+        writeln("Weighted?: ", weighted);
+        writeln("Directed?: ", directed);
+        writeln("Comment starter: ", comments);
+        writeln("Filetype: ", filetype);
+
+        // Write message to show which file was read in. 
+        outMsg = "path of read file = " + path;
+        smLogger.info(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
+
+        // Graph data structure building timer. 
+        var timer:Timer;
+        timer.start();
+
+        // Initializing the arrays that make up our double-index data structure.
+        var src = makeDistArray(ne, int);
+        var edge_domain = src.domain;
+
+        var neighbor = makeDistArray(nv,int);
+        var vertex_domain = neighbor.domain;
+
+        // Edge index arrays. 
+        var dst, e_weight, srcR, dstR, iv: [edge_domain] int;
+        
+        // Vertex index arrays. 
+        var start_i, neighborR, start_iR,depth, v_weight: [vertex_domain] int;
+
+        // Check to see if the file can be opened correctly. 
+        try {
+            var f = open(path, iomode.r);
+            f.close();
+        } catch {
+            smLogger.error(getModuleName(),getRoutineName(),getLineNumber(), "Error opening file.");
+        }
+
+        // Read the file line by line. 
+        proc readLinebyLine() throws {
+            coforall loc in Locales  {
+                on loc {
+                    var f = open(path, iomode.r);
+                    var r = f.reader(kind = ionative);
+                    var line:string;
+                    var a,b,c:string;
+                    var curline:int = 0;
+                    var srclocal = src.localSubdomain();
+                    var ewlocal = e_weight.localSubdomain();
+
+                    while r.readLine(line) {
+                        // Ignore comments.
+                        if (line[0] == comments) {
+                            continue;
+                        }
+                        
+                        // Parse our vertices and weights, if applicable. 
+                        if (weighted == true) {
+                            (a,b) = line.splitMsgToTuple(2);
+                        } else {
+                            (a,b,c) = line.splitMsgToTuple(3);
+                        }
+
+                        // Place the read edge into the current locale.
+                        if (srclocal.contains(curline)) {
+                            src[curline] = (a:int);
+                            dst[curline] = (b:int);
+                        }
+                        curline+=1;
+                        if (curline > srclocal.highBound) {
+                            break;
+                        }
+                    } 
+                    if (curline <= srclocal.highBound) {
+                        var myoutMsg = "The input file does not contain enough edges for locale " 
+                                       + here.id:string + " current line = " + curline:string;
+                        smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),myoutMsg);
+                    }
+                    r.close();
+                    f.close();
+                }// end on loc
+            }// end coforall
+        }// end readLinebyLine
+
+        readLinebyLine();
+
+        /*
+        NewNv=vertex_remap(src,dst,Nv);
+        try  { 
+            combine_sort(src, dst,e_weight,WeightedFlag, false);
+        } catch {
+            try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error.");
+        }
+
+        set_neighbor(src,start_i,neighbor);
+
+        // Read in undirected graph parts into reversed arrays.
+        if (!DirectedFlag) {
+            smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),"Read undirected graph.");
+            coforall loc in Locales  {
+                on loc {
+                    forall i in srcR.localSubdomain(){
+                        srcR[i]=dst[i];
+                        dstR[i]=src[i];
+                    }
+                }
+            }
+            try  { 
+                combine_sort(srcR, dstR,e_weight,WeightedFlag, false);
+            } catch {
+                try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error");
+            }
+            set_neighbor(srcR,start_iR,neighborR);
+
+            if (DegreeSortFlag) {
+                degree_sort_u(src, dst, start_i, neighbor, srcR, dstR, start_iR, neighborR,e_weight,WeightedFlag);
+            }
+        }
+
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(), "Remove self-loops and duplicated edges");
+        var cur=0;
+        var tmpsrc=src;
+        var tmpdst=dst;
+        for i in 0..Ne-1 {
+            // Ignore self-loops. 
+            if src[i]==dst[i] {
+                continue;
+            }
+            if (cur==0) {
+                tmpsrc[cur]=src[i];
+                tmpdst[cur]=dst[i]; 
+                cur+=1;
+                continue;
+            }
+            // Ignore duplicated edges.
+            if (tmpsrc[cur-1]==src[i]) && (tmpdst[cur-1]==dst[i]) {
+                continue;
+            } else {
+                if (src[i]>dst[i]) {
+                    var u=src[i]:int;
+                    var v=dst[i]:int;
+                    var lu=start_i[u]:int;
+                    var nu=neighbor[u]:int;
+                    var lv=start_i[v]:int;
+                    var nv=neighbor[v]:int;
+                    var DupE:int;
+                    DupE = binSearchE(dst,lv,lv+nv-1,u);
+                    //find v->u 
+                    if DupE!=-1 {
+                        continue;
+                    }
+                }
+
+                tmpsrc[cur]=src[i];
+                tmpdst[cur]=dst[i]; 
+                cur+=1;
+            }
+        }
+        NewNe=cur;    
+ 
+        if (NewNe<Ne ) {
+            smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),
+                "removed "+(Ne-NewNe):string +" edges");
+
+            var mysrc=makeDistArray(NewNe,int);
+            var myedgeD=mysrc.domain;
+
+            var myneighbor=makeDistArray(NewNv,int);
+            var myvertexD=myneighbor.domain;
+
+            var mydst,mye_weight,mysrcR,mydstR, myiv: [myedgeD] int ;
+            var mystart_i,myneighborR, mystart_iR,mydepth, myv_weight: [myvertexD] int;
+
+            forall i in 0..NewNe-1 {
+                mysrc[i]=tmpsrc[i];
+                mydst[i]=tmpdst[i];
+            }
+            try  { 
+                combine_sort(mysrc, mydst,mye_weight,WeightedFlag, false);
+            } catch {
+                try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error");
+            }
+
+            set_neighbor(mysrc,mystart_i,myneighbor);
+
+            if (!DirectedFlag) { //undirected graph
+                coforall loc in Locales  {
+                    on loc {
+                        forall i in mysrcR.localSubdomain(){
+                            mysrcR[i]=mydst[i];
+                            mydstR[i]=mysrc[i];
+                        }
+                    }
+                }
+                try  { 
+                    combine_sort(mysrcR, mydstR,mye_weight,WeightedFlag, false);
+                } catch {
+                    try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error");
+                }
+                set_neighbor(mysrcR,mystart_iR,myneighborR);
+                if (DegreeSortFlag) {
+                    degree_sort_u(mysrc, mydst, mystart_i, myneighbor, mysrcR, mydstR, mystart_iR, myneighborR,mye_weight,WeightedFlag);
+                }
+            }//end of undirected
+            else {
+                if (DegreeSortFlag) {
+                    part_degree_sort(mysrc, mydst, mystart_i, myneighbor,mye_weight,myneighbor,WeightedFlag);
+                }  
+            }  
+            if (WriteFlag) {
+                var wf = open(FileName+".pr", iomode.cw);
+                var mw = wf.writer(kind=ionative);
+                for i in 0..NewNe-1 {
+                    mw.writeln("%-15i    %-15i".format(mysrc[i],mydst[i]));
+                }
+                mw.writeln("Num Edge=%i  Num Vertex=%i".format(NewNe, NewNv));
+                mw.close();
+                wf.close();
+            }
+            } else {
+                if (WriteFlag) {
+                    var wf = open(FileName+".pr", iomode.cw);
+                    var mw = wf.writer(kind=ionative);
+                    for i in 0..NewNe-1 {
+                        mw.writeln("%-15i    %-15i".format(src[i],dst[i]));
+                    }
+                    mw.writeln("Num Edge=%i  Num Vertex=%i".format(NewNe, NewNv));
+                    mw.close();
+                    wf.close();
+                }
+            }
+        */
+        timer.stop();
+        outMsg="Building graph from known edge file takes " + timer.elapsed():string;
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
+        var repMsg = "readKnownEdgeList SUCCESS."; 
+        return new MsgTuple(repMsg, MsgType.NORMAL);
+    } // end of segGraphPreProcessingMsg
+
+    // directly read a graph from given file and build the SegGraph class in memory
+    proc readEdgelistMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+        // Parse the message from Python to extract needed data. 
+        var neS = msgArgs.getValueOf("NumOfEdges");
+        var nvS = msgArgs.getValueOf("NumOfVertices");
+        var pathS = msgArgs.getValueOf("Path");
+        var weightS = msgArgs.getValueOf("Weighted");
+        var directedS = msgArgs.getValueOf("Directed");
+        var commentsS = msgArgs.getValueOf("Comments");
+        var filetypeS = msgArgs.getValueOf("FileType");
+
+        // Convert parsed message to needed data types for Chapel operations.
+        var ne:int = (neS:int);
+        var nv:int = (nvS:int);
+        var path:string = (pathS:string);
+
+        var weight:bool; 
+        weightS = weightS.toLower();
+        weight = (weightS:bool);
+
+        var directed:bool;
+        directedS = directedS.toLower();
+        directed = (directedS:bool);
+
+        var comments:string = (commentsS:string);
+        var filetype:string = (filetypeS:string);
+     
+        // Ensure messages were convertd properly.
+        writeln("Num edges: ", ne);
+        writeln("Num vertices: ", nv);
+        writeln("Path to file: ", path);
+        writeln("Weighted?: ", weight);
+        writeln("Directed?: ", directed);
+        writeln("Comment starter: ", comments);
+        writeln("Filetype: ", filetype);
+
         var timer:Timer;
 
         outMsg = "path of read file = " + path;
@@ -390,27 +667,8 @@ module GraphMsg {
 
         /*
         timer.start();
-    
         var NewNe,NewNv:int;
 
-        if (DirectedS:int)==1 {
-            DirectedFlag=true;
-        }
-        if NumCol>2 {
-            WeightedFlag=true;
-        }
-        if(RemapVertexS:int)==1 {
-            RemapVertexFlag=true;
-        }
-        if (DegreeSortS:int)==1 {
-            DegreeSortFlag=true;
-        }
-        if (RCMS:int)==1 {
-            RCMFlag=true;
-        }
-        if (RwriteS:int)==1 {
-            WriteFlag=true;
-        }
         var src = makeDistArray(Ne,int);
         var edgeD=src.domain;
 
@@ -627,223 +885,15 @@ module GraphMsg {
                     wf.close();
                 }
             }
-        timer.stop();
         */
+        timer.stop();
         outMsg="Building graph from known edge file takes " + timer.elapsed():string;
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-        repMsg = "readKnownEdgeList SUCCESS."; 
-        return new MsgTuple(repMsg, MsgType.NORMAL);
-    } // end of segGraphPreProcessingMsg
-
-    // directly read a graph from given file and build the SegGraph class in memory
-    proc readEdgeListMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
-        var NeS=msgArgs.getValueOf("NumOfEdges");
-        var NvS=msgArgs.getValueOf("NumOfVertices");
-        var ColS=msgArgs.getValueOf("NumOfColumns");
-        var DirectedS=msgArgs.getValueOf("Directed");
-        var FileName=msgArgs.getValueOf("FileName");
-        var RemapVertexS=msgArgs.getValueOf("RemapFlag");
-        var DegreeSortS=msgArgs.getValueOf("DegreeSortFlag");
-        var RCMS=msgArgs.getValueOf("RCMFlag");
-        var RwriteS=msgArgs.getValueOf("WriteFlag");
-
-        var Ne:int =(NeS:int);
-        var Nv:int =(NvS:int);
-        var NumCol=ColS:int;
-        var DirectedFlag:bool=false;
-        var WeightedFlag:bool=false;
-        var timer: Timer;
-        var RCMFlag:bool=false;
-        var DegreeSortFlag:bool=false;
-        var RemapVertexFlag:bool=false;
-        var WriteFlag:bool=false;
-        outMsg="read file ="+FileName;
-        smLogger.info(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-        timer.start();
-
-        if (DirectedS:int)==1 {
-            DirectedFlag=true;
-        }
-        if NumCol>2 {
-            WeightedFlag=true;
-        }
-        if (RemapVertexS:int)==1 {
-            RemapVertexFlag=true;
-        }
-        if (DegreeSortS:int)==1 {
-            DegreeSortFlag=true;
-        }
-        if (RCMS:int)==1 {
-            RCMFlag=true;
-        }
-        if (RwriteS:int)==1 {
-            WriteFlag=true;
-        }
-        var src=makeDistArray(Ne,int);
-        var edgeD=src.domain;
-
-        var neighbor=makeDistArray(Nv,int);
-        var vertexD=neighbor.domain;
-
-        var dst,e_weight,srcR,dstR, iv: [edgeD] int ;
-        var start_i,neighborR, start_iR,depth, v_weight: [vertexD] int;
-
-        var linenum:int=0;
-        var repMsg: string;
-
-        var tmpmindegree:int =start_min_degree;
-
-        try {
-            var f = open(FileName, iomode.r);
-            // we check if the file can be opened correctly
-            f.close();
-        } catch {
-            smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Open file error");
-        }
-
-        proc readLinebyLine() throws {
-            coforall loc in Locales  {
-                on loc {
-                    var f = open(FileName, iomode.r);
-                    var r = f.reader(kind=ionative);
-                    var line:string;
-                    var a,b,c:string;
-                    var curline=0:int;
-                    var srclocal=src.localSubdomain();
-                    var ewlocal=e_weight.localSubdomain();
-
-                    while r.readLine(line) {
-                        if line[0]=="%" {
-                            smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"edge  error");
-                            continue;
-                        }
-                        if NumCol==2 {
-                            (a,b)=  line.splitMsgToTuple(2);
-                        } else {
-                            (a,b,c)=  line.splitMsgToTuple(3);
-                        }
-                        if a==b {
-                            smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"self cycle "+ a +"->"+b);
-                        }
-                        if (RemapVertexFlag) {
-                            if srclocal.contains(curline) {
-                                src[curline]=(a:int);
-                                dst[curline]=(b:int);
-                            }
-                        } else {
-                            if srclocal.contains(curline) {
-                                src[curline]=(a:int)%Nv;
-                                dst[curline]=(b:int)%Nv;
-                            }
-                        }
-                        curline+=1;
-                        if curline>srclocal.highBound {
-                            break;
-                        }
-                    } 
-                    if (curline<=srclocal.highBound) {
-                        var myoutMsg="The input file " + FileName + " does not give enough edges for locale " + here.id:string +" current line="+curline:string;
-                        smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),myoutMsg);
-                    }
-                    r.close();
-                    f.close();
-                }// end on loc
-            }//end coforall
-        }//end readLinebyLine
-      
-        // readLinebyLine sets ups src, dst, start_i, neightbor.  e_weights will also be set if it is an edge weighted graph
-        // currently we ignore the weight.
-
-        readLinebyLine(); 
-        timer.stop();
-
-        outMsg="Reading File takes " + timer.elapsed():string;
-        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-
-        timer.clear();
-        timer.start();
-        try  { 
-            combine_sort(src, dst,e_weight,WeightedFlag, false);
-        } catch {
-            try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"combine sort error");
-        }
-
-      set_neighbor(src,start_i,neighbor);
-
-      // Make a composable SegGraph object that we can store in a GraphSymEntry later
-        var graph = new shared SegGraph(Ne, Nv, DirectedFlag);
-        graph.withSRC(new shared SymEntry(src):GenSymEntry)
-            .withDST(new shared SymEntry(dst):GenSymEntry)
-            .withSTART_IDX(new shared SymEntry(start_i):GenSymEntry)
-            .withNEIGHBOR(new shared SymEntry(neighbor):GenSymEntry);
-
-        if (!DirectedFlag) { //undirected graph
-            coforall loc in Locales  {
-                on loc {
-                    forall i in srcR.localSubdomain(){
-                        srcR[i]=dst[i];
-                        dstR[i]=src[i];
-                    }
-                }
-            }
-            try  { 
-                combine_sort(srcR, dstR,e_weight,WeightedFlag, false);
-            } catch {
-                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"combine sort error");
-            }
-                set_neighbor(srcR,start_iR,neighborR);
-
-            if (DegreeSortFlag) {
-                degree_sort_u(src, dst, start_i, neighbor, srcR, dstR, start_iR, neighborR,e_weight,WeightedFlag);
-            }
-
-            graph.withSRC_R(new shared SymEntry(srcR):GenSymEntry)
-                .withDST_R(new shared SymEntry(dstR):GenSymEntry)
-                .withSTART_IDX_R(new shared SymEntry(start_iR):GenSymEntry)
-                .withNEIGHBOR_R(new shared SymEntry(neighborR):GenSymEntry);
-
-        }//end of undirected
-        else {
-            if (DegreeSortFlag) {
-                part_degree_sort(src, dst, start_i, neighbor,e_weight,neighbor,WeightedFlag);
-            }
-        }//end of else
-        if (WriteFlag) {
-            var wf = open(FileName+".my.gr", iomode.cw);
-            var mw = wf.writer(kind=ionative);
-            for i in 0..Ne-1 {
-                mw.writeln("%-15n    %-15n".format(src[i],dst[i]));
-            }
-            mw.close();
-            wf.close();
-        }
-        var sNv=Nv:string;
-        var sNe=Ne:string;
-        var sDirected:string;
-        var sWeighted:string;
-        if (DirectedFlag) {
-            sDirected="1";
-        } else {
-            sDirected="0";
-        }
-
-        if (WeightedFlag) {
-            sWeighted="1";
-        } else {
-            sWeighted="0";
-        }
-        var graphEntryName = st.nextName();
-        var graphSymEntry = new shared GraphSymEntry(graph);
-        st.addEntry(graphEntryName, graphSymEntry);
-        repMsg =  sNv + '+ ' + sNe + '+ ' + sDirected + '+ ' + sWeighted + '+' +  graphEntryName; 
-        timer.stop();
-        outMsg="Sorting Edges takes "+ timer.elapsed():string;
-        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+        var repMsg = "readEdgelist SUCCESS."; 
         return new MsgTuple(repMsg, MsgType.NORMAL);
     } // end of segGraphFileMsg
 
     use CommandMap;
-    registerFunction("readKnownEdgeList", readKnownEdgeListMsg, getModuleName());
-    registerFunction("readEdgeList", readEdgeListMsg, getModuleName());
+    registerFunction("readKnownEdgelist", readKnownEdgelistMsg, getModuleName());
+    registerFunction("readEdgelist", readEdgelistMsg, getModuleName());
 }
