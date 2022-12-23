@@ -6,7 +6,7 @@ The specific implementation is a mathematically equivalent algorithm from Sergey
 
 Both the original consistent weighted sampling scheme and the approximate "zero-bit" version described by Ping Li in "0-bit Consistent Weighted Sampling" (https://dl.acm.org/doi/abs/10.1145/2783258.2783406) are provided.
 
-Efficient pair construction required for locality-sensitive hashing (LSH) has not yet been implemented. Minhash banding is also yet to be implemented.
+Efficient pair construction required for locality-sensitive hashing (LSH) has not yet been implemented. Minhash banding is also yet to be implemented. The GNU Scientific Library (https://www.gnu.org/software/gsl/) is required for random number generation.
 
 
 asdf
