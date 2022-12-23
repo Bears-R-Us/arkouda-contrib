@@ -103,7 +103,7 @@ module lshMinMax
 
       forall (o, s, l) in zip(offsets, setIds, setSizes) {
 
-          coforall hashIdx in 0..numHashes-1 {
+          [hashIdx in 0..numHashes-1] {
 
               var outIdx = s*numHashes + hashIdx;
 
@@ -116,7 +116,7 @@ module lshMinMax
 	      var setD: domain = {o..#l};
               var hashes: [setD] (real, int, real);
 
-	      forall z in setD {
+	      [z in setD] {
 
 		  var u_z, g_1, g_2, t_z, y_z, a_z = 0.0;
 
