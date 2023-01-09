@@ -536,15 +536,15 @@ module GraphMsg {
         }
 
         // TODO: REMOVE BEFORE PULL REQUEST.
-        // writeln("AFTER UNDIRECTED GRAPH CONSTRUCTION.");
-        // writeln("src      = ", src);
-        // writeln("dst      = ", dst);
-        // writeln("srcR     = ", srcR); 
-        // writeln("dstR     = ", dstR);
-        // writeln("nei      = ", neighbor);
-        // writeln("neiR     = ", neighborR);
-        // writeln("start_i  = ", start_i);
-        // writeln("start_iR = ", start_iR);
+        writeln("AFTER GRAPH CONSTRUCTION FROM KNOWN GRAPH.");
+        writeln("src      = ", src);
+        writeln("dst      = ", dst);
+        writeln("srcR     = ", srcR); 
+        writeln("dstR     = ", dstR);
+        writeln("nei      = ", neighbor);
+        writeln("neiR     = ", neighborR);
+        writeln("start_i  = ", start_i);
+        writeln("start_iR = ", start_iR);
 
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed);
@@ -560,10 +560,20 @@ module GraphMsg {
                  .withNEIGHBOR_R(new shared SymEntry(neighborR):GenSymEntry);
         }
 
+        // Add graph to the specific symbol table entry. 
+        var graphEntryName = st.nextName();
+        var graphSymEntry = new shared GraphSymEntry(graph);
+        st.addEntry(graphEntryName, graphSymEntry);
+        var repMsg = nvS + '+ ' + neS + '+ ' + directedS + '+ ' + weighted:int:string + '+' + graphEntryName;
+        
+        // Print out the length of time it takes to read in and build a known graph file.
         timer.stop();
         outMsg = "Building graph from known edge file takes " + timer.elapsed():string;
+        
+        // Print out debug information to arkouda server output. 
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-        var repMsg = "readKnownEdgeList SUCCESS."; 
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+
         return new MsgTuple(repMsg, MsgType.NORMAL);
     } // end of segGraphPreProcessingMsg
 
@@ -839,15 +849,15 @@ module GraphMsg {
         }
 
         // TODO: REMOVE BEFORE PULL REQUEST.
-        writeln("AFTER REMOVAL OF SELF LOOPS AND MULTIPLE EDGES.");
-        writeln("src      = ", mysrc);
-        writeln("dst      = ", mydst);
-        writeln("srcR     = ", mysrcR); 
-        writeln("dstR     = ", mydstR);
-        writeln("nei      = ", myneighbor);
-        writeln("neiR     = ", myneighborR);
-        writeln("start_i  = ", mystart_i);
-        writeln("start_iR = ", mystart_iR);
+        writeln("AFTER GRAPH CONSTRUCTION FROM UNKNOWN GRAPH.");
+        writeln("src      = ", src);
+        writeln("dst      = ", dst);
+        writeln("srcR     = ", srcR); 
+        writeln("dstR     = ", dstR);
+        writeln("nei      = ", neighbor);
+        writeln("neiR     = ", neighborR);
+        writeln("start_i  = ", start_i);
+        writeln("start_iR = ", start_iR);
 
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed);
@@ -863,10 +873,20 @@ module GraphMsg {
                  .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
         }
 
+        // Add graph to the specific symbol table entry. 
+        var graphEntryName = st.nextName();
+        var graphSymEntry = new shared GraphSymEntry(graph);
+        st.addEntry(graphEntryName, graphSymEntry);
+        var repMsg = new_nv:string + '+ ' + new_ne:string + '+ ' + directedS + '+ ' + weighted:int:string + '+' + graphEntryName;
+        
+        // Print out the length of time it takes to read in and build a known graph file.
         timer.stop();
-        outMsg="Building graph from edge file takes " + timer.elapsed():string;
+        outMsg = "Building graph from unknown edge file takes " + timer.elapsed():string;
+        
+        // Print out debug information to arkouda server output. 
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
-        var repMsg = "readEdgelist SUCCESS."; 
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+
         return new MsgTuple(repMsg, MsgType.NORMAL);
     } // end of segGraphFileMsg
 
