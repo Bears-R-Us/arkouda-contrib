@@ -1,33 +1,290 @@
 module BFSMsg {
+    // Chapel modules.
+    use IO;
     use Reflection;
-    use ServerErrors;
-    use Logging;
-    use Message;
-    use SegmentedString;
-    use ServerErrorStrings;
-    use ServerConfig;
+    use Set;
+    use Time; 
+    use Sort; 
+
+    // Modules contributed to Chapel. 
+    use DistributedBag; 
+    
+    // Arachne Modules.
+    use GraphArray;
+    
+    // Arkouda modules.
     use MultiTypeSymbolTable;
     use MultiTypeSymEntry;
-    use IO;
-
-
-    use SymArrayDmap;
-    use RadixSortLSD;
-    use Set;
-    use DistributedBag;
+    use ServerConfig;
     use ArgSortMsg;
-    use Time;
-    use CommAggregation;
-    use Map;
-    use DistributedDeque;
+    use AryUtil;
+    use Logging;
+    use Message;
+    
+    // Server message logger. 
+    private config const logLevel = LogLevel.DEBUG;
+    const smLogger = new Logger(logLevel);
+    var outMsg:string;
 
 
-    use LockFreeStack;
-    use Atomics;
-    use IO.FormattedIO; 
-    use GraphArray;
-    use GraphMsg;
+    /**
+    * Check if a particular value x is local in an array. It is local if it is between or equal to 
+    * the low and high values passed. 
+    *
+    * x: value we are searching for. 
+    * low: lower value of subdomain. 
+    * high: higher value of subdomain. 
+    *
+    * returns: true if local, false otherwise. 
+    */
+    private proc xlocal(x: int, low: int, high: int):bool {
+        return low <= x && x <= high;
+    }
 
+    /**
+    * Check if a particular value x is remote in an array. It is remote if it is not between or 
+    * equal to the low and high values passed. 
+    *
+    * x: value we are searching for. 
+    * low: lower value of subdomain. 
+    * high: higher value of subdomain. 
+    *
+    * returns: true if remote, false otherwise. 
+    */
+    private proc xremote(x: int, low: int, high: int):bool {
+        return !xlocal(x, low, high);
+    }
 
+    /**
+    * Run BFS on a(n) (un)directed or (un)weighted graph. 
+    *
+    * cmd: operation to perform. 
+    * msgArgs: arugments passed to backend. 
+    * SymTab: symbol table used for storage. 
+    *
+    * returns: message back to Python.
+    */
+    proc segBFSMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+        var repMsg: string;
+        var depthName:string;
 
+        var n_verticesN = msgArgs.getValueOf("NumOfVertices");
+        var n_edgesN = msgArgs.getValueOf("NumOfEdges");
+        var directedN = msgArgs.getValueOf("Directed");
+        var weightedN = msgArgs.getValueOf("Weighted");
+        var graphEntryName = msgArgs.getValueOf("GraphName");
+
+        var Nv = n_verticesN:int;
+        var Ne = n_edgesN:int;
+        var directed = directedN:int;
+        var weighted = weightedN:int;
+        var timer:Timer;
+
+        var root:int; 
+        var srcN, dstN, startN, neighborN, eweightN, rootN: string; 
+        var srcRN, dstRN, startRN, neighborRN: string; 
+        var gEntry: borrowed GraphSymEntry = getGraphSymEntry(graphEntryName, st); 
+        var ag = gEntry.graph; 
+
+        timer.start();
+
+        // Create empty depth array to return at the end of execution. 
+        var depth = makeDistArray(Nv, int);
+        coforall loc in Locales  {
+            on loc {
+                forall i in depth.localSubdomain() {
+                    depth[i] = -1;
+                }       
+            }
+        }
+
+        /**
+        * BFS kernel for undirected graphs. 
+        *
+        * nei: neighbor array
+        * start_i: starting edge array location given vertex v
+        * src: source array
+        * dst: destination array
+        * neiR: reversed neighbor array
+        * start_iR: reversed starting edge array location given vertex v
+        * srcR: reversed source array
+        * dstR: reversed destination array
+        *
+        * returns: message back to Python.
+        */
+        proc fo_bag_bfs_kernel_u(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, dst: [?D4] int, 
+                                neiR: [?D11] int, start_iR: [?D12] int, srcR: [?D13] int, 
+                                dstR: [?D14] int):string throws {
+            var cur_level = 0;
+            var SetCurF = new DistBag(int, Locales); // use bag to keep the current frontier
+            var SetNextF = new DistBag(int, Locales); // use bag to keep the next frontier
+            SetCurF.add(root);
+            var numCurF = 1 : int;
+            depth[root] = 0;
+            while (numCurF > 0) {
+                coforall loc in Locales  with (ref SetNextF) {
+                    on loc {
+                        ref srcf = src;
+                        ref df = dst;
+                        ref nf = nei;
+                        ref sf = start_i;
+
+                        ref srcfR = srcR;
+                        ref dfR = dstR;
+                        ref nfR = neiR;
+                        ref sfR = start_iR;
+
+                        var edgeBegin = src.localSubdomain().low;
+                        var edgeEnd = src.localSubdomain().high;
+                        var vertexBegin = src[edgeBegin];
+                        var vertexEnd = src[edgeEnd];
+                        var vertexBeginR = srcR[edgeBegin];
+                        var vertexEndR = srcR[edgeEnd];
+
+                        forall i in SetCurF with (ref SetNextF) {
+                            // current edge has the vertex
+                            if((xlocal(i, vertexBegin, vertexEnd))) { 
+                                var numNF = nf[i];
+                                var edgeId = sf[i];
+                                var nextStart = max(edgeId, edgeBegin);
+                                var nextEnd = min(edgeEnd, edgeId + numNF - 1);
+                                ref NF = df[nextStart..nextEnd];
+                                forall j in NF with (ref SetNextF){
+                                    if (depth[j] == -1) {
+                                        depth[j] = cur_level + 1;
+                                        SetNextF.add(j);
+                                    }
+                                }
+                            } 
+                            if ((xlocal(i, vertexBeginR, vertexEndR))) {
+                                var numNF = nfR[i];
+                                var edgeId = sfR[i];
+                                var nextStart = max(edgeId, edgeBegin);
+                                var nextEnd = min(edgeEnd, edgeId + numNF - 1);
+                                ref NF = dfR[nextStart..nextEnd];
+                                forall j in NF with (ref SetNextF)  {
+                                    if (depth[j] == -1) {
+                                        depth[j] = cur_level+1;
+                                        SetNextF.add(j);
+                                    }
+                                }
+                            }
+                        } //end forall
+                    } // end on loc
+                }// end coforall loc
+                cur_level += 1;
+                numCurF = SetNextF.getSize();
+                SetCurF <=> SetNextF;
+                SetNextF.clear();
+            }// end while 
+            return "success";
+        }// end of fo_bag_bfs_kernel_u
+
+        /**
+        * BFS kernel for directed graphs. 
+        *
+        * nei: neighbor array
+        * start_i: starting edge array location given vertex v
+        * src: source array
+        * dst: destination array
+        *
+        * returns: message back to Python.
+        */
+        proc fo_bag_bfs_kernel_d( nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, 
+                                  dst: [?D4] int): string throws {
+            var cur_level = 0;
+            var SetCurF = new DistBag(int, Locales); // use bag to keep the current frontier
+            var SetNextF = new DistBag(int, Locales); // use bag to keep the next frontier
+            SetCurF.add(root);
+            var numCurF = 1 : int;
+            var topdown = 0 : int;
+            var bottomup = 0 : int;
+
+            while (numCurF>0) {
+                coforall loc in Locales  with (ref SetNextF, + reduce topdown, + reduce bottomup) {
+                    on loc {
+                        ref srcf=src;
+                        ref df=dst;
+                        ref nf=nei;
+                        ref sf=start_i;
+
+                        var edgeBegin = src.localSubdomain().low;
+                        var edgeEnd = src.localSubdomain().high;
+                        var vertexBegin = src[edgeBegin];
+                        var vertexEnd = src[edgeEnd];
+                        forall i in SetCurF with (ref SetNextF) {
+                            if ((xlocal(i, vertexBegin, vertexEnd))) { // current edge has the vertex
+                                var numNF = nf[i];
+                                var edgeId = sf[i];
+                                var nextStart = max(edgeId, edgeBegin);
+                                var nextEnd = min(edgeEnd, edgeId + numNF - 1);
+                                ref NF = df[nextStart..nextEnd];
+                                forall j in NF with (ref SetNextF) {
+                                    if (depth[j] == -1) {
+                                        depth[j] = cur_level + 1;
+                                        SetNextF.add(j);
+                                    }
+                                }
+                            } 
+                        } // end forall
+                        forall i in vertexBegin..vertexEnd with (ref SetNextF) {
+                            if depth[i] == -1 {
+                                var numNF = nf[i];
+                                var edgeId = sf[i];
+                                var nextStart = max(edgeId, edgeBegin);
+                                var nextEnd = min(edgeEnd, edgeId + numNF - 1);
+                                ref NF = df[nextStart..nextEnd];
+                                forall j in NF with (ref SetNextF){
+                                    if (SetCurF.contains(j)) {
+                                        depth[i] = cur_level + 1;
+                                        SetNextF.add(i);
+                                    }
+                                }
+                            }
+                        }
+                    } // end on loc
+                } // end coforall loc
+                cur_level += 1;
+                numCurF = SetNextF.getSize();
+                SetCurF <=> SetNextF;
+                SetNextF.clear();
+            }//end while  
+            return depth;
+        }//end of fo_bag_bfs_kernel_d
+
+        rootN=msgArgs.getValueOf("Root");
+        root=rootN:int;
+        depth[root]=0;
+
+        proc return_depth(): string throws{
+            var depthName = st.nextName();
+            var depthEntry = new shared SymEntry([0]);
+            st.addEntry(depthName, depthEntry);
+
+            var depMsg =  'created ' + st.attrib(depthName);
+            return depMsg;
+        }
+
+        if(directed) {
+            fo_bag_bfs_kernel_dir(
+                toSymEntry(ag.getNEIGHBOR(), int).a,
+                toSymEntry(ag.getSTART_IDX(), int).a,
+                toSymEntry(ag.getSRC(), int).a,
+                toSymEntry(ag.getDST(), int).a
+            );
+            repMsg=return_depth();
+        } else {
+            fo_bag_bfs_kernel_und(
+                toSymEntry(ag.getNEIGHBOR(), int).a,
+                toSymEntry(ag.getSTART_IDX(), int).a,
+                toSymEntry(ag.getSRC(), int).a,
+                toSymEntry(ag.getDST(), int).a,
+                toSymEntry(ag.getNEIGHBOR_R(), int).a,
+                toSymEntry(ag.getSTART_IDX_R(), int).a,
+                toSymEntry(ag.getSRC_R(), int).a,
+                toSymEntry(ag.getDST_R(), int).a
+            );
+            repMsg=return_depth();
+        }
+    }
 }

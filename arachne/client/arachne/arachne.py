@@ -84,7 +84,6 @@ class Graph:
             Raised if not enough arguments are passed to generate the graph. 
         """
         try:
-            print("len(args):", len(args))
             if len(args) < 5:
                 raise ValueError
             self.n_vertices = int(cast(int, args[0]))
@@ -262,7 +261,6 @@ def read_known_edgelist(ne: int, nv: int, path: str, weighted: bool = False, dir
              "Comments" : comments,
              "FileType" : filetype }
     repMsg = generic_msg(cmd=cmd, args=args)
-    print("repMsg:", repMsg)
 
     if not directed:
         return Graph(*(cast(str, repMsg).split('+')))
@@ -349,7 +347,7 @@ def bfs_layers(graph: Graph, source: int) -> pdarray:
     args = { "NumOfVertices":graph.n_vertices,
              "NumOfEdges":graph.n_edges,
              "Directed":graph.directed,
-             "Weighted": graph.weighted,
+             "Weighted":graph.weighted,
              "GraphName":graph.name,
              "Source":source}
 

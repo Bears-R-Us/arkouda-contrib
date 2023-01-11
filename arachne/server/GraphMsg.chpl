@@ -17,13 +17,11 @@ module GraphMsg {
     use AryUtil;
     use Logging;
     use Message;
-
     
+    // Server message logger. 
     private config const logLevel = LogLevel.DEBUG;
     const smLogger = new Logger(logLevel);
     var outMsg:string;
-
-    config const start_min_degree = 1000000;
 
     /**
     * Set the neighbor and start_i arrays for the graph data structure.
@@ -201,11 +199,10 @@ module GraphMsg {
         tmpedges = ldst[iv];
         ldst = tmpedges;
 
-        // TODO: is this needed?
-        // if (lWeightedFlag && sortw) {
-        //   tmpedges = le_weight[iv];
-        //   le_weight = tmpedges;
-        //}
+        if (lWeightedFlag && sortw) {
+          tmpedges = le_weight[iv];
+          le_weight = tmpedges;
+        }
     }//end combine_sort()
 
     /**
@@ -222,7 +219,7 @@ module GraphMsg {
     * returns: nothing
     */
     private proc part_degree_sort(lsrc: [?D1] int, ldst: [?D2] int, lstart_i: [?D3] int, 
-                                  lneighbor: [?D4] int,le_weight: [?D5] int, lneighborR: [?D6] int,
+                                  lneighbor: [?D4] int, le_weight: [?D5] int, lneighborR: [?D6] int,
                                   lWeightedFlag: bool) {
         var DegreeArray, vertex_mapping: [D4] int;
         var tmpedge: [D1] int;
@@ -362,11 +359,11 @@ module GraphMsg {
       }// end of binSearchE()
 
     /**
-    * Preprocess a graph to remove all selfloops and duplicate edges and write back out to new file.
+    * Read a graph whose number of vertices and edges are known before analysis. Saves time in 
+    * building the graph data structure. 
     *
     * cmd: operation to perform. 
-    * payload: parameters from the python frontend. 
-    * argSize: number of arguments. 
+    * msgArgs: arugments passed to backend. 
     * SymTab: symbol table used for storage. 
     *
     * returns: message back to Python.
@@ -397,15 +394,6 @@ module GraphMsg {
 
         var comments:string = (commentsS:string);
         var filetype:string = (filetypeS:string);
-     
-        // TODO: REMOVE BEFORE PULL REQUEST.
-        // writeln("Num edges: ", ne);
-        // writeln("Num vertices: ", nv);
-        // writeln("Path to file: ", path);
-        // writeln("Weighted?: ", weighted);
-        // writeln("Directed?: ", directed);
-        // writeln("Comment starter: ", comments);
-        // writeln("Filetype: ", filetype);
 
         // Write message to show which file was read in. 
         outMsg = "path of read file = " + path;
@@ -422,11 +410,12 @@ module GraphMsg {
         var neighbor = makeDistArray(nv,int);
         var vertex_domain = neighbor.domain;
 
+        // TODO: We intitialize memory we do not need. For example, directed graphs do not require
+        //       reversed arrays. This must be fixed. 
         // Edge index arrays. 
-        var dst, e_weight, srcR, dstR, iv: [edge_domain] int;
-        
+        var dst, e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
         // Vertex index arrays. 
-        var start_i, neighborR, start_iR,depth, v_weight: [vertex_domain] int;
+        var start_i, neighborR, start_iR,depth: [vertex_domain] int;
 
         // Check to see if the file can be opened correctly. 
         try {
@@ -460,7 +449,7 @@ module GraphMsg {
                         }
                         
                         // Parse our vertices and weights, if applicable. 
-                        if (weighted == true) {
+                        if (!weighted) {
                             (a,b) = line.splitMsgToTuple(2);
                         } else {
                             (a,b,c) = line.splitMsgToTuple(3);
@@ -470,6 +459,10 @@ module GraphMsg {
                         if (srclocal.contains(curline)) {
                             src[curline] = (a:int);
                             dst[curline] = (b:int);
+
+                            if (weighted) {
+                                e_weight[curline] = (c:int);
+                            }
                         }
 
                         curline += 1;
@@ -494,26 +487,24 @@ module GraphMsg {
         readLinebyLine();
 
         // Sort our edge arrays for easy lookup of neighbor vertices. 
-        try { 
-            combine_sort(src, dst, e_weight, weighted, false);
-        } catch {
-            try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
-                                "Combine sort error.");
+        if (!weighted) {
+            try { 
+                combine_sort(src, dst, e_weight, weighted, false);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                    "Combine sort error.");
+            }
+        } else {
+            try { 
+                combine_sort(src, dst, e_weight, weighted, true);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                    "Combine sort error.");
+            }
         }
 
         // Set neighbor (vertex index array) information based off edges, 
         set_neighbor(src, start_i, neighbor);
-
-        // TODO: REMOVE BEFORE PULL REQUEST.
-        // writeln("BEFORE UNDIRECTED GRAPH CONSTRUCTION.");
-        // writeln("src      = ", src);
-        // writeln("dst      = ", dst);
-        // writeln("srcR     = ", srcR); 
-        // writeln("dstR     = ", dstR);
-        // writeln("nei      = ", neighbor);
-        // writeln("neiR     = ", neighborR);
-        // writeln("start_i  = ", start_i);
-        // writeln("start_iR = ", start_iR);
 
         // Create the reversed arrays for undirected graphs
         if (!directed) {
@@ -524,30 +515,72 @@ module GraphMsg {
                     forall i in srcR.localSubdomain(){
                         srcR[i] = dst[i];
                         dstR[i] = src[i];
+
+                        if (weighted) {
+                            e_weightR = e_weight[i];
+                        }
                     }
                 }
             }
-            try  { 
-                combine_sort(srcR, dstR, e_weight, weighted, false);
-            } catch {
-                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error");
+            if (!weighted) {
+                try  { 
+                    combine_sort(srcR, dstR, e_weightR, weighted, false);
+                } catch {
+                    try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error");
+                }
+            } else {
+                try  { 
+                    combine_sort(srcR, dstR, e_weightR, weighted, true);
+                } catch {
+                    try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error");
+                }
             }
             set_neighbor(srcR,start_iR,neighborR);
         }
 
-        // TODO: REMOVE BEFORE PULL REQUEST.
-        writeln("AFTER GRAPH CONSTRUCTION FROM KNOWN GRAPH.");
-        writeln("src      = ", src);
-        writeln("dst      = ", dst);
-        writeln("srcR     = ", srcR); 
-        writeln("dstR     = ", dstR);
-        writeln("nei      = ", neighbor);
-        writeln("neiR     = ", neighborR);
-        writeln("start_i  = ", start_i);
-        writeln("start_iR = ", start_iR);
+        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
+        if (directed && !weighted) {
+            writeln("DIRECTED AND UNWEIGHTED GRAPH:");
+            writeln("src       = ", src);
+            writeln("dst       = ", dst);
+            writeln("nei       = ", neighbor);
+            writeln("start_i   = ", start_i);
+        }
+        if (directed && weighted) {
+            writeln("DIRECTED AND WEIGHTED GRAPH:");
+            writeln("src       = ", src);
+            writeln("dst       = ", dst);
+            writeln("nei       = ", neighbor);
+            writeln("start_i   = ", start_i);
+            writeln("e_weight  = ", e_weight);
+        }
+        if (!directed && !weighted) {
+            writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
+            writeln("src       = ", src);
+            writeln("dst       = ", dst);
+            writeln("srcR      = ", srcR); 
+            writeln("dstR      = ", dstR);
+            writeln("nei       = ", neighbor);
+            writeln("neiR      = ", neighborR);
+            writeln("start_i   = ", start_i);
+            writeln("start_iR  = ", start_iR);
+        }
+        if (!directed && weighted) {
+            writeln("UNDIRECTED AND WEIGHTED GRAPH:");
+            writeln("src       = ", src);
+            writeln("dst       = ", dst);
+            writeln("srcR      = ", srcR); 
+            writeln("dstR      = ", dstR);
+            writeln("nei       = ", neighbor);
+            writeln("neiR      = ", neighborR);
+            writeln("start_i   = ", start_i);
+            writeln("start_iR  = ", start_iR);
+            writeln("e_weight  = ", e_weight);
+            writeln("e_weightR = ", e_weightR);
+        }
 
-        // Finish building graph data structure.
-        var graph = new shared SegGraph(ne, nv, directed);
+        // Add graph data structure to the symbol table. 
+        var graph = new shared SegGraph(ne, nv, directed, weighted);
         graph.withSRC(new shared SymEntry(src):GenSymEntry)
              .withDST(new shared SymEntry(dst):GenSymEntry)
              .withSTART_IDX(new shared SymEntry(start_i):GenSymEntry)
@@ -558,6 +591,14 @@ module GraphMsg {
                  .withDST_R(new shared SymEntry(dstR):GenSymEntry)
                  .withSTART_IDX_R(new shared SymEntry(start_iR):GenSymEntry)
                  .withNEIGHBOR_R(new shared SymEntry(neighborR):GenSymEntry);
+        }
+
+        if (weighted) {
+            graph.withEDGE_WEIGHT(new shared SymEntry(e_weight):GenSymEntry);
+
+            if (!directed) {
+                graph.withEDGE_WEIGHT_R(new shared SymEntry(e_weightR):GenSymEntry);
+            }
         }
 
         // Add graph to the specific symbol table entry. 
@@ -577,7 +618,15 @@ module GraphMsg {
         return new MsgTuple(repMsg, MsgType.NORMAL);
     } // end of segGraphPreProcessingMsg
 
-    // directly read a graph from given file and build the SegGraph class in memory
+    /**
+    * Read a graph whose number of vertices and edges are unknown before analysis.
+    *
+    * cmd: operation to perform. 
+    * msgArgs: arugments passed to backend. 
+    * SymTab: symbol table used for storage. 
+    *
+    * returns: message back to Python.
+    */
     proc readEdgelistMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
         // Parse the message from Python to extract needed data. 
         var pathS = msgArgs.getValueOf("Path");
@@ -599,13 +648,6 @@ module GraphMsg {
 
         var comments:string = (commentsS:string);
         var filetype:string = (filetypeS:string);
-     
-        // TODO: REMOVE BEFORE PULL REQUEST.
-        writeln("Path to file: ", path);
-        writeln("Weighted?: ", weighted);
-        writeln("Directed?: ", directed);
-        writeln("Comment starter: ", comments);
-        writeln("Filetype: ", filetype);
 
         // Graph data structure building timer. 
         var timer:Timer;
@@ -635,7 +677,7 @@ module GraphMsg {
             }
 
             // Parse our vertices and weights, if applicable. 
-            if (weighted == true) {
+            if (weighted == false) {
                 (a,b) = line.splitMsgToTuple(2);
             } else {
                 (a,b,c) = line.splitMsgToTuple(3);
@@ -659,11 +701,12 @@ module GraphMsg {
         var neighbor = makeDistArray(nv,int);
         var vertex_domain = neighbor.domain;
 
+        // TODO: We intitialize memory we do not need. For example, directed graphs do not require
+        //       reversed arrays. This must be fixed. 
         // Edge index arrays. 
-        var dst, e_weight, srcR, dstR, iv: [edge_domain] int;
-        
+        var dst, e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
         // Vertex index arrays. 
-        var start_i, neighborR, start_iR,depth, v_weight: [vertex_domain] int;
+        var start_i, neighborR, start_iR,depth: [vertex_domain] int;
 
         /**
         * Read the graph file and store edge information in double-index data structure. 
@@ -689,7 +732,7 @@ module GraphMsg {
                         }
 
                         // Parse our vertices and weights, if applicable. 
-                        if (weighted == true) {
+                        if (!weighted) {
                             (a,b) = line.splitMsgToTuple(2);
                         } else {
                             (a,b,c) = line.splitMsgToTuple(3);
@@ -705,6 +748,10 @@ module GraphMsg {
                         if (srclocal.contains(curline)) {
                             src[curline] = (a:int);
                             dst[curline] = (b:int);
+
+                            if (weighted) {
+                                e_weight[curline] = (c:int);
+                            }
                         }
 
                         curline+=1;
@@ -731,10 +778,18 @@ module GraphMsg {
         // Remap the vertices to a new range.
         var new_nv:int = vertex_remap(src, dst, nv);
       
-        try { 
-            combine_sort(src, dst, e_weight, weighted, false);
-        } catch {
-            try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error.");
+        if (!weighted) {
+            try { 
+                combine_sort(src, dst, e_weight, weighted, false);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error.");
+            }
+        } else {
+            try { 
+                combine_sort(src, dst, e_weight, weighted, true);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error.");
+            }
         }
 
         // Set neighbor (vertex index array) information based off edges,
@@ -748,14 +803,24 @@ module GraphMsg {
                     forall i in srcR.localSubdomain(){
                         srcR[i] = dst[i];
                         dstR[i] = src[i];
+                        e_weightR = e_weight[i];
                     }
                 }
             }
-            try  { 
-                combine_sort(srcR, dstR, e_weight, weighted, false);
-            } catch {
-                try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
-                                     "Combine sort error");
+            if (!weighted) {
+                try  { 
+                    combine_sort(srcR, dstR, e_weightR, weighted, false);
+                } catch {
+                    try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                        "Combine sort error");
+                }
+            } else {
+                try  { 
+                    combine_sort(srcR, dstR, e_weightR, weighted, false);
+                } catch {
+                    try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                        "Combine sort error");
+                }
             }
         }
 
@@ -765,6 +830,7 @@ module GraphMsg {
         var cur = 0;
         var tmpsrc = src;
         var tmpdst = dst;
+        var tmpe_weight = e_weight;
         
         for i in 0..ne - 1 {
             // Ignore self-loops. 
@@ -774,6 +840,7 @@ module GraphMsg {
             if (cur == 0) {
                 tmpsrc[cur] = src[i];
                 tmpdst[cur] = dst[i]; 
+                tmpe_weight[cur] = e_weight[i];
                 cur += 1;
                 continue;
             }
@@ -790,14 +857,16 @@ module GraphMsg {
                     var lv = start_i[v]:int;
                     var nv = neighbor[v]:int;
                     var DupE:int;
+                    
+                    // Find v->u.
                     DupE = binSearchE(dst,lv,lv+nv-1,u);
-                    //find v->u 
                     if (DupE != -1) {
                         continue;
                     }
                 }
-                tmpsrc[cur]=src[i];
-                tmpdst[cur]=dst[i]; 
+                tmpsrc[cur] = src[i];
+                tmpdst[cur] = dst[i]; 
+                tmpe_weight[cur] = e_weight[i]; 
                 cur+=1;
             }
         }
@@ -809,9 +878,13 @@ module GraphMsg {
         var myneighbor = makeDistArray(new_nv, int);
         var myvertexD=myneighbor.domain;
 
-        var mydst, mye_weight, mysrcR, mydstR, myiv: [myedgeD] int ;
-        var mystart_i, myneighborR, mystart_iR, mydepth, myv_weight: [myvertexD] int;
-        // Finish performing the remapping. 
+        // Arrays made from the edge domain. 
+        var mydst, mye_weight, mye_weightR, mysrcR, mydstR, myiv: [myedgeD] int ;
+
+        // Arrays made from the vertex domain. 
+        var mystart_i, myneighborR, mystart_iR, mydepth: [myvertexD] int;
+        
+        // Finish creating the new arrays after removing self-loops and multiedges.
         if (new_ne < ne ) {
             smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),
                 "Removed " + (ne - new_ne):string + " edges");
@@ -819,6 +892,7 @@ module GraphMsg {
             forall i in 0..new_ne-1 {
                 mysrc[i] = tmpsrc[i];
                 mydst[i] = tmpdst[i];
+                mye_weight[i] = tmpe_weight[i];
             }
             try { 
                 combine_sort(mysrc, mydst, mye_weight, weighted, false);
@@ -835,32 +909,73 @@ module GraphMsg {
                         forall i in mysrcR.localSubdomain(){
                             mysrcR[i] = mydst[i];
                             mydstR[i] = mysrc[i];
+                            mye_weightR[i] = mye_weight[i];
                         }
                     }
                 }
-                try  { 
-                    combine_sort(mysrcR, mydstR, mye_weight, weighted, false);
-                } catch {
-                    try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
-                                        "Combine sort error");
+
+                if(!weighted) {
+                    try  { 
+                        combine_sort(mysrcR, mydstR, mye_weightR, weighted, false);
+                    } catch {
+                        try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                            "Combine sort error");
+                    }
+                } else {
+                    try  { 
+                        combine_sort(mysrcR, mydstR, mye_weightR, weighted, true);
+                    } catch {
+                        try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                            "Combine sort error");
+                    }
                 }
                 set_neighbor(mysrcR, mystart_iR, myneighborR);
             }//end of undirected
         }
 
-        // TODO: REMOVE BEFORE PULL REQUEST.
-        writeln("AFTER GRAPH CONSTRUCTION FROM UNKNOWN GRAPH.");
-        writeln("src      = ", src);
-        writeln("dst      = ", dst);
-        writeln("srcR     = ", srcR); 
-        writeln("dstR     = ", dstR);
-        writeln("nei      = ", neighbor);
-        writeln("neiR     = ", neighborR);
-        writeln("start_i  = ", start_i);
-        writeln("start_iR = ", start_iR);
+        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
+        if (directed && !weighted) {
+            writeln("DIRECTED AND UNWEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("nei       = ", myneighbor);
+            writeln("start_i   = ", mystart_i);
+        }
+        if (directed && weighted) {
+            writeln("DIRECTED AND WEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("nei       = ", myneighbor);
+            writeln("start_i   = ", mystart_i);
+            writeln("e_weight  = ", mye_weight);
+        }
+        if (!directed && !weighted) {
+            writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("srcR      = ", mysrcR); 
+            writeln("dstR      = ", mydstR);
+            writeln("nei       = ", myneighbor);
+            writeln("neiR      = ", myneighborR);
+            writeln("start_i   = ", mystart_i);
+            writeln("start_iR  = ", mystart_iR);
+        }
+        if (!directed && weighted) {
+            writeln("UNDIRECTED AND WEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("srcR      = ", mysrcR); 
+            writeln("dstR      = ", mydstR);
+            writeln("nei       = ", myneighbor);
+            writeln("neiR      = ", myneighborR);
+            writeln("start_i   = ", mystart_i);
+            writeln("start_iR  = ", mystart_iR);
+            writeln("e_weight  = ", mye_weight);
+            writeln("e_weightR = ", mye_weightR);
+        }
 
         // Finish building graph data structure.
-        var graph = new shared SegGraph(ne, nv, directed);
+        var graph = new shared SegGraph(ne, nv, directed, weighted);
         graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
              .withDST(new shared SymEntry(mydst):GenSymEntry)
              .withSTART_IDX(new shared SymEntry(mystart_i):GenSymEntry)
@@ -871,6 +986,14 @@ module GraphMsg {
                  .withDST_R(new shared SymEntry(mydstR):GenSymEntry)
                  .withSTART_IDX_R(new shared SymEntry(mystart_iR):GenSymEntry)
                  .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
+        }
+
+        if (weighted) {
+            graph.withEDGE_WEIGHT(new shared SymEntry(mye_weight):GenSymEntry);
+
+            if (!directed) {
+                graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
+            }
         }
 
         // Add graph to the specific symbol table entry. 

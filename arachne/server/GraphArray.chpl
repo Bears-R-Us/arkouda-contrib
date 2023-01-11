@@ -5,7 +5,7 @@ module GraphArray {
     use MultiTypeSymEntry;
     use MultiTypeSymbolTable;
 
-    // Server message logger 
+    // Server message logger.
     private config const logLevel = LogLevel.DEBUG;
     const graphLogger = new Logger(logLevel);
 
@@ -18,9 +18,9 @@ module GraphArray {
         START_IDX,      // The starting index of every vertex in src and dst
         START_IDX_R,    // Reverse of START_IDX
         NEIGHBOR,       // Number of neighbors for a vertex  
-        NEIGHBOR_R,     // Numebr of neighbors for a vertex based on the reversed arrays
+        NEIGHBOR_R,     // Number of neighbors for a vertex based on the reversed arrays
         EDGE_WEIGHT,    // Edge weights
-        VERTEX_WEIGHT   // Vertex weights
+        EDGE_WEIGHT_R,  // Edge weights reversed for undirecteed graphs.
     }
 
     /**
@@ -43,13 +43,17 @@ module GraphArray {
         // The graph is directed (True) or undirected (False)
         var directed : bool;
 
+        // Thee graph is weighted (True) or unweighted (False)
+        var weighted: bool;
+
         /**
         * Init the basic graph object, we'll compose the pieces using the withCOMPONENT methods.
         */
-        proc init(num_v:int, num_e:int, directed:bool) {
+        proc init(num_v:int, num_e:int, directed:bool, weighted:bool) {
             this.n_vertices = num_v;
             this.n_edges = num_e;
             this.directed = directed;
+            this.weighted = weighted;
         }
 
         proc isDirected():bool { return this.directed; }
@@ -63,7 +67,7 @@ module GraphArray {
         proc withNEIGHBOR(a:shared GenSymEntry):SegGraph { components.add(Component.NEIGHBOR, a); return this; }
         proc withNEIGHBOR_R(a:GenSymEntry):SegGraph { components.add(Component.NEIGHBOR_R, a); return this; }
         proc withEDGE_WEIGHT(a:shared GenSymEntry):SegGraph { components.add(Component.EDGE_WEIGHT, a); return this; }
-        proc withVERTEX_WEIGHT(a:shared GenSymEntry):SegGraph { components.add(Component.VERTEX_WEIGHT, a); return this; }
+        proc withEDGE_WEIGHT_R(a:shared GenSymEntry):SegGraph { components.add(Component.EDGE_WEIGHT_R, a); return this; }
 
         proc hasSRC():bool { return components.contains(Component.SRC); }
         proc hasSRC_R():bool { return components.contains(Component.SRC_R); }
@@ -74,7 +78,7 @@ module GraphArray {
         proc hasNEIGHBOR():bool { return components.contains(Component.NEIGHBOR); }
         proc hasNEIGHBOR_R():bool { return components.contains(Component.NEIGHBOR_R); }
         proc hasEDGE_WEIGHT():bool { return components.contains(Component.EDGE_WEIGHT); }
-        proc hasVERTEX_WEIGHT():bool { return components.contains(Component.VERTEX_WEIGHT); }
+        proc hasEDGE_WEIGHT_R():bool { return components.contains(Component.EDGE_WEIGHT_R); }
         
         proc getSRC() { return components.getBorrowed(Component.SRC); }
         proc getSRC_R() { return components.getBorrowed(Component.SRC_R); }
@@ -85,7 +89,7 @@ module GraphArray {
         proc getNEIGHBOR() { return components.getBorrowed(Component.NEIGHBOR); }
         proc getNEIGHBOR_R() { return components.getBorrowed(Component.NEIGHBOR_R); }
         proc getEDGE_WEIGHT() { return components.getBorrowed(Component.EDGE_WEIGHT); }
-        proc getVERTEX_WEIGHT() { return components.getBorrowed(Component.VERTEX_WEIGHT); }
+        proc getEDGE_WEIGHT_R() { return components.getBorrowed(Component.EDGE_WEIGHT_R); }
     }
 
     /**
