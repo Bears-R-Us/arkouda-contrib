@@ -1,6 +1,9 @@
 module GraphArray {
+    // Chapel modules.
     use Map;
+    use Reflection; 
     
+    // Arkouda modules.
     use Logging;
     use MultiTypeSymEntry;
     use MultiTypeSymbolTable;

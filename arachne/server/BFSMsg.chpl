@@ -26,7 +26,6 @@ module BFSMsg {
     const smLogger = new Logger(logLevel);
     var outMsg:string;
 
-
     /**
     * Check if a particular value x is local in an array. It is local if it is between or equal to 
     * the low and high values passed. 
@@ -112,7 +111,7 @@ module BFSMsg {
         *
         * returns: message back to Python.
         */
-        proc fo_bag_bfs_kernel_u(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, dst: [?D4] int, 
+        proc fo_bag_bfs_kernel_und(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, dst: [?D4] int, 
                                 neiR: [?D11] int, start_iR: [?D12] int, srcR: [?D13] int, 
                                 dstR: [?D14] int):string throws {
             var cur_level = 0;
@@ -190,7 +189,7 @@ module BFSMsg {
         *
         * returns: message back to Python.
         */
-        proc fo_bag_bfs_kernel_d( nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, 
+        proc fo_bag_bfs_kernel_dir( nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, 
                                   dst: [?D4] int): string throws {
             var cur_level = 0;
             var SetCurF = new DistBag(int, Locales); // use bag to keep the current frontier
@@ -249,16 +248,16 @@ module BFSMsg {
                 SetCurF <=> SetNextF;
                 SetNextF.clear();
             }//end while  
-            return depth;
+            return "success";
         }//end of fo_bag_bfs_kernel_d
 
-        rootN=msgArgs.getValueOf("Root");
-        root=rootN:int;
+        rootN = msgArgs.getValueOf("Source");
+        root = rootN:int;
         depth[root]=0;
 
         proc return_depth(): string throws{
             var depthName = st.nextName();
-            var depthEntry = new shared SymEntry([0]);
+            var depthEntry = new shared SymEntry(depth);
             st.addEntry(depthName, depthEntry);
 
             var depMsg =  'created ' + st.attrib(depthName);
@@ -286,5 +285,10 @@ module BFSMsg {
             );
             repMsg=return_depth();
         }
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+        return new MsgTuple(repMsg, MsgType.NORMAL);
     }
+
+    use CommandMap;
+    registerFunction("segmentedGraphBFS", segBFSMsg, getModuleName());
 }
