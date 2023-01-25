@@ -18,7 +18,7 @@ module lshMinMaxMsg
 
   /* An implementation of a locality-sensitive hashing scheme for the MinMax (i.e. weighted 
      Jaccard) kernel originally described in "Consistent Weighted Sampling" (Manasse, McSherry
-     Talwar). The specific implementation is an equivalent version by Sergie Ioffe described 
+     Talwar). The specific implementation is an equivalent version by Sergey Ioffe described 
      in "Improved Consistent Sampling, Weighted Minhash, and L1 Sketching" that improves the
      runtime of the hashing setp from expected constant time to constant time. */
 
