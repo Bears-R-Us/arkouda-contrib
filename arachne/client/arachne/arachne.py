@@ -85,13 +85,18 @@ class Graph:
         """
         try:
             if len(args) < 5:
-                raise ValueError
-            self.n_vertices = int(cast(int, args[0]))
-            self.n_edges = int(cast(int, args[1]))
-            self.weighted = int(cast(int, args[3]))
-            oriname = cast(str, args[4])
-            self.name = oriname.strip()
-            self.directed = 0
+                self.n_vertices = 0
+                self.n_edges = 0
+                self.weighted = None
+                self.directed = 0
+                self.name = None
+            else:
+                self.n_vertices = int(cast(int, args[0]))
+                self.n_edges = int(cast(int, args[1]))
+                self.weighted = int(cast(int, args[3]))
+                oriname = cast(str, args[4])
+                self.name = oriname.strip()
+                self.directed = 0
         except Exception as e:
             raise RuntimeError(e)
 
@@ -101,8 +106,12 @@ class Graph:
     def __iter__(self):
         """Currently, we do not provide a mechanism for iterating over arrays. The best workaround
         is to create an array of size n-1 where each element stores the index of the element
-        location as an integeer. WARNING: This may create a very large array that Python may not be able to
-        handle at the frontend.
+        location as an integeer. WARNING: This may create a very large array that Python may not be 
+        able to handle.
+
+        Returns
+        -------
+        None
         """
         raise NotImplementedError("""Graph does not support iteration. It is derived from
                                    Arkouda's pdarrays which also do not support iteration.""")
@@ -116,6 +125,36 @@ class Graph:
             The number of vertices in the graph.
         """
         return self.n_vertices
+
+    def add_edges_from(self, akarray_src: pdarray, akarray_dst: pdarray, 
+                       akarray_weight: Union[None, pdarray] = None) -> None:
+        """Populates the graph object with edges as defined by the akarrays. 
+
+        Returns
+        -------
+        None
+        """
+        cmd = "addEdgesFrom"
+
+        if akarray_weight is not None:
+            self.weighted = 1
+        else:
+            self.weighted = 0
+
+        args = { "AkArraySrc" : akarray_src,
+                 "AkArrayDst" : akarray_dst, 
+                 "AkArrayWeight" : akarray_weight,
+                 "Weighted" : bool(self.weighted),
+                 "Directed": bool(self.directed) }
+        
+        repMsg = generic_msg(cmd=cmd, args=args)
+        returned_vals = (cast(str, repMsg).split('+'))
+
+        self.n_vertices = int(cast(int, returned_vals[0]))
+        self.n_edges = int(cast(int, returned_vals[1]))
+        self.weighted = int(cast(int, returned_vals[3]))
+        oriname = cast(str, returned_vals[4])
+        self.name = oriname.strip()
 
 class DiGraph(Graph):
     """Base class for directed graphs. Inherits from Graph.
@@ -189,13 +228,18 @@ class DiGraph(Graph):
         """
         try:
             if len(args) < 5:
-                raise ValueError
-            self.n_vertices = int (cast(int, args[0]))
-            self.n_edges = int(cast(int, args[1]))
-            self.weighted = int(cast(int, args[3]))
-            oriname = cast(str, args[4])
-            self.name = oriname.strip()
-            self.directed = 1
+                self.n_vertices = 0
+                self.n_edges = 0
+                self.weighted = None
+                self.directed = 1
+                self.name = None
+            else:
+                self.n_vertices = int (cast(int, args[0]))
+                self.n_edges = int(cast(int, args[1]))
+                self.weighted = int(cast(int, args[3]))
+                oriname = cast(str, args[4])
+                self.name = oriname.strip()
+                self.directed = 1
         except Exception as e:
             raise RuntimeError(e)
 

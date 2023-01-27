@@ -144,7 +144,6 @@ module GraphMsg {
     *
     * returns: nothing
     */
-    // TODO: combine_sort has bugs, compare against Arkouda version.
     private proc combine_sort(lsrc: [?D1] int, ldst: [?D2] int, le_weight: [?D3] int, 
                               lWeightedFlag: bool, sortw = false: bool) {
         param bitsPerDigit = RSLSD_bitsPerDigit;
@@ -411,7 +410,7 @@ module GraphMsg {
         var vertex_domain = neighbor.domain;
 
         // TODO: We intitialize memory we do not need. For example, directed graphs do not require
-        //       reversed arrays. This must be fixed. 
+        //       reversed arrays. This must be fixed, but may require significant code changes.
         // Edge index arrays. 
         var dst, e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
         // Vertex index arrays. 
@@ -616,7 +615,7 @@ module GraphMsg {
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
 
         return new MsgTuple(repMsg, MsgType.NORMAL);
-    } // end of segGraphPreProcessingMsg
+    } // end of readKnownEdgelistMsg
 
     /**
     * Read a graph whose number of vertices and edges are unknown before analysis.
@@ -702,7 +701,7 @@ module GraphMsg {
         var vertex_domain = neighbor.domain;
 
         // TODO: We intitialize memory we do not need. For example, directed graphs do not require
-        //       reversed arrays. This must be fixed. 
+        //       reversed arrays. This must be fixed, but may require significant code changes.
         // Edge index arrays. 
         var dst, e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
         // Vertex index arrays. 
@@ -1011,9 +1010,328 @@ module GraphMsg {
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
 
         return new MsgTuple(repMsg, MsgType.NORMAL);
-    } // end of segGraphFileMsg
+    } // end of readEdgelistMsg
+
+    /**
+    * Convert akarrays to a graph object. 
+    *
+    * cmd: operation to perform. 
+    * msgArgs: arugments passed to backend. 
+    * SymTab: symbol table used for storage. 
+    *
+    * returns: message back to Python.
+    */
+    proc addEdgesFromMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+        // Parse the message from Python to extract needed data. 
+        var akarray_srcS = msgArgs.getValueOf("AkArraySrc");
+        var akarray_dstS = msgArgs.getValueOf("AkArrayDst");
+        var akarray_weightS = msgArgs.getValueOf("AkArrayWeight");
+        var weightedS = msgArgs.getValueOf("Weighted");
+        var directedS = msgArgs.getValueOf("Directed");
+
+        // Convert parsed message to needed data types for Chapel operations.
+        var src_name:string = (akarray_srcS:string);
+        var dst_name:string = (akarray_dstS:string);
+        var weight_name:string = (akarray_weightS:string);
+
+        var weighted:bool; 
+        weightedS = weightedS.toLower();
+        weighted = (weightedS:bool);
+
+        var directed:bool;
+        directedS = directedS.toLower();
+        directed = (directedS:bool);
+
+        // Graph data structure building timer. 
+        var timer:Timer;
+        timer.start();
+
+        // Extract the entry names from the symbol table to extract the data for use.
+        var akarray_src_entry: borrowed GenSymEntry = getGenericTypedArrayEntry(src_name, st);
+        var akarray_dst_entry: borrowed GenSymEntry = getGenericTypedArrayEntry(dst_name, st);
+
+        // Extract the data for use. 
+        var akarray_src_sym = toSymEntry(akarray_src_entry,int);
+        var src = akarray_src_sym.a;
+
+        var akarray_dst_sym = toSymEntry(akarray_dst_entry,int);
+        var dst = akarray_dst_sym.a;
+
+        // Perform a first pass over the data to get number of edges and vertices.
+        var a,b,c:string;
+        var curline:int = 0;
+
+        // Add vertices to a set and count number of lines which is number of edges.
+        var vertex_set = new set(int, parSafe = true);
+        forall (u,v) in zip(src, dst) with (ref vertex_set){            
+            // Add vertices to a vertex_set. 
+            vertex_set.add(u:int);
+            vertex_set.add(v:int);
+        }
+
+        // Write the number of edges and vertices. 
+        var ne:int = src.size:int; 
+        var nv:int = (vertex_set.size:int);
+
+        // Initializing the arrays that make up our double-index data structure.
+        var edge_domain = src.domain;
+
+        var neighbor = makeDistArray(nv,int);
+        var vertex_domain = neighbor.domain;
+
+        // TODO: We intitialize memory we do not need. For example, directed graphs do not require
+        //       reversed arrays. This must be fixed, but may require significant code changes.
+        // Edge index arrays. 
+        var e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
+        // Vertex index arrays. 
+        var start_i, neighborR, start_iR,depth: [vertex_domain] int;
+
+        if weighted {
+            var akarray_weight_entry: borrowed GenSymEntry = getGenericTypedArrayEntry(weight_name, st);
+            var akarray_weight_sym = toSymEntry(akarray_weight_entry,int);
+            e_weight = akarray_weight_sym.a;
+        }
+
+        // Remap the vertices to a new range.
+        var new_nv:int = vertex_remap(src, dst, nv);
+      
+        if (!weighted) {
+            try { 
+                combine_sort(src, dst, e_weight, weighted, false);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error.");
+            }
+        } else {
+            try { 
+                combine_sort(src, dst, e_weight, weighted, true);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),"Combine sort error.");
+            }
+        }
+
+        // Set neighbor (vertex index array) information based off edges,
+        set_neighbor(src, start_i, neighbor);
+
+        // Read in undirected graph parts into reversed arrays.
+        if (!directed) {
+            smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),"Read undirected graph.");
+            coforall loc in Locales  {
+                on loc {
+                    forall i in srcR.localSubdomain(){
+                        srcR[i] = dst[i];
+                        dstR[i] = src[i];
+                        e_weightR = e_weight[i];
+                    }
+                }
+            }
+            if (!weighted) {
+                try  { 
+                    combine_sort(srcR, dstR, e_weightR, weighted, false);
+                } catch {
+                    try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                        "Combine sort error");
+                }
+            } else {
+                try  { 
+                    combine_sort(srcR, dstR, e_weightR, weighted, false);
+                } catch {
+                    try!  smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                        "Combine sort error");
+                }
+            }
+        }
+
+        // Remove self loops and duplicated edges.
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),
+                       "Remove self loops and duplicated edges");
+        var cur = 0;
+        var tmpsrc = src;
+        var tmpdst = dst;
+        var tmpe_weight = e_weight;
+        
+        for i in 0..ne - 1 {
+            // Ignore self-loops. 
+            if src[i]==dst[i] {
+                continue;
+            }
+            if (cur == 0) {
+                tmpsrc[cur] = src[i];
+                tmpdst[cur] = dst[i]; 
+                tmpe_weight[cur] = e_weight[i];
+                cur += 1;
+                continue;
+            }
+            
+            // Ignore duplicated edges.
+            if (tmpsrc[cur-1] == src[i]) && (tmpdst[cur-1] == dst[i]) {
+                continue;
+            } else {
+                if (src[i] > dst[i]) {
+                    var u = src[i]:int;
+                    var v = dst[i]:int;
+                    var lu = start_i[u]:int;
+                    var nu = neighbor[u]:int;
+                    var lv = start_i[v]:int;
+                    var nv = neighbor[v]:int;
+                    var DupE:int;
+                    
+                    // Find v->u.
+                    DupE = binSearchE(dst,lv,lv+nv-1,u);
+                    if (DupE != -1) {
+                        continue;
+                    }
+                }
+                tmpsrc[cur] = src[i];
+                tmpdst[cur] = dst[i]; 
+                tmpe_weight[cur] = e_weight[i]; 
+                cur+=1;
+            }
+        }
+        var new_ne = cur;  
+ 
+        var mysrc = makeDistArray(new_ne, int);
+        var myedgeD = mysrc.domain;
+
+        var myneighbor = makeDistArray(new_nv, int);
+        var myvertexD=myneighbor.domain;
+
+        // Arrays made from the edge domain. 
+        var mydst, mye_weight, mye_weightR, mysrcR, mydstR, myiv: [myedgeD] int ;
+
+        // Arrays made from the vertex domain. 
+        var mystart_i, myneighborR, mystart_iR, mydepth: [myvertexD] int;
+        
+        // Finish creating the new arrays after removing self-loops and multiedges.
+        if (new_ne < ne ) {
+            smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),
+                "Removed " + (ne - new_ne):string + " edges");
+
+            forall i in 0..new_ne-1 {
+                mysrc[i] = tmpsrc[i];
+                mydst[i] = tmpdst[i];
+                mye_weight[i] = tmpe_weight[i];
+            }
+            try { 
+                combine_sort(mysrc, mydst, mye_weight, weighted, false);
+            } catch {
+                try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                    "Combine sort error.");
+            }
+
+            set_neighbor(mysrc, mystart_i, myneighbor);
+
+            if (!directed) { // undirected graph
+                coforall loc in Locales  {
+                    on loc {
+                        forall i in mysrcR.localSubdomain(){
+                            mysrcR[i] = mydst[i];
+                            mydstR[i] = mysrc[i];
+                            mye_weightR[i] = mye_weight[i];
+                        }
+                    }
+                }
+
+                if(!weighted) {
+                    try  { 
+                        combine_sort(mysrcR, mydstR, mye_weightR, weighted, false);
+                    } catch {
+                        try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                            "Combine sort error");
+                    }
+                } else {
+                    try  { 
+                        combine_sort(mysrcR, mydstR, mye_weightR, weighted, true);
+                    } catch {
+                        try! smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
+                                            "Combine sort error");
+                    }
+                }
+                set_neighbor(mysrcR, mystart_iR, myneighborR);
+            }//end of undirected
+        }
+
+        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
+        if (directed && !weighted) {
+            writeln("DIRECTED AND UNWEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("nei       = ", myneighbor);
+            writeln("start_i   = ", mystart_i);
+        }
+        if (directed && weighted) {
+            writeln("DIRECTED AND WEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("nei       = ", myneighbor);
+            writeln("start_i   = ", mystart_i);
+            writeln("e_weight  = ", mye_weight);
+        }
+        if (!directed && !weighted) {
+            writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("srcR      = ", mysrcR); 
+            writeln("dstR      = ", mydstR);
+            writeln("nei       = ", myneighbor);
+            writeln("neiR      = ", myneighborR);
+            writeln("start_i   = ", mystart_i);
+            writeln("start_iR  = ", mystart_iR);
+        }
+        if (!directed && weighted) {
+            writeln("UNDIRECTED AND WEIGHTED GRAPH:");
+            writeln("src       = ", mysrc);
+            writeln("dst       = ", mydst);
+            writeln("srcR      = ", mysrcR); 
+            writeln("dstR      = ", mydstR);
+            writeln("nei       = ", myneighbor);
+            writeln("neiR      = ", myneighborR);
+            writeln("start_i   = ", mystart_i);
+            writeln("start_iR  = ", mystart_iR);
+            writeln("e_weight  = ", mye_weight);
+            writeln("e_weightR = ", mye_weightR);
+        }
+
+        // Finish building graph data structure.
+        var graph = new shared SegGraph(ne, nv, directed, weighted);
+        graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
+             .withDST(new shared SymEntry(mydst):GenSymEntry)
+             .withSTART_IDX(new shared SymEntry(mystart_i):GenSymEntry)
+             .withNEIGHBOR(new shared SymEntry(myneighbor):GenSymEntry);
+
+        if (!directed) {
+            graph.withSRC_R(new shared SymEntry(mysrcR):GenSymEntry)
+                 .withDST_R(new shared SymEntry(mydstR):GenSymEntry)
+                 .withSTART_IDX_R(new shared SymEntry(mystart_iR):GenSymEntry)
+                 .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
+        }
+
+        if (weighted) {
+            graph.withEDGE_WEIGHT(new shared SymEntry(mye_weight):GenSymEntry);
+
+            if (!directed) {
+                graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
+            }
+        }
+
+        // Add graph to the specific symbol table entry. 
+        var graphEntryName = st.nextName();
+        var graphSymEntry = new shared GraphSymEntry(graph);
+        st.addEntry(graphEntryName, graphSymEntry);
+        var repMsg = new_nv:string + '+ ' + new_ne:string + '+ ' + directedS + '+ ' + weighted:int:string + '+' + graphEntryName;
+        
+        // Print out the length of time it takes to read in and build a known graph file.
+        timer.stop();
+        outMsg = "Building graph from unknown edge file takes " + timer.elapsed():string;
+        
+        // Print out debug information to arkouda server output. 
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
+        smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),repMsg);
+
+        return new MsgTuple(repMsg, MsgType.NORMAL);
+    } // end of addEdgesFromMsg
 
     use CommandMap;
     registerFunction("readKnownEdgelist", readKnownEdgelistMsg, getModuleName());
     registerFunction("readEdgelist", readEdgelistMsg, getModuleName());
+    registerFunction("addEdgesFrom", addEdgesFromMsg, getModuleName());
 }
