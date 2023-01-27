@@ -77,7 +77,7 @@ module BFSMsg {
         var Ne = n_edgesN:int;
         var directed = directedN:int;
         var weighted = weightedN:int;
-        var timer:Timer;
+        var timer:stopwatch;
 
         var root:int; 
         var srcN, dstN, startN, neighborN, eweightN, rootN: string; 

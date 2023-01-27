@@ -399,7 +399,7 @@ module GraphMsg {
         smLogger.info(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
 
         // Graph data structure building timer. 
-        var timer:Timer;
+        var timer:stopwatch;
         timer.start();
 
         // Initializing the arrays that make up our double-index data structure.
@@ -537,47 +537,6 @@ module GraphMsg {
             set_neighbor(srcR,start_iR,neighborR);
         }
 
-        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
-        if (directed && !weighted) {
-            writeln("DIRECTED AND UNWEIGHTED GRAPH:");
-            writeln("src       = ", src);
-            writeln("dst       = ", dst);
-            writeln("nei       = ", neighbor);
-            writeln("start_i   = ", start_i);
-        }
-        if (directed && weighted) {
-            writeln("DIRECTED AND WEIGHTED GRAPH:");
-            writeln("src       = ", src);
-            writeln("dst       = ", dst);
-            writeln("nei       = ", neighbor);
-            writeln("start_i   = ", start_i);
-            writeln("e_weight  = ", e_weight);
-        }
-        if (!directed && !weighted) {
-            writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
-            writeln("src       = ", src);
-            writeln("dst       = ", dst);
-            writeln("srcR      = ", srcR); 
-            writeln("dstR      = ", dstR);
-            writeln("nei       = ", neighbor);
-            writeln("neiR      = ", neighborR);
-            writeln("start_i   = ", start_i);
-            writeln("start_iR  = ", start_iR);
-        }
-        if (!directed && weighted) {
-            writeln("UNDIRECTED AND WEIGHTED GRAPH:");
-            writeln("src       = ", src);
-            writeln("dst       = ", dst);
-            writeln("srcR      = ", srcR); 
-            writeln("dstR      = ", dstR);
-            writeln("nei       = ", neighbor);
-            writeln("neiR      = ", neighborR);
-            writeln("start_i   = ", start_i);
-            writeln("start_iR  = ", start_iR);
-            writeln("e_weight  = ", e_weight);
-            writeln("e_weightR = ", e_weightR);
-        }
-
         // Add graph data structure to the symbol table. 
         var graph = new shared SegGraph(ne, nv, directed, weighted);
         graph.withSRC(new shared SymEntry(src):GenSymEntry)
@@ -599,6 +558,47 @@ module GraphMsg {
                 graph.withEDGE_WEIGHT_R(new shared SymEntry(e_weightR):GenSymEntry);
             }
         }
+
+        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
+        // if (directed && !weighted) {
+        //     writeln("DIRECTED AND UNWEIGHTED GRAPH:");
+        //     writeln("src       = ", src);
+        //     writeln("dst       = ", dst);
+        //     writeln("nei       = ", neighbor);
+        //     writeln("start_i   = ", start_i);
+        // }
+        // if (directed && weighted) {
+        //     writeln("DIRECTED AND WEIGHTED GRAPH:");
+        //     writeln("src       = ", src);
+        //     writeln("dst       = ", dst);
+        //     writeln("nei       = ", neighbor);
+        //     writeln("start_i   = ", start_i);
+        //     writeln("e_weight  = ", e_weight);
+        // }
+        // if (!directed && !weighted) {
+        //     writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
+        //     writeln("src       = ", src);
+        //     writeln("dst       = ", dst);
+        //     writeln("srcR      = ", srcR); 
+        //     writeln("dstR      = ", dstR);
+        //     writeln("nei       = ", neighbor);
+        //     writeln("neiR      = ", neighborR);
+        //     writeln("start_i   = ", start_i);
+        //     writeln("start_iR  = ", start_iR);
+        // }
+        // if (!directed && weighted) {
+        //     writeln("UNDIRECTED AND WEIGHTED GRAPH:");
+        //     writeln("src       = ", src);
+        //     writeln("dst       = ", dst);
+        //     writeln("srcR      = ", srcR); 
+        //     writeln("dstR      = ", dstR);
+        //     writeln("nei       = ", neighbor);
+        //     writeln("neiR      = ", neighborR);
+        //     writeln("start_i   = ", start_i);
+        //     writeln("start_iR  = ", start_iR);
+        //     writeln("e_weight  = ", e_weight);
+        //     writeln("e_weightR = ", e_weightR);
+        // }
 
         // Add graph to the specific symbol table entry. 
         var graphEntryName = st.nextName();
@@ -649,7 +649,7 @@ module GraphMsg {
         var filetype:string = (filetypeS:string);
 
         // Graph data structure building timer. 
-        var timer:Timer;
+        var timer:stopwatch;
         timer.start();
 
         // Check to see if the file can be opened correctly. 
@@ -933,45 +933,45 @@ module GraphMsg {
         }
 
         // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
-        if (directed && !weighted) {
-            writeln("DIRECTED AND UNWEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("nei       = ", myneighbor);
-            writeln("start_i   = ", mystart_i);
-        }
-        if (directed && weighted) {
-            writeln("DIRECTED AND WEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("nei       = ", myneighbor);
-            writeln("start_i   = ", mystart_i);
-            writeln("e_weight  = ", mye_weight);
-        }
-        if (!directed && !weighted) {
-            writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("srcR      = ", mysrcR); 
-            writeln("dstR      = ", mydstR);
-            writeln("nei       = ", myneighbor);
-            writeln("neiR      = ", myneighborR);
-            writeln("start_i   = ", mystart_i);
-            writeln("start_iR  = ", mystart_iR);
-        }
-        if (!directed && weighted) {
-            writeln("UNDIRECTED AND WEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("srcR      = ", mysrcR); 
-            writeln("dstR      = ", mydstR);
-            writeln("nei       = ", myneighbor);
-            writeln("neiR      = ", myneighborR);
-            writeln("start_i   = ", mystart_i);
-            writeln("start_iR  = ", mystart_iR);
-            writeln("e_weight  = ", mye_weight);
-            writeln("e_weightR = ", mye_weightR);
-        }
+        // if (directed && !weighted) {
+        //     writeln("DIRECTED AND UNWEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("start_i   = ", mystart_i);
+        // }
+        // if (directed && weighted) {
+        //     writeln("DIRECTED AND WEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("start_i   = ", mystart_i);
+        //     writeln("e_weight  = ", mye_weight);
+        // }
+        // if (!directed && !weighted) {
+        //     writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("srcR      = ", mysrcR); 
+        //     writeln("dstR      = ", mydstR);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("neiR      = ", myneighborR);
+        //     writeln("start_i   = ", mystart_i);
+        //     writeln("start_iR  = ", mystart_iR);
+        // }
+        // if (!directed && weighted) {
+        //     writeln("UNDIRECTED AND WEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("srcR      = ", mysrcR); 
+        //     writeln("dstR      = ", mydstR);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("neiR      = ", myneighborR);
+        //     writeln("start_i   = ", mystart_i);
+        //     writeln("start_iR  = ", mystart_iR);
+        //     writeln("e_weight  = ", mye_weight);
+        //     writeln("e_weightR = ", mye_weightR);
+        // }
 
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed, weighted);
@@ -1043,7 +1043,7 @@ module GraphMsg {
         directed = (directedS:bool);
 
         // Graph data structure building timer. 
-        var timer:Timer;
+        var timer:stopwatch;
         timer.start();
 
         // Extract the entry names from the symbol table to extract the data for use.
@@ -1251,45 +1251,45 @@ module GraphMsg {
         }
 
         // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
-        if (directed && !weighted) {
-            writeln("DIRECTED AND UNWEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("nei       = ", myneighbor);
-            writeln("start_i   = ", mystart_i);
-        }
-        if (directed && weighted) {
-            writeln("DIRECTED AND WEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("nei       = ", myneighbor);
-            writeln("start_i   = ", mystart_i);
-            writeln("e_weight  = ", mye_weight);
-        }
-        if (!directed && !weighted) {
-            writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("srcR      = ", mysrcR); 
-            writeln("dstR      = ", mydstR);
-            writeln("nei       = ", myneighbor);
-            writeln("neiR      = ", myneighborR);
-            writeln("start_i   = ", mystart_i);
-            writeln("start_iR  = ", mystart_iR);
-        }
-        if (!directed && weighted) {
-            writeln("UNDIRECTED AND WEIGHTED GRAPH:");
-            writeln("src       = ", mysrc);
-            writeln("dst       = ", mydst);
-            writeln("srcR      = ", mysrcR); 
-            writeln("dstR      = ", mydstR);
-            writeln("nei       = ", myneighbor);
-            writeln("neiR      = ", myneighborR);
-            writeln("start_i   = ", mystart_i);
-            writeln("start_iR  = ", mystart_iR);
-            writeln("e_weight  = ", mye_weight);
-            writeln("e_weightR = ", mye_weightR);
-        }
+        // if (directed && !weighted) {
+        //     writeln("DIRECTED AND UNWEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("start_i   = ", mystart_i);
+        // }
+        // if (directed && weighted) {
+        //     writeln("DIRECTED AND WEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("start_i   = ", mystart_i);
+        //     writeln("e_weight  = ", mye_weight);
+        // }
+        // if (!directed && !weighted) {
+        //     writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("srcR      = ", mysrcR); 
+        //     writeln("dstR      = ", mydstR);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("neiR      = ", myneighborR);
+        //     writeln("start_i   = ", mystart_i);
+        //     writeln("start_iR  = ", mystart_iR);
+        // }
+        // if (!directed && weighted) {
+        //     writeln("UNDIRECTED AND WEIGHTED GRAPH:");
+        //     writeln("src       = ", mysrc);
+        //     writeln("dst       = ", mydst);
+        //     writeln("srcR      = ", mysrcR); 
+        //     writeln("dstR      = ", mydstR);
+        //     writeln("nei       = ", myneighbor);
+        //     writeln("neiR      = ", myneighborR);
+        //     writeln("start_i   = ", mystart_i);
+        //     writeln("start_iR  = ", mystart_iR);
+        //     writeln("e_weight  = ", mye_weight);
+        //     writeln("e_weightR = ", mye_weightR);
+        // }
 
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed, weighted);
@@ -1321,7 +1321,7 @@ module GraphMsg {
         
         // Print out the length of time it takes to read in and build a known graph file.
         timer.stop();
-        outMsg = "Building graph from unknown edge file takes " + timer.elapsed():string;
+        outMsg = "Building graph from two edge arrays takes " + timer.elapsed():string;
         
         // Print out debug information to arkouda server output. 
         smLogger.debug(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
