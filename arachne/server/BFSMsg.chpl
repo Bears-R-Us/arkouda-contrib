@@ -112,8 +112,8 @@ module BFSMsg {
         * returns: message back to Python.
         */
         proc fo_bag_bfs_kernel_und(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, dst: [?D4] int, 
-                                neiR: [?D11] int, start_iR: [?D12] int, srcR: [?D13] int, 
-                                dstR: [?D14] int):string throws {
+                                neiR: [?D5] int, start_iR: [?D6] int, srcR: [?D7] int, 
+                                dstR: [?D8] int):string throws {
             var cur_level = 0;
             var SetCurF = new DistBag(int, Locales); // use bag to keep the current frontier
             var SetNextF = new DistBag(int, Locales); // use bag to keep the next frontier

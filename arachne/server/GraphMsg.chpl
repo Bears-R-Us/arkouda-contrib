@@ -1,12 +1,12 @@
 module GraphMsg {
     // Chapel modules.
-    use IO;
     use Reflection;
     use Set;
     use Time; 
     use Sort; 
     
     // Arachne Modules.
+    use Utils; 
     use GraphArray;
     
     // Arkouda modules.
@@ -355,7 +355,7 @@ module GraphMsg {
                 return binSearchE(ary,l,m-1,key);
             }
         }
-      }// end of binSearchE()
+    }// end of binSearchE()
 
     /**
     * Read a graph whose number of vertices and edges are known before analysis. Saves time in 
@@ -424,66 +424,8 @@ module GraphMsg {
             smLogger.error(getModuleName(),getRoutineName(),getLineNumber(), "Error opening file.");
         }
 
-        /**
-        * Read the graph file and store edge information in double-index data structure. 
-        *
-        * returns: null.
-        */ 
-        // TODO: combine into one callable global proc for whole file.
-        proc readLinebyLine() throws {
-            coforall loc in Locales  {
-                on loc {
-                    var f = open(path, iomode.r);
-                    var r = f.reader(kind = ionative);
-                    var line:string;
-                    var a,b,c:string;
-                    var curline:int = 0;
-                    var srclocal = src.localSubdomain();
-                    var ewlocal = e_weight.localSubdomain();
-
-                    while r.readLine(line) {
-                        // Ignore comments.
-                        if (line[0] == comments) {
-                            continue;
-                        }
-                        
-                        // Parse our vertices and weights, if applicable. 
-                        if (!weighted) {
-                            (a,b) = line.splitMsgToTuple(2);
-                        } else {
-                            (a,b,c) = line.splitMsgToTuple(3);
-                        }
-
-                        // Place the read edge into the current locale.
-                        if (srclocal.contains(curline)) {
-                            src[curline] = (a:int);
-                            dst[curline] = (b:int);
-
-                            if (weighted) {
-                                e_weight[curline] = (c:int);
-                            }
-                        }
-
-                        curline += 1;
-
-                        // Do not to write on an out of bounds locale. 
-                        if (curline > srclocal.highBound) {
-                            break;
-                        }
-                    } 
-                    if (curline <= srclocal.highBound) {
-                        var myoutMsg = "The input file does not contain enough edges for locale " 
-                                       + here.id:string + " current line = " + curline:string;
-                        smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),myoutMsg);
-                    }
-                    r.close();
-                    f.close();
-                }// end on loc
-            }// end coforall
-        }// end readLinebyLine
-
         // Read the file line by line. 
-        readLinebyLine();
+        readLinebyLine(src, dst, e_weight, path, comments, weighted);
 
         // Sort our edge arrays for easy lookup of neighbor vertices. 
         if (!weighted) {
@@ -559,46 +501,11 @@ module GraphMsg {
             }
         }
 
-        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
-        // if (directed && !weighted) {
-        //     writeln("DIRECTED AND UNWEIGHTED GRAPH:");
-        //     writeln("src       = ", src);
-        //     writeln("dst       = ", dst);
-        //     writeln("nei       = ", neighbor);
-        //     writeln("start_i   = ", start_i);
-        // }
-        // if (directed && weighted) {
-        //     writeln("DIRECTED AND WEIGHTED GRAPH:");
-        //     writeln("src       = ", src);
-        //     writeln("dst       = ", dst);
-        //     writeln("nei       = ", neighbor);
-        //     writeln("start_i   = ", start_i);
-        //     writeln("e_weight  = ", e_weight);
-        // }
-        // if (!directed && !weighted) {
-        //     writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
-        //     writeln("src       = ", src);
-        //     writeln("dst       = ", dst);
-        //     writeln("srcR      = ", srcR); 
-        //     writeln("dstR      = ", dstR);
-        //     writeln("nei       = ", neighbor);
-        //     writeln("neiR      = ", neighborR);
-        //     writeln("start_i   = ", start_i);
-        //     writeln("start_iR  = ", start_iR);
-        // }
-        // if (!directed && weighted) {
-        //     writeln("UNDIRECTED AND WEIGHTED GRAPH:");
-        //     writeln("src       = ", src);
-        //     writeln("dst       = ", dst);
-        //     writeln("srcR      = ", srcR); 
-        //     writeln("dstR      = ", dstR);
-        //     writeln("nei       = ", neighbor);
-        //     writeln("neiR      = ", neighborR);
-        //     writeln("start_i   = ", start_i);
-        //     writeln("start_iR  = ", start_iR);
-        //     writeln("e_weight  = ", e_weight);
-        //     writeln("e_weightR = ", e_weightR);
-        // }
+        // Print for debugging server-side from Utils.chpl. 
+        if(debug_print) {
+            print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
+                                   e_weight, e_weightR, directed, weighted);
+        }
 
         // Add graph to the specific symbol table entry. 
         var graphEntryName = st.nextName();
@@ -707,72 +614,8 @@ module GraphMsg {
         // Vertex index arrays. 
         var start_i, neighborR, start_iR,depth: [vertex_domain] int;
 
-        /**
-        * Read the graph file and store edge information in double-index data structure. 
-        *
-        * returns: null.
-        */ 
-        // TODO: combine into one callable global proc for whole file.
-        proc readLinebyLine() throws {
-            coforall loc in Locales  {
-                on loc {
-                    var f = open(path, iomode.r);
-                    var r = f.reader(kind = ionative);
-                    var line:string;
-                    var a,b,c:string;
-                    var curline:int = 0;
-                    var srclocal = src.localSubdomain();
-                    var ewlocal = e_weight.localSubdomain();
-
-                    while r.readLine(line) {
-                        // Ignore comments.
-                        if (line[0] == comments) {
-                            continue;
-                        }
-
-                        // Parse our vertices and weights, if applicable. 
-                        if (!weighted) {
-                            (a,b) = line.splitMsgToTuple(2);
-                        } else {
-                            (a,b,c) = line.splitMsgToTuple(3);
-                        }
-
-                        // Detect a self loop and write it to the server.
-                        if (a == b) {
-                            smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
-                                           "self loop " + a + "->" + b);
-                        }
-
-                        // Place the read edge into the current locale.
-                        if (srclocal.contains(curline)) {
-                            src[curline] = (a:int);
-                            dst[curline] = (b:int);
-
-                            if (weighted) {
-                                e_weight[curline] = (c:int);
-                            }
-                        }
-
-                        curline+=1;
-
-                        // Do not to write on an out of bounds locale. 
-                        if (curline > srclocal.highBound) {
-                            break;
-                        }
-                    } 
-                    if (curline <= srclocal.highBound) {
-                        var myoutMsg = "The input file does not contain enough edges for locale " 
-                                       + here.id:string + " current line = " + curline:string;
-                        smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),myoutMsg);
-                    }
-                    r.close();
-                    f.close();
-                }// end on loc
-            }//end coforall
-        }//end readLinebyLine
-
         // Read the file line by line.
-        readLinebyLine(); 
+        readLinebyLine(src, dst, e_weight, path, comments, weighted); 
         
         // Remap the vertices to a new range.
         var new_nv:int = vertex_remap(src, dst, nv);
@@ -932,46 +775,11 @@ module GraphMsg {
             }//end of undirected
         }
 
-        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
-        // if (directed && !weighted) {
-        //     writeln("DIRECTED AND UNWEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("start_i   = ", mystart_i);
-        // }
-        // if (directed && weighted) {
-        //     writeln("DIRECTED AND WEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("start_i   = ", mystart_i);
-        //     writeln("e_weight  = ", mye_weight);
-        // }
-        // if (!directed && !weighted) {
-        //     writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("srcR      = ", mysrcR); 
-        //     writeln("dstR      = ", mydstR);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("neiR      = ", myneighborR);
-        //     writeln("start_i   = ", mystart_i);
-        //     writeln("start_iR  = ", mystart_iR);
-        // }
-        // if (!directed && weighted) {
-        //     writeln("UNDIRECTED AND WEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("srcR      = ", mysrcR); 
-        //     writeln("dstR      = ", mydstR);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("neiR      = ", myneighborR);
-        //     writeln("start_i   = ", mystart_i);
-        //     writeln("start_iR  = ", mystart_iR);
-        //     writeln("e_weight  = ", mye_weight);
-        //     writeln("e_weightR = ", mye_weightR);
-        // }
+        // Print for debugging server-side from Utils.chpl. 
+        if(debug_print) {
+            print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
+                                   e_weight, e_weightR, directed, weighted);
+        }
 
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed, weighted);
@@ -1250,47 +1058,6 @@ module GraphMsg {
             }//end of undirected
         }
 
-        // TODO: COMMENT OUT BEFORE PULL REQUEST. TEST CODE. MAY BE REMOVED IN FUTURE.
-        // if (directed && !weighted) {
-        //     writeln("DIRECTED AND UNWEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("start_i   = ", mystart_i);
-        // }
-        // if (directed && weighted) {
-        //     writeln("DIRECTED AND WEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("start_i   = ", mystart_i);
-        //     writeln("e_weight  = ", mye_weight);
-        // }
-        // if (!directed && !weighted) {
-        //     writeln("UNDIRECTED AND UNWEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("srcR      = ", mysrcR); 
-        //     writeln("dstR      = ", mydstR);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("neiR      = ", myneighborR);
-        //     writeln("start_i   = ", mystart_i);
-        //     writeln("start_iR  = ", mystart_iR);
-        // }
-        // if (!directed && weighted) {
-        //     writeln("UNDIRECTED AND WEIGHTED GRAPH:");
-        //     writeln("src       = ", mysrc);
-        //     writeln("dst       = ", mydst);
-        //     writeln("srcR      = ", mysrcR); 
-        //     writeln("dstR      = ", mydstR);
-        //     writeln("nei       = ", myneighbor);
-        //     writeln("neiR      = ", myneighborR);
-        //     writeln("start_i   = ", mystart_i);
-        //     writeln("start_iR  = ", mystart_iR);
-        //     writeln("e_weight  = ", mye_weight);
-        //     writeln("e_weightR = ", mye_weightR);
-        // }
-
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed, weighted);
         graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
@@ -1311,6 +1078,12 @@ module GraphMsg {
             if (!directed) {
                 graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
             }
+        }
+
+        // Print for debugging server-side from Utils.chpl. 
+        if(debug_print) {
+            print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
+                                   e_weight, e_weightR, directed, weighted);
         }
 
         // Add graph to the specific symbol table entry. 
