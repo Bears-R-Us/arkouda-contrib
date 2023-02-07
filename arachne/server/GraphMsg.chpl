@@ -555,6 +555,10 @@ module GraphMsg {
         var comments:string = (commentsS:string);
         var filetype:string = (filetypeS:string);
 
+        if (filetype == "mtx") {
+            comments = "%";
+        }
+
         // Graph data structure building timer. 
         var timer:stopwatch;
         timer.start();
@@ -571,15 +575,22 @@ module GraphMsg {
         var f = open(path, iomode.r);
         var r = f.reader(kind = ionative);
         var line:string;
+        var prevline:string;
         var a,b,c:string;
-        var curline:int = 0;
+        var edge_count:int = 0;
 
         // Add vertices to a set and count number of lines which is number of edges.
         var vertex_set = new set(int, parSafe = true);
         while (r.readLine(line)) {
-            // Ignore comments.
+            // Ignore comments for all files and matrix dimensions for mtx files.
             if (line[0] == comments) {
+                prevline = line;
                 continue;
+            } else {
+                if (filetype == "mtx") && (prevline[0] == comments) {
+                    continue;
+                }
+                prevline = line; 
             }
 
             // Parse our vertices and weights, if applicable. 
@@ -593,11 +604,12 @@ module GraphMsg {
             vertex_set.add(a:int);
             vertex_set.add(b:int);
 
-            curline += 1;
+            // Keep track of the number of edges read from file lines. 
+            edge_count += 1;
         }
 
         // Write the number of edges and vertices. 
-        var ne:int = curline; 
+        var ne:int = edge_count; 
         var nv:int = (vertex_set.size:int);
 
         // Initializing the arrays that make up our double-index data structure.

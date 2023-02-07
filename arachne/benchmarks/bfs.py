@@ -10,24 +10,26 @@ import arachne as ar
 
 def bfs_single(filename:str):
     cfg = ak.get_config()
-    print("BREADTH FIRST SEARCH -- SINGLE MODE")
-    print("server Hostname =", cfg["serverHostname"])
-    print("Number of Locales=", cfg["numLocales"])
-    print("number of PUs =", cfg["numPUs"])
-    print("Max Tasks =", cfg["maxTaskPar"])
-    print("Memory =", cfg["physicalMemory"])
+    print(
+        f"BREADTH FIRST SEARCH -- SINGLE MODE\n"
+        f"server hostname = {cfg['serverHostname']}\n"
+        f"number of locales = {cfg['numLocales']}\n"
+        f"number of PUs = {cfg['numPUs']}\n"
+        f"max tasks = {cfg['maxTaskPar']}\n"
+        f"memory = {cfg['physicalMemory']}\n")
 
     # Split up filename parameter to only path and only name of file.
     filepath_and_filename = filename.rsplit("/", 1)
     only_filepath = filepath_and_filename[0] + "/"
     only_filename = filepath_and_filename[1]
+    only_extension = filename.rsplit(".", 1)[1]
 
     # Read in the graph and perform BFS steps. 
-    G = ar.read_edgelist(filename)
+    G = ar.read_edgelist(filename, filetype=only_extension)
     selectroot = np.random.randint(0, num_vertices-1, trials)
     start = time.time()
     for root in selectroot:
-        ar.graph_bfs(G, int(root))
+        ar.bfs_layers(G, int(root))
     end = time.time()
     avg = (end-start) / trials
     print("Average performance for {} trials for graph {}: {}".format(trials, only_filename, avg))
@@ -90,9 +92,9 @@ if __name__ == "__main__":
     print(args)
     
     if args.filename is not None:
-        bfs_graph(args.filename)
+        bfs_single(args.filename)
     elif args.dirname is not None:
-        bfs_graphs(args.dirname)
+        bfs_batch(args.dirname)
     else:
         print("File name or directory name were not passed, function cannot proceed.")
         sys.exit(0)
