@@ -5,7 +5,8 @@ use IO;
 use Logging;
 
 // Allow graphs to be printed server-side? Defaulted to false. MUST BE MANUALLY CHANGED.
-var debug_print = true; 
+// TODO: make this a param instead of a set variable?
+var debug_print = false; 
 
 // Server message logger. 
 private config const logLevel = LogLevel.DEBUG;
