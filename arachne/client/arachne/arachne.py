@@ -126,6 +126,16 @@ class Graph:
         """
         return self.n_vertices
 
+    def size(self) -> int:
+        """Returns the number of edges in the graph. Use: 'G.size()'.
+
+        Returns
+        -------
+        n_edges: int.
+            The number of edges in the graph.
+        """
+        return self.n_edges
+
     def add_edges_from(self, akarray_src: pdarray, akarray_dst: pdarray, 
                        akarray_weight: Union[None, pdarray] = None) -> None:
         """Populates the graph object with edges as defined by the akarrays. 

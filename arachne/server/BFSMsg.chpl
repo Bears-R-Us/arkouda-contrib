@@ -11,6 +11,7 @@ module BFSMsg {
     
     // Arachne Modules.
     use GraphArray;
+    use Utils;
     
     // Arkouda modules.
     use MultiTypeSymbolTable;
@@ -114,6 +115,12 @@ module BFSMsg {
         proc fo_bag_bfs_kernel_und(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, dst: [?D4] int, 
                                 neiR: [?D5] int, start_iR: [?D6] int, srcR: [?D7] int, 
                                 dstR: [?D8] int):string throws {
+            
+            
+            var tmp1: [D1] real;
+            var tmp2: [D1] real;
+            print_graph_serverside(nei, start_i, src, dst, neiR, start_iR, srcR, dstR, tmp1, tmp2, false, false);
+            
             var cur_level = 0;
             var SetCurF = new DistBag(int, Locales); // use bag to keep the current frontier
             var SetNextF = new DistBag(int, Locales); // use bag to keep the next frontier

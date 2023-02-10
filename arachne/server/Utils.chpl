@@ -30,7 +30,7 @@ var outMsg:string;
 */
 proc print_graph_serverside(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, dst: [?D4] int, 
                             neiR: [?D5] int, start_iR: [?D6] int, srcR: [?D7] int, 
-                            dstR: [?D8] int, weight: [?D9] int, weightR: [?D10] int, 
+                            dstR: [?D8] int, weight: [?D9] real, weightR: [?D10] real, 
                             directed: bool, weighted: bool) throws {
 
     if (directed && !weighted) {
@@ -79,7 +79,7 @@ proc print_graph_serverside(nei: [?D1] int, start_i: [?D2] int, src: [?D3] int, 
 *
 * returns: null.
 */
-proc readLinebyLine(src: [?D1] int, dst: [?D2] int, e_weight: [?D3] int, path: string, 
+proc readLinebyLine(src: [?D1] int, dst: [?D2] int, e_weight: [?D3] real, path: string, 
                     comments: string, weighted: bool) throws {
     coforall loc in Locales  {
         on loc {
@@ -87,14 +87,20 @@ proc readLinebyLine(src: [?D1] int, dst: [?D2] int, e_weight: [?D3] int, path: s
             var r = f.reader(kind = ionative);
             var line:string;
             var a,b,c:string;
-            var curline:int = 0;
+            var edge_count:int = 0;
             var srclocal = src.localSubdomain();
             var ewlocal = e_weight.localSubdomain();
 
             while r.readLine(line) {
-                // Ignore comments.
+                // Ignore comments for all files and matrix dimensions for mtx files.
                 if (line[0] == comments) {
+                    edge_count -= 1; 
                     continue;
+                } else {
+                    if (edge_count < 0) {
+                        edge_count = 0; 
+                        continue;
+                    }
                 }
 
                 // Parse our vertices and weights, if applicable. 
@@ -105,31 +111,31 @@ proc readLinebyLine(src: [?D1] int, dst: [?D2] int, e_weight: [?D3] int, path: s
                 }
 
                 // Detect a self loop and write it to the server.
-                if (a == b) {
+                if ((a == b) && (debug_print == true)) {
                     smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),
                                     "self loop " + a + "->" + b);
                 }
 
                 // Place the read edge into the current locale.
-                if (srclocal.contains(curline)) {
-                    src[curline] = (a:int);
-                    dst[curline] = (b:int);
+                if (srclocal.contains(edge_count)) {
+                    src[edge_count] = (a:int);
+                    dst[edge_count] = (b:int);
 
                     if (weighted) {
-                        e_weight[curline] = (c:int);
+                        e_weight[edge_count] = (c:real);
                     }
                 }
 
-                curline+=1;
+                edge_count += 1;
 
                 // Do not to write on an out of bounds locale. 
-                if (curline > srclocal.highBound) {
+                if (edge_count > srclocal.highBound) {
                     break;
                 }
             } 
-            if (curline <= srclocal.highBound) {
+            if (edge_count <= srclocal.highBound) {
                 var myoutMsg = "The input file does not contain enough edges for locale " 
-                                + here.id:string + " current line = " + curline:string;
+                                + here.id:string + " current line = " + edge_count:string;
                 smLogger.error(getModuleName(),getRoutineName(),getLineNumber(),myoutMsg);
             }
             r.close();

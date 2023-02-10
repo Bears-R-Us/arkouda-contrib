@@ -144,7 +144,7 @@ module GraphMsg {
     *
     * returns: nothing
     */
-    private proc combine_sort(lsrc: [?D1] int, ldst: [?D2] int, le_weight: [?D3] int, 
+    private proc combine_sort(lsrc: [?D1] int, ldst: [?D2] int, le_weight: [?D3] real, 
                               lWeightedFlag: bool, sortw = false: bool) {
         param bitsPerDigit = RSLSD_bitsPerDigit;
         var bitWidths: [0..1] int;
@@ -199,7 +199,7 @@ module GraphMsg {
         ldst = tmpedges;
 
         if (lWeightedFlag && sortw) {
-          tmpedges = le_weight[iv];
+          var tmpedges = le_weight[iv];
           le_weight = tmpedges;
         }
     }//end combine_sort()
@@ -218,7 +218,7 @@ module GraphMsg {
     * returns: nothing
     */
     private proc part_degree_sort(lsrc: [?D1] int, ldst: [?D2] int, lstart_i: [?D3] int, 
-                                  lneighbor: [?D4] int, le_weight: [?D5] int, lneighborR: [?D6] int,
+                                  lneighbor: [?D4] int, le_weight: [?D5] real, lneighborR: [?D6] int,
                                   lWeightedFlag: bool) {
         var DegreeArray, vertex_mapping: [D4] int;
         var tmpedge: [D1] int;
@@ -300,7 +300,7 @@ module GraphMsg {
     // TODO: degree_sort_u() exists and will be used, but not in this pull request saved for future.
     private proc degree_sort_u(lsrc: [?D1] int, ldst: [?D2] int, lstart_i: [?D3] int,
                                lneighbor: [?D4] int, lsrcR: [?D5] int, ldstR: [?D6] int,
-                               lstart_iR: [?D7] int, lneighborR: [?D8] int, le_weight: [?D9] int,
+                               lstart_iR: [?D7] int, lneighborR: [?D8] int, le_weight: [?D9] real,
                                lWeightedFlag: bool) {
 
         part_degree_sort(lsrc, ldst, lstart_i, lneighbor, le_weight, lneighborR, lWeightedFlag);
@@ -403,7 +403,7 @@ module GraphMsg {
         timer.start();
 
         // Initializing the arrays that make up our double-index data structure.
-        var src = makeDistArray(ne, int);
+        var src = makeDistArray(ne,int);
         var edge_domain = src.domain;
 
         var neighbor = makeDistArray(nv,int);
@@ -412,7 +412,8 @@ module GraphMsg {
         // TODO: We intitialize memory we do not need. For example, directed graphs do not require
         //       reversed arrays. This must be fixed, but may require significant code changes.
         // Edge index arrays. 
-        var dst, e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
+        var dst, srcR, dstR, iv: [edge_domain] int;
+        var e_weight, e_weightR: [edge_domain] real;
         // Vertex index arrays. 
         var start_i, neighborR, start_iR,depth: [vertex_domain] int;
 
@@ -575,7 +576,6 @@ module GraphMsg {
         var f = open(path, iomode.r);
         var r = f.reader(kind = ionative);
         var line:string;
-        var prevline:string;
         var a,b,c:string;
         var edge_count:int = 0;
 
@@ -584,13 +584,13 @@ module GraphMsg {
         while (r.readLine(line)) {
             // Ignore comments for all files and matrix dimensions for mtx files.
             if (line[0] == comments) {
-                prevline = line;
+                edge_count -= 1; 
                 continue;
             } else {
-                if (filetype == "mtx") && (prevline[0] == comments) {
+                if (edge_count < 0) {
+                    edge_count = 0; 
                     continue;
                 }
-                prevline = line; 
             }
 
             // Parse our vertices and weights, if applicable. 
@@ -622,7 +622,8 @@ module GraphMsg {
         // TODO: We intitialize memory we do not need. For example, directed graphs do not require
         //       reversed arrays. This must be fixed, but may require significant code changes.
         // Edge index arrays. 
-        var dst, e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
+        var dst, srcR, dstR, iv: [edge_domain] int;
+        var e_weight, e_weightR: [edge_domain] real;
         // Vertex index arrays. 
         var start_i, neighborR, start_iR,depth: [vertex_domain] int;
 
@@ -676,6 +677,7 @@ module GraphMsg {
                                         "Combine sort error");
                 }
             }
+            set_neighbor(srcR, start_iR, neighborR);
         }
 
         // Remove self loops and duplicated edges.
@@ -733,7 +735,8 @@ module GraphMsg {
         var myvertexD=myneighbor.domain;
 
         // Arrays made from the edge domain. 
-        var mydst, mye_weight, mye_weightR, mysrcR, mydstR, myiv: [myedgeD] int ;
+        var mydst, mysrcR, mydstR, myiv: [myedgeD] int;
+        var mye_weight, mye_weightR: [myedgeD] real;
 
         // Arrays made from the vertex domain. 
         var mystart_i, myneighborR, mystart_iR, mydepth: [myvertexD] int;
@@ -783,35 +786,64 @@ module GraphMsg {
                                             "Combine sort error");
                     }
                 }
+                
                 set_neighbor(mysrcR, mystart_iR, myneighborR);
             }//end of undirected
         }
 
-        // Print for debugging server-side from Utils.chpl. 
-        if(debug_print) {
-            print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
-                                   e_weight, e_weightR, directed, weighted);
-        }
-
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed, weighted);
-        graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
-             .withDST(new shared SymEntry(mydst):GenSymEntry)
-             .withSTART_IDX(new shared SymEntry(mystart_i):GenSymEntry)
-             .withNEIGHBOR(new shared SymEntry(myneighbor):GenSymEntry);
+        if (new_ne < ne) { // Different arrays for when edges had to be removed.
+            // Print for debugging server-side from Utils.chpl. 
+            if(debug_print) {
+                print_graph_serverside(myneighbor, mystart_i, mysrc, mydst, myneighborR, mystart_iR, mysrcR, mydstR, 
+                                    mye_weight, mye_weightR, directed, weighted);
+            }
 
-        if (!directed) {
-            graph.withSRC_R(new shared SymEntry(mysrcR):GenSymEntry)
-                 .withDST_R(new shared SymEntry(mydstR):GenSymEntry)
-                 .withSTART_IDX_R(new shared SymEntry(mystart_iR):GenSymEntry)
-                 .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
-        }
-
-        if (weighted) {
-            graph.withEDGE_WEIGHT(new shared SymEntry(mye_weight):GenSymEntry);
+            graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
+                .withDST(new shared SymEntry(mydst):GenSymEntry)
+                .withSTART_IDX(new shared SymEntry(mystart_i):GenSymEntry)
+                .withNEIGHBOR(new shared SymEntry(myneighbor):GenSymEntry);
 
             if (!directed) {
-                graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
+                graph.withSRC_R(new shared SymEntry(mysrcR):GenSymEntry)
+                    .withDST_R(new shared SymEntry(mydstR):GenSymEntry)
+                    .withSTART_IDX_R(new shared SymEntry(mystart_iR):GenSymEntry)
+                    .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
+            }
+
+            if (weighted) {
+                graph.withEDGE_WEIGHT(new shared SymEntry(mye_weight):GenSymEntry);
+
+                if (!directed) {
+                    graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
+                }
+            }
+        } else { // No edge removals.
+            // Print for debugging server-side from Utils.chpl. 
+            if(debug_print) {
+                print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
+                                    e_weight, e_weightR, directed, weighted);
+            }
+
+            graph.withSRC(new shared SymEntry(src):GenSymEntry)
+                .withDST(new shared SymEntry(dst):GenSymEntry)
+                .withSTART_IDX(new shared SymEntry(start_i):GenSymEntry)
+                .withNEIGHBOR(new shared SymEntry(neighbor):GenSymEntry);
+
+            if (!directed) {
+                graph.withSRC_R(new shared SymEntry(srcR):GenSymEntry)
+                    .withDST_R(new shared SymEntry(dstR):GenSymEntry)
+                    .withSTART_IDX_R(new shared SymEntry(start_iR):GenSymEntry)
+                    .withNEIGHBOR_R(new shared SymEntry(neighborR):GenSymEntry);
+            }
+
+            if (weighted) {
+                graph.withEDGE_WEIGHT(new shared SymEntry(e_weight):GenSymEntry);
+
+                if (!directed) {
+                    graph.withEDGE_WEIGHT_R(new shared SymEntry(e_weightR):GenSymEntry);
+                }
             }
         }
 
@@ -902,13 +934,14 @@ module GraphMsg {
         // TODO: We intitialize memory we do not need. For example, directed graphs do not require
         //       reversed arrays. This must be fixed, but may require significant code changes.
         // Edge index arrays. 
-        var e_weight, e_weightR, srcR, dstR, iv: [edge_domain] int;
+        var srcR, dstR, iv: [edge_domain] int;
+        var e_weight, e_weightR: [edge_domain] real;
         // Vertex index arrays. 
         var start_i, neighborR, start_iR,depth: [vertex_domain] int;
 
         if weighted {
             var akarray_weight_entry: borrowed GenSymEntry = getGenericTypedArrayEntry(weight_name, st);
-            var akarray_weight_sym = toSymEntry(akarray_weight_entry,int);
+            var akarray_weight_sym = toSymEntry(akarray_weight_entry, real);
             e_weight = akarray_weight_sym.a;
         }
 
@@ -959,6 +992,7 @@ module GraphMsg {
                                         "Combine sort error");
                 }
             }
+            set_neighbor(srcR, start_iR, neighborR);
         }
 
         // Remove self loops and duplicated edges.
@@ -1016,7 +1050,8 @@ module GraphMsg {
         var myvertexD=myneighbor.domain;
 
         // Arrays made from the edge domain. 
-        var mydst, mye_weight, mye_weightR, mysrcR, mydstR, myiv: [myedgeD] int ;
+        var mydst, mysrcR, mydstR, myiv: [myedgeD] int;
+        var mye_weight, mye_weightR: [myedgeD] real;
 
         // Arrays made from the vertex domain. 
         var mystart_i, myneighborR, mystart_iR, mydepth: [myvertexD] int;
@@ -1072,30 +1107,58 @@ module GraphMsg {
 
         // Finish building graph data structure.
         var graph = new shared SegGraph(ne, nv, directed, weighted);
-        graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
-             .withDST(new shared SymEntry(mydst):GenSymEntry)
-             .withSTART_IDX(new shared SymEntry(mystart_i):GenSymEntry)
-             .withNEIGHBOR(new shared SymEntry(myneighbor):GenSymEntry);
+        if (new_ne < ne) { // Different arrays for when edges had to be removed.
+            // Print for debugging server-side from Utils.chpl. 
+            if(debug_print) {
+                print_graph_serverside(myneighbor, mystart_i, mysrc, mydst, myneighborR, mystart_iR, mysrcR, mydstR, 
+                                    mye_weight, mye_weightR, directed, weighted);
+            }
 
-        if (!directed) {
-            graph.withSRC_R(new shared SymEntry(mysrcR):GenSymEntry)
-                 .withDST_R(new shared SymEntry(mydstR):GenSymEntry)
-                 .withSTART_IDX_R(new shared SymEntry(mystart_iR):GenSymEntry)
-                 .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
-        }
-
-        if (weighted) {
-            graph.withEDGE_WEIGHT(new shared SymEntry(mye_weight):GenSymEntry);
+            graph.withSRC(new shared SymEntry(mysrc):GenSymEntry)
+                .withDST(new shared SymEntry(mydst):GenSymEntry)
+                .withSTART_IDX(new shared SymEntry(mystart_i):GenSymEntry)
+                .withNEIGHBOR(new shared SymEntry(myneighbor):GenSymEntry);
 
             if (!directed) {
-                graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
+                graph.withSRC_R(new shared SymEntry(mysrcR):GenSymEntry)
+                    .withDST_R(new shared SymEntry(mydstR):GenSymEntry)
+                    .withSTART_IDX_R(new shared SymEntry(mystart_iR):GenSymEntry)
+                    .withNEIGHBOR_R(new shared SymEntry(myneighborR):GenSymEntry);
             }
-        }
 
-        // Print for debugging server-side from Utils.chpl. 
-        if(debug_print) {
-            print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
-                                   e_weight, e_weightR, directed, weighted);
+            if (weighted) {
+                graph.withEDGE_WEIGHT(new shared SymEntry(mye_weight):GenSymEntry);
+
+                if (!directed) {
+                    graph.withEDGE_WEIGHT_R(new shared SymEntry(mye_weightR):GenSymEntry);
+                }
+            }
+        } else { // No edge removals.
+            // Print for debugging server-side from Utils.chpl. 
+            if(debug_print) {
+                print_graph_serverside(neighbor, start_i, src, dst, neighborR, start_iR, srcR, dstR, 
+                                    e_weight, e_weightR, directed, weighted);
+            }
+
+            graph.withSRC(new shared SymEntry(src):GenSymEntry)
+                .withDST(new shared SymEntry(dst):GenSymEntry)
+                .withSTART_IDX(new shared SymEntry(start_i):GenSymEntry)
+                .withNEIGHBOR(new shared SymEntry(neighbor):GenSymEntry);
+
+            if (!directed) {
+                graph.withSRC_R(new shared SymEntry(srcR):GenSymEntry)
+                    .withDST_R(new shared SymEntry(dstR):GenSymEntry)
+                    .withSTART_IDX_R(new shared SymEntry(start_iR):GenSymEntry)
+                    .withNEIGHBOR_R(new shared SymEntry(neighborR):GenSymEntry);
+            }
+
+            if (weighted) {
+                graph.withEDGE_WEIGHT(new shared SymEntry(e_weight):GenSymEntry);
+
+                if (!directed) {
+                    graph.withEDGE_WEIGHT_R(new shared SymEntry(e_weightR):GenSymEntry);
+                }
+            }
         }
 
         // Add graph to the specific symbol table entry. 
