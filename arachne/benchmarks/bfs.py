@@ -1,5 +1,3 @@
-#!/usr/bin/env python3                                                         
-
 from os import walk
 import argparse
 import pathlib
@@ -13,14 +11,14 @@ import networkx as nx
 import arkouda as ak
 import arachne as ar
 
-def bfs_single(filename:str, trials:int):
+def bfs_single(filepath:str, trials:int):
     print(f"BREADTH FIRST SEARCH -- SINGLE MODE")
 
     # Split up filename parameter to only path and only name of file.
-    filepath_and_filename = filename.rsplit("/", 1)
+    filepath_and_filename = filepath.rsplit("/", 1)
     only_filepath = filepath_and_filename[0] + "/"
     only_filename = filepath_and_filename[1]
-    only_extension = filename.rsplit(".", 1)[1]
+    only_extension = only_filename.rsplit(".", 1)[1]
 
     weighted = False
     directed = False
@@ -36,7 +34,7 @@ def bfs_single(filename:str, trials:int):
             weighted = bool(int(text[2]))
 
     # Read in the graph and perform BFS steps. 
-    G = ar.read_edgelist(filename, directed=directed, weighted=weighted, filetype=only_extension)
+    G = ar.read_edgelist(filepath, directed=directed, weighted=weighted, filetype=only_extension)
     selectroot = np.random.randint(0, len(G) - 1, trials)
     start = time.time()
     for root in selectroot:
@@ -45,23 +43,23 @@ def bfs_single(filename:str, trials:int):
     avg = (end - start) / trials
     print(f"Average performance for {trials} trials for graph {only_filename}: {avg}")
 
-def bfs_batch(dirname:str, trials:int):
+def bfs_batch(dirpath:str, trials:int):
     print("BREADTH FIRST SEARCH -- BATCH MODE")
 
     # Read all mtx files in the passed directory. 
-    filenames = next(walk(dirname), (None, None, []))[2]
-    dirname = dirname + "/"
+    filenames = next(walk(dirpath), (None, None, []))[2]
+    dirpath = dirpath + "/"
 
     for filename in filenames:
         # Split up filename parameter to only path and only name of file.
-        only_filepath = dirname
+        only_filepath = dirpath
         only_filename = filename
         only_extension = filename.rsplit(".", 1)[1]
 
         if only_extension != "mtx":
             continue
 
-        filename = dirname + filename
+        filename = dirpath + filename
 
         weighted = False
         directed = False
@@ -87,20 +85,18 @@ def bfs_batch(dirname:str, trials:int):
 
 def correctness():
     print("BREADTH FIRST SEARCH -- CORRECTNESS CHECK")
+    
+    # Parse out paths where benchmark files are to be held. 
     curr_path = str(pathlib.Path(__file__).parent.resolve())
-    filepath_and_filename = curr_path.rsplit("/", 1)
-    curr_path = filepath_and_filename[0] + "/"
-    filename = curr_path + "data/karate.mtx"
+    curr_path = curr_path.rsplit("/", 1)[0] + "/"
+    filepath = curr_path + "data/karate.mtx"
+    only_filepath = curr_path + "data/"
+    only_filename = filepath.rsplit("/", 1)[1]
+    only_extension = filepath.rsplit(".", 1)[1]
 
-    # Split up filename parameter to only path and only name of file.
-    filepath_and_filename = filename.rsplit("/", 1)
-    only_filepath = filepath_and_filename[0] + "/"
-    only_filename = filepath_and_filename[1]
-    only_extension = filename.rsplit(".", 1)[1]
-
+    # Parse out metadata for test files from information txt file. 
     weighted = False
     directed = False
-    # Read in metadata for file from external info file.
     for line in open(only_filepath + "info.txt"):
         if line[0] == "#":
             continue
@@ -111,30 +107,30 @@ def correctness():
             directed = bool(int(text[1]))
             weighted = bool(int(text[2]))
 
-    # Read in the graph. 
-    G = ar.read_edgelist(filename, directed=directed, weighted=weighted, filetype=only_extension)
+    # Read in the graph with Arachne. 
+    G = ar.read_edgelist(filepath, directed=directed, weighted=weighted, filetype=only_extension)
     print(f"G = Graph with {len(G)} nodes and {G.size()} edges")
 
-    # Run bfs_layers. 
+    # Run bfs_layers with Arachne. 
     start = time.time()
     ar_layers = ar.bfs_layers(G, 0).to_ndarray()
     end = time.time()
 
+    # Turn Arachne results to a dictionary to compare against NetworkX.
     ar_layer_dict = {}
-    # Generate dictionary object.
     for (i,x) in enumerate(ar_layers):
         if x not in ar_layer_dict:
             ar_layer_dict[x] = [i]
         else:
             ar_layer_dict[x].append(i)
 
-    # NetworkX reading in below.
+    # Read in graph and generate dictionary object with NetworkX.
     fh = open(filename, "rb")
     H = nx.from_scipy_sparse_array(sp.io.mmread(fh))
     print("H =", H)
     nx_layer_dict = dict(enumerate(nx.bfs_layers(H, 0)))
 
-    # Sort to make the lists the same.
+    # Sort to make the lists the same for equal comparison. 
     for key in ar_layer_dict:
         ar_layer_dict[key].sort()
         nx_layer_dict[key].sort()
@@ -162,13 +158,13 @@ def create_parser():
     )
     parser.add_argument(
         "-f",
-        "--filename",
+        "--filepath",
         type=str,
         help="Absolute path to file of the graph we wish to preprocess."
     )
     parser.add_argument(
         "-d",
-        "--dirname",
+        "--dirpath",
         type=str,
         help="Absolute path to directory with multiple files to preprocess (batch method). Must end without '/'."
     )
@@ -198,10 +194,10 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         print()
-        if args.filename is not None:
+        if args.filepath is not None:
             bfs_single(args.filename, args.trials)
-        elif args.dirname is not None:
-            bfs_batch(args.dirname, args.trials)
+        elif args.dirpath is not None:
+            bfs_batch(args.dirpath, args.trials)
         else:
             print(f"File name or directory name were not passed, function cannot proceed.")
             sys.exit(0)

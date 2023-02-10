@@ -394,6 +394,10 @@ module GraphMsg {
         var comments:string = (commentsS:string);
         var filetype:string = (filetypeS:string);
 
+        if (filetype == "mtx") {
+            comments = "%";
+        }
+
         // Write message to show which file was read in. 
         outMsg = "path of read file = " + path;
         smLogger.info(getModuleName(),getRoutineName(),getLineNumber(),outMsg);
