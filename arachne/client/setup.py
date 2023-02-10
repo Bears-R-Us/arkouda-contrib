@@ -15,5 +15,5 @@ setup(
     long_description_content_type="text/markdown",
     packages=["arachne"],
     python_requires=">=3.8",
-    install_requires=["arkouda"],
+    install_requires=["arkouda","networkx","scipy"],
 )

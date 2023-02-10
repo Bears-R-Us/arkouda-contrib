@@ -125,7 +125,7 @@ def correctness():
             ar_layer_dict[x].append(i)
 
     # Read in graph and generate dictionary object with NetworkX.
-    fh = open(filename, "rb")
+    fh = open(filepath, "rb")
     H = nx.from_scipy_sparse_array(sp.io.mmread(fh))
     print("H =", H)
     nx_layer_dict = dict(enumerate(nx.bfs_layers(H, 0)))
@@ -160,13 +160,13 @@ def create_parser():
         "-f",
         "--filepath",
         type=str,
-        help="Absolute path to file of the graph we wish to preprocess."
+        help="Absolute path to file of the graph we wish to preprocess. Info file with graph metadata must exist named info.txt."
     )
     parser.add_argument(
         "-d",
         "--dirpath",
         type=str,
-        help="Absolute path to directory with multiple files to preprocess (batch method). Must end without '/'."
+        help="Absolute path to directory with multiple files to preprocess (batch method). Must end without '/'. Info file with graph metadata must exist named info.txt."
     )
     
     return parser
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     else:
         print()
         if args.filepath is not None:
-            bfs_single(args.filename, args.trials)
+            bfs_single(args.filepath, args.trials)
         elif args.dirpath is not None:
             bfs_batch(args.dirpath, args.trials)
         else:

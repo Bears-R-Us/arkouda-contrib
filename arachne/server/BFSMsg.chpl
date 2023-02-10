@@ -119,7 +119,6 @@ module BFSMsg {
             
             var tmp1: [D1] real;
             var tmp2: [D1] real;
-            print_graph_serverside(nei, start_i, src, dst, neiR, start_iR, srcR, dstR, tmp1, tmp2, false, false);
             
             var cur_level = 0;
             var SetCurF = new DistBag(int, Locales); // use bag to keep the current frontier
