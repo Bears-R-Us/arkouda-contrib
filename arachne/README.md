@@ -20,7 +20,7 @@ For benchmarking a single graph you can execute:
 python3 bfs.py node port -f /path/to/arkouda-contrib/arachne/data/karate.mtx -t 10
 ```
 
-For benchmaarking a directory of graphs you can execute: 
+For benchmarking a directory of graphs you can execute: 
 ```
 python3 bfs.py node01 5554 -d /path/to/arkouda-contrib/arachne/data -t 10
 ```
