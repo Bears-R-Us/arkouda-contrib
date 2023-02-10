@@ -34,6 +34,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     hdf5-tools \
     libcurl4-openssl-dev \
+    clang \
+    lldb \
+    lld \
+    llvm-dev \
+    libclang-14-dev \
+    libclang-cpp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m ubuntu && echo "ubuntu:ubuntu" | chpasswd && adduser ubuntu sudo
@@ -48,8 +54,9 @@ ENV CHPL_HOME=/opt/chapel/$CHPL_VERSION
 ENV CHPL_COMM_SUBSTRATE=udp
 ENV CHPL_COMM=gasnet
 ENV CHPL_LAUNCHER=amudprun
-ENV CHPL_LLVM=bundled
+ENV CHPL_LLVM=system
 ENV CHPL_RE2=bundled
+ENV CHPL_GMP=system
 RUN chmod 777 /opt
 
 USER ubuntu
