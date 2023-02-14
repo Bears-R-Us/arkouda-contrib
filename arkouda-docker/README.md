@@ -144,3 +144,7 @@ docker build --build-arg CHAPEL_UDP_IMAGE=$CHAPEL_UDP_IMAGE \
              --build-arg ARKOUDA_INTEGRATION_DOWNLOAD_URL=$ARKOUDA_INTEGRATION_DOWNLOAD_URL \
              -f arkouda-udp-server -t $ARKOUDA_IMAGE_REPO/arkouda-udp-server:$ARKOUDA_DISTRO_NAME .
 ```
+
+## Launching arkouda-udp-server
+
+The arkouda-udp-server docker image is designed to be launched on Kubernetes via Helm. The Arkouda-on-Kubernetes deployment will be added to arkoud-contrib in the near future.
