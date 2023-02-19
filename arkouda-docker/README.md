@@ -10,9 +10,9 @@ and ipython interface to Arkouda.
 ```
 # set env variables
 export CHAPEL_SMP_IMAGE=chapel/chapel-gasnet-smp:1.29.0
-export ARKOUDA_BRANCH_NAME=2023.01.11
-export ARKOUDA_DISTRO_NAME=v2023.01.11
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.01.11.zip
+export ARKOUDA_BRANCH_NAME=2023.02.08
+export ARKOUDA_DISTRO_NAME=v2023.02.08
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.02.08.zip
 export ARKOUDA_IMAGE_REPO=bearsrus
 
 docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
@@ -31,7 +31,7 @@ By default arkouda-full-stack launches a jupyter notebook that is accessible via
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.01.11
+export ARKOUDA_VERSION=v2023.02.08
 
 docker run -it --rm -p 8888:8888 $ARKOUDA_IMAGE_REPO/arkouda-full-stack:$ARKOUDA_VERSION
 ```
@@ -43,7 +43,7 @@ To mount a directory containing files to be analyzed, execute the following comm
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.01.11
+export ARKOUDA_VERSION=v2023.02.08
 export HOST_DIR=/opt/datafiles
 export CONTAINER_DIR=/app/data
 
@@ -59,7 +59,7 @@ command is as follows:
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.01.11
+export ARKOUDA_VERSION=v2023.02.08
 
 docker run -it --rm --entrypoint=/opt/start-arkouda-full-stack.sh \
                     $ARKOUDA_IMAGE_REPO/arkouda-full-stack:$ARKOUDA_VERSION
@@ -76,9 +76,9 @@ The arkouda-smp-server extends chapel-gasnet-smp to deliver a GASNET smp configu
 
 ```
 export CHAPEL_SMP_IMAGE=chapel/chapel-gasnet-smp:1.29.0
-export ARKOUDA_DISTRO_NAME=v2023.01.11
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.01.11.zip
-export ARKOUDA_BRANCH_NAME=2023.01.11
+export ARKOUDA_DISTRO_NAME=v2023.02.08
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.02.08.zip
+export ARKOUDA_BRANCH_NAME=2023.02.08
 export ARKOUDA_IMAGE_REPO=bearsrus
 
 docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
@@ -93,7 +93,7 @@ docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2022.11.17
+export ARKOUDA_VERSION=v2023.02.08
 
 docker run -it --rm -p 5555:5555 $ARKOUDA_IMAGE_REPO/arkouda-smp-server:$ARKOUDA_VERSION
 ```
@@ -129,9 +129,9 @@ The arkouda-udp-server image delivers a GASNET udp configuration that enables de
 
 ```
 export CHAPEL_UDP_IMAGE=bearsrus/chapel-gasnet-udp:1.29.0
-export ARKOUDA_DISTRO_NAME=v2023.01.11
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.01.11.zip
-export ARKOUDA_BRANCH_NAME=2023.01.11
+export ARKOUDA_DISTRO_NAME=v2023.02.08
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.02.08.zip
+export ARKOUDA_BRANCH_NAME=2023.02.08
 export ARKOUDA_INTEGRATION_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
 export ARKOUDA_INTEGRATION_DISTRO_NAME=main
 export ARKOUDA_IMAGE_REPO=bearsrus
