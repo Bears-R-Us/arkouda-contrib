@@ -37,6 +37,9 @@ RUN pip3 install jupyterlab
 
 # Add startup script and set as entrypoint
 ADD scripts/start-smp-arkouda-full-stack.sh /opt/start-arkouda-full-stack.sh
-ENTRYPOINT sh /opt/start-arkouda-full-stack.sh
+ADD scripts/start-smp-arkouda-full-stack-notebook.sh /opt/start-arkouda-full-stack-notebook.sh
+RUN chmod +x /opt/start-arkouda-full-stack.sh /opt/start-arkouda-full-stack-notebook.sh
+ENTRYPOINT sh /opt/start-arkouda-full-stack-notebook.sh
 
-EXPOSE 5555
+WORKDIR /opt/arkouda
+EXPOSE 8888
