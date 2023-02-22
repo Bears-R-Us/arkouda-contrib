@@ -15,7 +15,7 @@ def getImageFile(imageType: ImageType) -> str:
     '''
     Returns the Dockerfile per the image type
 
-    
+    :param ImageType imageType: Docker image type enum    
     :return: Dockerfile corresponding to the image type
     :rtype: str
     '''
@@ -49,9 +49,28 @@ def buildImage(repo: str, chapelVersion: str, file: str, distro: str, tag: Optio
     :param Optional[str] tag: Arkouda tag name, if applicable
     :return: None
     '''
+    def buildArkoudaFullStack(repo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
+        p = subprocess.Popen(shell=True, args=['docker','build',
+                                               '--build-arg', f'CHPL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
+                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={distro}',
+                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,distro=distro)}',
+                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
+                                               '-f',file,
+                                               '-t', f'{repo}/arkouda-full-stack:{tag}'])
+
     buildTag = generateBuildTag(repo=repo, file=file, tag=tag,distro=distro)
-    print(buildTag)
-    #p = subprocess.Popen(shell=True, args=['docker','build','-f',image,chapelVersion])
+    print(buildTag)    
+
+def generateChapelSmpVersion(chapelVersion: str) -> str:
+    return f'chapel/chapel-gasnet-smp:{chapelVersion}'
+
+def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str:
+    if tag:
+        return f'https://github.com/Bears-R-Us/arkouda/archive/refs/tags/{tag}.zip'
+    elif branch:
+        return f'https://github.com/Bears-R-Us/arkouda/archive/refs/heads/{branch}.zip'
+    else:
+        raise ValueError('either the tag or branch must be not None')
 
 def generateBuildTag(repo: str, file: str, tag: Optional[str], distro: Optional[str]) -> str:
     '''
