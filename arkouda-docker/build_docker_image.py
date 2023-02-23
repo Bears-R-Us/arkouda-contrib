@@ -96,10 +96,16 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         buildChapelUdp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
 
 def getDistroName(distro: str, tag: Optional[str]) -> str:
-    if tag:
-        return tag
-    else:
-        return distro
+    '''
+    Returns the distro name used to specify the name of the Arkouda distribution that is
+    either a tag or a branch.
+
+    :param str distro: name of Arkouda distro (branch)
+    :param Optional[str] tag: name of Arkouda tag
+    :return: tag or branch name
+    :rtype:str
+    '''
+    return tag if tag else distro
 
 def generateChplSmpVersion(chapelVersion: str) -> str:
     return f'chapel/chapel-gasnet-smp:{chapelVersion}'
