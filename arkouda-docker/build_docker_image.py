@@ -9,7 +9,7 @@ class ImageType(Enum):
     ARKOUDA_FULL_STACK = 'arkouda-full-stack'
     ARKOUDA_SMP_SERVER = 'arkouda-smp-server'
     ARKOUDA_UDP_SERVER = 'arkouda-udp-server'
-    CHAPEL_UDP = 'chapel-gasnet-udp'
+    CHAPEL_GASNET_UDP = 'chapel-gasnet-udp'
 
 def getImageFile(imageType: ImageType) -> str:
     '''
@@ -86,11 +86,11 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
 
     dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
 
-    if file == 'arkouda-full-stack':   
+    if file == ImageType.ARKOUDA_FULL_STACK.value:
         buildArkoudaFullStack(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
-    elif file == 'arkouda-smp-server':
+    elif file == ImageType.ARKOUDA_SMP_SERVER.value:
         buildArkoudaSmpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
-    elif file == 'arkouda-udp-server':
+    elif file == ImageType.ARKOUDA_UDP_SERVER.value:
         buildArkoudaUdpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
     else:
         buildChapelUdp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
