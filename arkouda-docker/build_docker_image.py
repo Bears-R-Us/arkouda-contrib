@@ -143,10 +143,7 @@ def generateBuildTag(dockerRepo: str, file: str, tag: Optional[str], distro: Opt
     :return: docker build tag 
     :rtype: str
     '''
-    if tag:
-        return f'{dockerRepo}/{file}:{tag}'
-    else:
-        return f'{dockerRepo}/{file}:{distro}'   
+    return f'{dockerRepo}/{file}:{tag}' if tag else f'{dockerRepo}/{file}:{distro}'
 
 def buildArkoudaImage(dockerFile: str) -> bool:
     '''
