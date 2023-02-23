@@ -148,3 +148,64 @@ docker build --build-arg CHAPEL_UDP_IMAGE=$CHAPEL_UDP_IMAGE \
 ## Launching arkouda-udp-server
 
 The arkouda-udp-server docker image is designed to be launched on Kubernetes via Helm. The Arkouda-on-Kubernetes deployment will be added to arkouda-contrib in the near future.
+
+# Building Images with Python script
+
+## Background
+
+The [build_docker_image.py](./build_docker_image.py) python script is a convenient means of building all for arkouda-docker images. 
+
+## Python Docker build script
+
+The --help command displays the docker build parameters:
+
+```
+python build_docker_image.py --help
+usage: build_docker_image.py [-h] [--image_type IMAGE_TYPE] [--arkouda_tag ARKOUDA_TAG] [--arkouda_branch ARKOUDA_BRANCH] [--dockerhub_repo DOCKERHUB_REPO]
+                             [--arkouda_repo ARKOUDA_REPO] [--chapel_version CHAPEL_VERSION]
+
+Build bearsrus docker images
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --image_type IMAGE_TYPE
+                        possible image types are ARKOUDA_FULL_STACK, ARKOUDA_SMP_SERVER, ARKOUDA_UDP_SERVER and CHAPEL_UDP
+  --arkouda_tag ARKOUDA_TAG
+                        if the desired arkouda version is a tag
+  --arkouda_branch ARKOUDA_BRANCH
+                        if the desired arkouda version is a branch
+  --dockerhub_repo DOCKERHUB_REPO
+                        the dockerhub repo the image is to be published, defaults to bearsrus
+  --arkouda_repo ARKOUDA_REPO
+                        the arkouda repo containing the arkouda source code, defaults to Bears-R-Us
+  --chapel_version CHAPEL_VERSION
+                        Version of Chapel used to build image
+``` 
+
+## Example Build Commands
+
+### arkouda-full-stack
+
+```
+python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=ARKOUDA_FULL_STACK
+```
+
+### arkouda-smp-server
+
+```
+python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=ARKOUDA_SMP_SERVER
+```
+
+### chapel-gasnet-udp
+
+```
+python build_docker_image.py --chapel_version=1.29.0 --image_type=CHAPEL_UDP
+```
+
+### arkouda-udp-server
+
+```
+python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=ARKOUDA_UDP_SERVER
+```
+
+
