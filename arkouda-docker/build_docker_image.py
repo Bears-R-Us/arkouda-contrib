@@ -81,6 +81,16 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                                                '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
         print(result)
 
+    def buildChapelUdp(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str) -> None:
+        result = subprocess.run(args=['docker','build',
+                                               '--build-arg', f'CHPL_BASE_IMAGE=ubuntu:22.04',
+                                               '--build-arg', f'CHPL_VERSION={chapelVersion}',
+                                               '--build-arg', f'CHPL_UDP_IMAGE_REPO={dockerRepo}',
+                                               '-f',file,
+                                               '-t', f'{dockerRepo}/{file}:{chapelVersion}', '.'], stdout=subprocess.DEVNULL)
+        print(result)
+
+
     dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
 
     if file == 'arkouda-full-stack':   
@@ -89,6 +99,8 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         buildArkoudaSmpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
     elif file == 'arkouda-udp-server':
         buildArkoudaUdpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+    else:
+        buildChapelUdp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
 
 def getDistroName(distro: str, tag: Optional[str]) -> str:
     if tag:
@@ -103,6 +115,16 @@ def generateChplUdpVersion(chapelVersion: str) -> str:
     return f'bearsrus/chapel-gasnet-udp:{chapelVersion}'
 
 def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str:
+    '''
+    Generates the Arkouda download URL based upon whether the desired Arkouda version
+    is either a tag or a branch.
+
+    :param Optional[str] tag: name of Arkouda tag, if applicable
+    :param Optional[str]: name of Arkouda branch, if applicable
+
+    :return: Arkouda download URL
+    :rtype: str
+    '''
     if tag:
         return f'https://github.com/Bears-R-Us/arkouda/archive/refs/tags/{tag}.zip'
     elif branch:
@@ -127,6 +149,16 @@ def generateBuildTag(dockerRepo: str, file: str, tag: Optional[str], distro: Opt
     else:
         return f'{dockerRepo}/{file}:{distro}'   
 
+def buildArkoudaImage(dockerFile: str) -> bool:
+    '''
+    Returns a boolean indicating if this is an Arkouda image to be built
+
+    :param str dockerFile: name of Dockerfile to be passed to docker build
+    :return: boolean indicating if this is an Arkouda Dockerfile
+    :rtype: str
+    '''
+    return 'arkouda' in dockerFile
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Build bearsrus docker images')
 
@@ -150,13 +182,15 @@ if __name__=="__main__":
     dockerRepo = args.dockerhub_repo
     arkoudaRepo = args.arkouda_repo
     chapelVersion = args.chapel_version
+    distro = None
 
-    if tag:
-        distro = getDistro(tag)
-    else:
-        if args.arkouda_branch:
-            distro = args.arkouda_branch
+    if buildArkoudaImage(file):
+        if tag:
+            distro = getDistro(tag)
         else:
-            raise ValueError('Either --arkouda_tag or --arkouda_branch must be specified')
+            if args.arkouda_branch:
+                distro = args.arkouda_branch
+            else:
+                raise ValueError('Either --arkouda_tag or --arkouda_branch must be specified')
     
     buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro)
