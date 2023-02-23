@@ -187,25 +187,25 @@ optional arguments:
 ### arkouda-full-stack
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=ARKOUDA_FULL_STACK
+python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=arkouda-full-stack
 ```
 
 ### arkouda-smp-server
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=ARKOUDA_SMP_SERVER
+python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=arkouda-smp-server
 ```
 
 ### chapel-gasnet-udp
 
 ```
-python build_docker_image.py --chapel_version=1.29.0 --image_type=CHAPEL_UDP
+python build_docker_image.py --chapel_version=1.29.0 --image_type=chapel-gasnet-udp
 ```
 
 ### arkouda-udp-server
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=ARKOUDA_UDP_SERVER
+python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=arkouda-udp-server
 ```
 
 
