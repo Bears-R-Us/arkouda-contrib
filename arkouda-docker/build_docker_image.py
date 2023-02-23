@@ -38,30 +38,43 @@ def getDistro(tag: str) -> str:
     '''
     return tag.lstrip('v')
 
-def buildImage(repo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
+def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
     '''
     Generates a build tag and then builds the desired docker image
 
-    :param str repo: dockerhub repo the image will be published to
+    :param str dockerRepo: dockerhub repo the image will be published to
     :param str chapelVersion: version of Chapel used to build Arkouda server
     :param str file: Dockerfile name
     :param str distro: Arkouda distro (branch name)
     :param Optional[str] tag: Arkouda tag name, if applicable
     :return: None
     '''
-    def buildArkoudaFullStack(repo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
-        p = subprocess.Popen(shell=True, args=['docker','build',
-                                               '--build-arg', f'CHPL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
+    def buildArkoudaFullStack(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
+        result = subprocess.run(args=['docker','build',
+                                               '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
                                                '--build-arg', f'ARKOUDA_DISTRO_NAME={distro}',
-                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,distro=distro)}',
+                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
                                                '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
                                                '-f',file,
-                                               '-t', f'{repo}/arkouda-full-stack:{tag}'])
+                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
+        print(result)
 
-    buildTag = generateBuildTag(repo=repo, file=file, tag=tag,distro=distro)
-    print(buildTag)    
+    def buildArkoudaSmpServer(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
+        result = subprocess.run(args=['docker','build',
+                                               '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
+                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={distro}',
+                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
+                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
+                                               '-f',file,
+                                               '-t', tag, '.'], stdout=subprocess.DEVNULL)
+        print(result)
 
-def generateChapelSmpVersion(chapelVersion: str) -> str:
+    dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
+    print(dockerTag)
+    if file == 'arkouda-full-stack':   
+        buildArkoudaFullStack(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag) 
+
+def generateChplSmpVersion(chapelVersion: str) -> str:
     return f'chapel/chapel-gasnet-smp:{chapelVersion}'
 
 def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str:
@@ -72,11 +85,11 @@ def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str
     else:
         raise ValueError('either the tag or branch must be not None')
 
-def generateBuildTag(repo: str, file: str, tag: Optional[str], distro: Optional[str]) -> str:
+def generateBuildTag(dockerRepo: str, file: str, tag: Optional[str], distro: Optional[str]) -> str:
     '''
     Generates a docker build tag corresponding to the repo, file, tag, an distro
 
-    :param str repo: dockerhub repo the image will be published to
+    :param str dockerRepo: dockerhub repo the image will be published to
     :param str file: Dockerfile name
     :param Optional[str] tag: Arkouda tag name, if applicable
     :param Optional[str] distro: Arkouda distro (branch name), if applicable
@@ -85,9 +98,9 @@ def generateBuildTag(repo: str, file: str, tag: Optional[str], distro: Optional[
     :rtype: str
     '''
     if tag:
-        return f'{repo}/{file}:{tag}'
+        return f'{dockerRepo}/{file}:{tag}'
     else:
-        return f'{repo}/{file}:{distro}'   
+        return f'{dockerRepo}/{file}:{distro}'   
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Build bearsrus docker images')
@@ -98,8 +111,10 @@ if __name__=="__main__":
                         help='if the desired arkouda version is a tag')
     parser.add_argument('--arkouda_branch', type=str, 
                         help='if the desired arkouda version is a branch')
-    parser.add_argument('--dockerhub_repo', type=str, default='Bears-R-Us',
-                        help='the dockerhub repo the image is to be published, defaults to Bears-R-Us')
+    parser.add_argument('--dockerhub_repo', type=str, default='bearsrus',
+                        help='the dockerhub repo the image is to be published, defaults to bearsrus')
+    parser.add_argument('--arkouda_repo', type=str, default='Bears-R-Us',
+                        help='the arkouda repo containing the arkouda source code, defaults to Bears-R-Us')
     parser.add_argument('--chapel_version', type=str,
                         help='Version of Chapel used to build image')
 
@@ -107,7 +122,8 @@ if __name__=="__main__":
 
     file = getImageFile(args.image_type)
     tag = args.arkouda_tag
-    repo = args.dockerhub_repo
+    dockerRepo = args.dockerhub_repo
+    arkoudaRepo = args.arkouda_repo
     chapelVersion = args.chapel_version
 
     if tag:
@@ -118,4 +134,4 @@ if __name__=="__main__":
         else:
             raise ValueError('Either --arkouda_tag or --arkouda_branch must be specified')
     
-    buildImage(repo=repo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro)
+    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro)
