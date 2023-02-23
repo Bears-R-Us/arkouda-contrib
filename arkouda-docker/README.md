@@ -153,7 +153,7 @@ The arkouda-udp-server docker image is designed to be launched on Kubernetes via
 
 ## Background
 
-The [build_docker_image.py](./build_docker_image.py) python script is a convenient means of building all for arkouda-docker images. 
+The [build_docker_image.py](./build_docker_image.py) python script is a convenient means of building the arkouda-docker images. 
 
 ## Python Docker build script
 
