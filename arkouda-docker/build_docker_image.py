@@ -52,30 +52,55 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     def buildArkoudaFullStack(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
         result = subprocess.run(args=['docker','build',
                                                '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
-                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={distro}',
+                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
                                                '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
                                                '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
                                                '-f',file,
                                                '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
         print(result)
 
-    def buildArkoudaSmpServer(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
+    def buildArkoudaSmpServer(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
         result = subprocess.run(args=['docker','build',
                                                '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
-                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={distro}',
+                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
                                                '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
                                                '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
                                                '-f',file,
-                                               '-t', tag, '.'], stdout=subprocess.DEVNULL)
+                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
+        print(result)
+
+    def buildArkoudaUdpServer(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
+        result = subprocess.run(args=['docker','build',
+                                               '--build-arg', f'CHAPEL_UDP_IMAGE={generateChplUdpVersion(chapelVersion)}',
+                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
+                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
+                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
+                                               '--build-arg', 'ARKOUDA_INTEGRATION_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
+                                               '--build-arg', 'ARKOUDA_INTEGRATION_DISTRO_NAME=main',
+                                               '-f',file,
+                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
         print(result)
 
     dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
-    print(dockerTag)
+
     if file == 'arkouda-full-stack':   
-        buildArkoudaFullStack(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag) 
+        buildArkoudaFullStack(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+    elif file == 'arkouda-smp-server':
+        buildArkoudaSmpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+    elif file == 'arkouda-udp-server':
+        buildArkoudaUdpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+
+def getDistroName(distro: str, tag: Optional[str]) -> str:
+    if tag:
+        return tag
+    else:
+        return distro
 
 def generateChplSmpVersion(chapelVersion: str) -> str:
     return f'chapel/chapel-gasnet-smp:{chapelVersion}'
+
+def generateChplUdpVersion(chapelVersion: str) -> str:
+    return f'bearsrus/chapel-gasnet-udp:{chapelVersion}'
 
 def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str:
     if tag:
