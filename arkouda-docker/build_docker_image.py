@@ -6,10 +6,10 @@ class ImageType(Enum):
     '''
     The ImageType enum provides controlled vocabulary for the docker image type
     '''
-    ARKOUDA_FULL_STACK = 'ARKOUDA_FULL_STACK'
-    ARKOUDA_SMP_SERVER = 'ARKOUDA_SMP_SERVER'
-    ARKOUDA_UDP_SERVER = 'ARKOUDA_UDP_SERVER'
-    CHAPEL_UDP = 'CHAPEL_UDP'
+    ARKOUDA_FULL_STACK = 'arkouda-full-stack'
+    ARKOUDA_SMP_SERVER = 'arkouda-smp-server'
+    ARKOUDA_UDP_SERVER = 'arkouda-udp-server'
+    CHAPEL_UDP = 'chapel-gasnet-udp'
 
 def getImageFile(imageType: ImageType) -> str:
     '''
@@ -19,14 +19,7 @@ def getImageFile(imageType: ImageType) -> str:
     :return: Dockerfile corresponding to the image type
     :rtype: str
     '''
-    if ImageType.ARKOUDA_FULL_STACK == imageType:
-        return 'arkouda-full-stack'
-    elif ImageType.ARKOUDA_SMP_SERVER == imageType:
-        return 'arkouda-smp-server'
-    elif ImageType.ARKOUDA_UDP_SERVER == imageType:
-        return 'arkouda-udp-server'
-    elif ImageType.CHAPEL_UDP == imageType:
-        return 'chapel-gasnet-udp'
+    return imageType.value
 
 def getDistro(tag: str) -> str:
     '''
@@ -163,7 +156,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Build bearsrus docker images')
 
     parser.add_argument('--image_type', type=ImageType,
-                        help='possible image types are ARKOUDA_FULL_STACK, ARKOUDA_SMP_SERVER, ARKOUDA_UDP_SERVER and CHAPEL_UDP')
+                        help='possible image types are arkouda_full_stack, arkouda-smp-server, arkouda-udp-server and chapel_udp')
     parser.add_argument('--arkouda_tag', type=str,
                         help='if the desired arkouda version is a tag')
     parser.add_argument('--arkouda_branch', type=str, 
