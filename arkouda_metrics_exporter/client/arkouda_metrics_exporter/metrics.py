@@ -28,6 +28,7 @@ class MetricCategory(Enum):
     ALL = "ALL"
     NUM_REQUESTS = "NUM_REQUESTS"
     RESPONSE_TIME = "RESPONSE_TIME"
+    AVG_RESPONSE_TIME = "AVG_RESPONSE_TIME"
     SERVER = "SERVER"
     SERVER_INFO = "SERVER_INFO"
     SYSTEM = "SYSTEM"
@@ -82,7 +83,6 @@ class Label:
     def __init__(self, name: str, value: Union[bool, float, int, str]) -> None:
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "value", value)
-
 
 '''
 The Metric class encapsulates Prometheus metric state
@@ -236,7 +236,7 @@ class ServerInfo:
 The ArkoudaMetrics class encapsulates logic and state to 
 1. collect and maintain user, request, system, and server-scoped metrics in Prometheus format
 2. fetch() method for fetching metrics from Arkouda
-3. integtration with prometheus_client http server for Prometheus scrape requests
+3. integration with prometheus_client http server for Prometheus scrape requests
 
 '''
 class ArkoudaMetrics:
@@ -252,6 +252,7 @@ class ArkoudaMetrics:
         "numberOfConnections",
         "_updateMetric",
         "responseTimesPerCommand",
+        "avgResponseTimesPerCommand",
         "memoryUsedPerLocale",
         "pctMemoryUsedPerLocale",
         "systemMemoryPerLocale",
@@ -271,6 +272,7 @@ class ArkoudaMetrics:
     numberOfRequestsPerCommand: Gauge
     numberOfConnections: Gauge
     responseTimesPerCommand: Gauge
+    avgResponseTimesPerCommand: Gauge
     memoryUsedPerLocale: Gauge
     pctMemoryUsedPerLocale: Gauge
     systemMemoryPerLocale: Gauge
@@ -317,6 +319,11 @@ class ArkoudaMetrics:
         self.responseTimesPerCommand = Gauge(
             "arkouda_response_times_per_command",
             "Response times of Arkouda commands",
+            labelnames=["command", "arkouda_server_name"],
+        )
+        self.avgResponseTimesPerCommand = Gauge(
+            "arkouda_avg_response_times_per_command",
+            "Average response times of Arkouda commands",
             labelnames=["command", "arkouda_server_name"],
         )
         self.memoryUsedPerLocale = Gauge(
@@ -374,6 +381,7 @@ class ArkoudaMetrics:
         self._updateMetric = {
             MetricCategory.NUM_REQUESTS: lambda x: self._updateNumberOfRequests(x),
             MetricCategory.RESPONSE_TIME: lambda x: self._updateResponseTimes(x),
+            MetricCategory.AVG_RESPONSE_TIME: lambda x: self._updateAvgResponseTimes(x),
             MetricCategory.SERVER: lambda x: self._updateServerMetrics(x),
             MetricCategory.SYSTEM: lambda x: self._updateSystemMetrics(x),
         }
@@ -471,6 +479,11 @@ class ArkoudaMetrics:
 
     def _updateResponseTimes(self, metric: Metric) -> None:
         self.responseTimesPerCommand.labels(
+            command=metric.name, arkouda_server_name=self.arkoudaMetricsServerName
+        ).set(metric.value)
+
+    def _updateAvgResponseTimes(self, metric: Metric) -> None:
+        self.avgResponseTimesPerCommand.labels(
             command=metric.name, arkouda_server_name=self.arkoudaMetricsServerName
         ).set(metric.value)
 
