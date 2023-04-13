@@ -149,6 +149,43 @@ docker build --build-arg CHAPEL_UDP_IMAGE=$CHAPEL_UDP_IMAGE \
 
 The arkouda-udp-server docker image is designed to be launched on Kubernetes via Helm. The Arkouda-on-Kubernetes deployment will be added to arkouda-contrib in the near future.
 
+# prometheus-arkouda-exporter
+
+## Background
+
+The prometheus-arkouda-exporter Docker image encapsulates the Arkouda prometheus exporter, enabling it to be deployed on Kubernetes, on Slurm, or via Docker Compose.
+
+## Building prometheus-arkouda-exporter
+
+There are six build arguments passed in to the docker build command:
+
+1. EXPORTER\_VERSION: it is recommended that this coincide with the Arkouda tag version
+2. ARKOUDA\_DISTRO\_NAME: corresponds to the Arkouda tag or branch name
+3. ARKOUDA\_BRANCH\_NAME: matches the ARKOUDA\_DISTRO\_NAME if the Arkouda distro is a branch, is the ARKOUDA\_DISTRO\_NAME w/out "v" if the Arkouda distro is a tag
+4. ARKOUDA\_DOWNLOAD\_URL: the url for the Arkouda source code zip file that corresponds to the ARKOUDA\_DISTRO\_NAME
+5. ARKOUDA\_CONTRIB\_DOWNLOAD\_URL: arkouda-contrib project download url
+6. ARKOUDA\_CONTRIB\_DISTRO\_NAME: corresponds to the arkouda-contrib branch name
+
+An example docker build command sequence is as follows:
+
+```
+export EXPORTER_VERSION=v2023.03.24
+export ARKOUDA_DISTRO_NAME=v2023.03.24
+export ARKOUDA_BRANCH_NAME=2023.03.24
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.03.24.zip
+export ARKOUDA_CONTRIB_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
+export ARKOUDA_CONTRIB_DISTRO_NAME=main
+
+docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME --build-arg ARKOUDA_BRANCH_NAME=$ARKOUDA_BRANCH_NAME --build-arg ARKOUDA_DOWNLOAD_URL=$ARKOUDA_DOWNLOAD_URL --build-arg ARKOUDA_CONTRIB_DOWNLOAD_URL=$ARKOUDA_CONTRIB_DOWNLOAD_URL --build-arg ARKOUDA_CONTRIB_DISTRO_NAME=$ARKOUDA_CONTRIB_DISTRO_NAME -f prometheus-arkouda-exporter -t bearsrus/prometheus-arkouda-exporter:$EXPORTER_VERSION .
+```
+
+## Running prometheus-arkouda-exporter
+
+```
+export EXPORTER_VERSION=v2023.03.24
+
+docker run -e ARKOUDA_METRICS_SERVICE_NAME=localhost -e ARKOUDA_METRICS_SERVICE_PORT=5556 -e POLLING_INTERVAL_SECONDS=5 -e EXPORT_PORT=5080 -e EXPORT_PORT=5080 -p 5080:5080 bearsrus/prometheus-arkouda-exporter:$EXPORTER_VERSION
+
 # Building Images with Python script
 
 ## Background
@@ -208,4 +245,9 @@ python build_docker_image.py --chapel_version=1.29.0 --image_type=chapel-gasnet-
 python build_docker_image.py --arkouda_tag=v2023.02.08 --chapel_version=1.29.0 --image_type=arkouda-udp-server
 ```
 
+### prometheus-arkouda-exporter
+
+```
+python build_docker_image.py --arkouda_tag=v2023.02.08 --image_type=prometheus-arkouda-exporter
+```
 

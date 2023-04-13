@@ -1,0 +1,48 @@
+FROM python:3.10-bullseye
+
+ARG EXPORTER_VERSION=${EXPORTER_VERSION}
+ENV EXPORTER_VERSION=${EXPORTER_VERSION}
+
+WORKDIR /opt
+
+# Set arkouda and arkouda-contrib env variables from build args
+ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ENV ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ARG ARKOUDA_CONTRIB_DOWNLOAD_URL=${ARKOUDA_CONTRIB_DOWNLOAD_URL}
+ENV ARKOUDA_CONTRIB_DOWNLOAD_URL=${ARKOUDA_CONTRIB_DOWNLOAD_URL}
+ARG ARKOUDA_CONTRIB_DISTRO_NAME=${ARKOUDA_CONTRIB_DISTRO_NAME}
+ENV ARKOUDA_CONTRIB_DISTRO_NAME=${ARKOUDA_CONTRIB_DISTRO_NAME}
+
+# Install dependencies
+RUN apt-get update && apt upgrade -y && apt-get install unzip -y
+
+# Download arkouda-contrib and arkouda
+RUN wget $ARKOUDA_CONTRIB_DOWNLOAD_URL && \
+    unzip $ARKOUDA_CONTRIB_DISTRO_NAME.zip
+
+RUN wget $ARKOUDA_DOWNLOAD_URL && \
+    unzip $ARKOUDA_DISTRO_NAME.zip
+
+WORKDIR /opt/arkouda-$ARKOUDA_BRANCH_NAME
+
+# Execute arkouda pip install
+RUN pip install --upgrade pip
+RUN pip install -e .[dev]
+
+WORKDIR /opt/arkouda-contrib-$ARKOUDA_CONTRIB_DISTRO_NAME/arkouda_metrics_exporter/client
+
+# Execute arkouda-contrib pip install
+RUN pip install --upgrade pip
+RUN pip install -e .[dev]
+
+WORKDIR /opt
+
+RUN rm -rf $ARKOUDA_DISTRO_NAME.zip $ARKOUDA_CONTRIB_DISTRO_NAME.zip
+
+EXPOSE 5080
+
+ENTRYPOINT python -c "from arkouda_metrics_exporter import metrics; metrics.main()"
