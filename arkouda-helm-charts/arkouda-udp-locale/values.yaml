@@ -1,0 +1,29 @@
+# Default values for arkouda-udp-locale chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+######################## Pod Settings ########################
+
+imageRepository: bearsrus
+releaseVersion: v2023.03.01
+imagePullPolicy: IfNotPresent
+
+################ Arkouda Locale Configuration ################
+
+server: 
+  port: 5555
+  numLocales: 2
+  memTrack: true
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 1000m
+      memory: 1024Mi
+  threadsPerLocale: 4
+external:
+  persistence: 
+    enabled: false
+    path: /opt/locale
+    hostPath:
