@@ -11,7 +11,7 @@ The arkouda-udp-server Helm deployment is configured within the [values.yaml](va
 ### Version
 
 ```
-releaseVersion: 0.4.5
+releaseVersion: v2023.03.01
 imagePullPolicy: IfNotPresent
 ```
 
