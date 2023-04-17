@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: arkouda-server
+  labels: 
+    app: arkouda-server
+spec:
+      restartPolicy: Never
+      containers:
+        {{- if eq .Values.server.metrics.collectMetrics true }}
+        - name: arkouda-metrics-server
+          image: {{ .Values.metricsExporter.imageRepository }}/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
+          imagePullPolicy: {{ .Values.metricsExporter.imagePullPolicy }}
+          ports:
+          - containerPort: {{ .Values.metricsExporter.service.port }}
+            hostPort: 5080
+          env:
+            - name: EXPORT_PORT
+              value: {{ .Values.metricsExporter.port | quote}}
+            - name: POLLING_INTERVAL_SECONDS
+              value: {{ .Values.metricsExporter.pollingIntervalSeconds | quote}}
+            - name: ARKOUDA_SERVER_NAME
+              value: {{ .Values.metricsExporter.service.name | quote}}
+            - name: ARKOUDA_METRICS_SERVICE_HOST
+              value: {{ .Values.server.metrics.service.name | quote}}
+            - name: ARKOUDA_METRICS_SERVICE_PORT
+              value: {{ .Values.server.metrics.service.port | quote}}
+        {{- end }}
+        - name: arkouda-server
+          image: {{ .Values.imageRepository }}/arkouda-udp-server:{{ .Values.releaseVersion }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
+          lifecycle:
+            preStop:
+              exec:
+              {{- if eq .Values.server.metrics.collectMetrics true }}
+                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; metricsService=os.environ["METRICS_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace); dao.delete_service(service_name=metricsService,namespace=namespace)']
+              {{ else }}
+                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
+              {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          ports:
+          - containerPort: {{ .Values.server.service.port }}
+            hostPort: 5555
+          - containerPort: 22
+            hostPort: 25
+          volumeMounts:
+          - name: ssl
+            mountPath: "/etc/ssl/arkouda"
+          - name: ssh
+            mountPath: "/home/ubuntu/ssh-keys"
+          {{- if eq .Values.external.persistence.enabled true }}
+          - name: locale
+            mountPath: {{ .Values.external.persistence.path }}
+          {{- end }}
+          - name: arkouda-server-launch-script
+            mountPath: /opt/arkouda/start-arkouda-server.sh
+            subPath: start-arkouda-server.sh
+          env:
+            - name: MY_IP
+              valueFrom:
+                fieldRef: 
+                  fieldPath: status.podIP
+            - name: GASNET_MASTERIP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NUMLOCALES
+              value: {{ .Values.server.numLocales | quote}}
+            - name: SSH_SERVERS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: AUTHENTICATE
+              value: {{ .Values.server.authenticate | quote}} 
+            - name: VERBOSE
+              value: {{ .Values.server.verbose | quote }}   
+            - name: MEMTRACK
+              value: {{ .Values.server.memTrack | quote }}
+            - name: MEMMAX
+              value: {{ .Values.server.memMax | quote }}
+            - name: CHPL_RT_NUM_THREADS_PER_LOCALE
+              value: {{ .Values.server.threadsPerLocale | quote }}
+            - name: GASNET_SUPERNODE_MAXSIZE
+              value: '1' 
+            - name: CERT_FILE
+              value: {{ .Values.external.certFile | quote }}
+            - name: KEY_FILE
+              value: {{ .Values.external.keyFile | quote }}
+            - name: K8S_HOST
+              value: {{ .Values.external.k8sHost | quote }} 
+            - name: NAMESPACE
+              value: {{ .Values.external.namespace }}
+            - name: APP_NAME
+              value: {{ .Values.locale.appName | quote }}
+            - name: ARKOUDA_CLIENT_MODE
+              value: API
+            - name: POD_METHOD
+              value: {{ .Values.locale.podMethod | quote }}
+            - name: EXTERNAL_SERVICE_NAME
+              value: {{ .Values.external.service.name | quote }}
+            - name: EXTERNAL_SERVICE_PORT
+              value: {{ .Values.external.service.port | quote }}
+            - name: EXTERNAL_SERVICE_TARGET_PORT
+              value: {{ .Values.external.service.targetPort | quote }}
+            - name: LOG_LEVEL  
+              value: {{ .Values.server.logLevel }}    
+            - name: COLLECT_METRICS
+              value: {{ .Values.server.metrics.collectMetrics | quote }}
+            - name: METRICS_SERVICE_NAME
+              value: {{ .Values.server.metrics.service.name }}
+            - name: METRICS_SERVICE_PORT
+              value: {{ .Values.server.metrics.service.port | quote }}
+            - name: METRICS_SERVICE_TARGET_PORT
+              value: {{ .Values.server.metrics.service.targetPort | quote }}
+      volumes:              
+        - name: ssl
+          secret:
+            secretName: arkouda-server 
+        - name: ssh
+          secret:
+            secretName: arkouda-ssh
+        {{- if eq .Values.external.persistence.enabled true }}
+        - name: locale
+          hostPath:
+            path: {{ .Values.external.persistence.hostPath }}
+        {{- end }}
+        - name: arkouda-server-launch-script
+          configMap:
+            name: arkouda-server-launch-script
+            items:
+             - key: script
+               path: start-arkouda-server.sh
+
