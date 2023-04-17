@@ -122,7 +122,7 @@ spec:
       volumes:              
         - name: ssl
           secret:
-            secretName: arkouda-server 
+            secretName: arkouda-tls
         - name: ssh
           secret:
             secretName: arkouda-ssh

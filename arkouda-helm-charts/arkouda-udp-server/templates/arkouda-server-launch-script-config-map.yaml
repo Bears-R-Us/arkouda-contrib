@@ -26,10 +26,10 @@ data:
      /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
                                                       --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
                                                       --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax=${MEMMAX:-1073741824}
+                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
      {{- else }}
      /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
                                                       --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
                                                       --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax=${MEMMAX:-1073741824}
+                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
      {{- end }}
