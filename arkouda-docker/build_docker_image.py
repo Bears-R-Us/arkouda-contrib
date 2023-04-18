@@ -92,7 +92,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                                                 '--build-arg', 'ARKOUDA_CONTRIB_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
                                                 '--build-arg', 'ARKOUDA_CONTRIB_DISTRO_NAME=main',
                                                 '-f', file,
-                                                '-t', f'{dockerRepo}/{file}:{distro}', '.'], stdout=subprocess.DEVNULL)
+                                                '-t', f'{dockerTag}', '.'], stdout=subprocess.DEVNULL)
         print(result)
 
 
@@ -107,7 +107,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     elif file == ImageType.CHAPEL_GASNET_UDP.value:
         buildChapelUdp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
     elif file == ImageType.PROMETHEUS_ARKOUDA_EXPORTER.value:
-        buildPrometheusArkoudaExporter(dockerRepo=dockerRepo,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+        buildPrometheusArkoudaExporter(dockerRepo=dockerRepo,file=file,distro=distro,dockerTag=dockerTag,tag=tag)
     else:
         raise ValueError(f'docker image type {file} for {ImageType.PROMETHEUS_ARKOUDA_EXPORTER} is invalid')
 
