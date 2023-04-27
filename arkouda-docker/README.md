@@ -9,7 +9,7 @@ and ipython interface to Arkouda.
 
 ```
 # set env variables
-export CHAPEL_SMP_IMAGE=chapel/chapel-gasnet-smp:1.30.0
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.30.0
 export ARKOUDA_BRANCH_NAME=2023.04.07
 export ARKOUDA_DISTRO_NAME=v2023.04.07
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.04.07.zip
@@ -227,6 +227,12 @@ Shown below are example build commands. To ensure the optimal, respective perfor
 
 ```
 python build_docker_image.py --arkouda_tag=v2023.04.07 --chapel_version=1.30.0 --image_type=arkouda-full-stack
+```
+
+### chapel-gasnet-smp
+
+```
+python build_docker_image.py --chapel_version=1.30.0 --image_type=chapel-gasnet-smp
 ```
 
 ### arkouda-smp-server
