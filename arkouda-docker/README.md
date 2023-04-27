@@ -75,7 +75,7 @@ The arkouda-smp-server extends chapel-gasnet-smp to deliver a GASNET smp configu
 ## Building arkouda-smp-server
 
 ```
-export CHAPEL_SMP_IMAGE=chapel/chapel-gasnet-smp:1.30.0
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.30.0
 export ARKOUDA_DISTRO_NAME=v2023.04.07
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.04.07.zip
 export ARKOUDA_BRANCH_NAME=2023.04.07

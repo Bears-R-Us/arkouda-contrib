@@ -1,5 +1,7 @@
-ARG CHPL_BASE_IMAGE
-FROM $CHPL_BASE_IMAGE
+FROM ubuntu:22.04
+
+ARG CHPL_VERSION=${CHPL_VERSION}
+ENV CHPL_VERSION=${CHPL_VERSION}
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -49,15 +51,15 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
            
 EXPOSE 22
 
-ARG CHPL_VERSION=${CHPL_VERSION}
-ENV CHPL_VERSION=${CHPL_VERSION}
 ENV CHPL_HOME=/opt/chapel/$CHPL_VERSION
 
+ENV CHPL_TARGET_PLATFORM=linux64
 ENV CHPL_COMM_SUBSTRATE=smp
 ENV CHPL_COMM=gasnet
+ENV CHPL_LAUNCHER=smp
 ENV CHPL_LLVM=system
-ENV CHPL_RE2=bundled
 ENV CHPL_GMP=system
+ENV CHPL_RE2=bundled
 RUN chmod 777 /opt
 
 USER ubuntu
@@ -66,7 +68,6 @@ RUN mkdir /home/ubuntu/.ssh
 RUN mkdir -p /opt/chapel \
     && wget -q -O - https://github.com/chapel-lang/chapel/releases/download/$CHPL_VERSION/chapel-$CHPL_VERSION.tar.gz | tar -xzC /opt/chapel --transform 's/chapel-//' \
     && make -C $CHPL_HOME \
-    #&& make -C $CHPL_HOME chpldoc test-venv mason \
     && make -C $CHPL_HOME cleanall
 
 USER root
