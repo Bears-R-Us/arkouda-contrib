@@ -1,6 +1,4 @@
-# Default values for arkouda-server-chart.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Default values for arkouda-udp-server chart.
 
 resources:
   limits:
@@ -13,7 +11,7 @@ resources:
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.03.01
+releaseVersion: v2023.04.07
 imagePullPolicy: IfNotPresent
 
 ################ Arkouda Server Configuration ################
@@ -48,7 +46,7 @@ external:
     hostPath: # host machine path
   certFile: /etc/ssl/arkouda/tls.crt
   keyFile: /etc/ssl/arkouda/tls.key
-  k8sHost: 
+  k8sHost: # Kubernetes API url (result of kubectl cluster-info command) 
   namespace: # namespace Arkouda will register service
   service: 
     name: # k8s service name Arkouda will register
@@ -63,3 +61,7 @@ metricsExporter:
     port: # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
   dynamicScrapeTarget: true
+secrets:
+  tls: # name of tls secret used to access Kubernetes API
+  ssh: # name of ssh secret used to launch Arkouda locales
+

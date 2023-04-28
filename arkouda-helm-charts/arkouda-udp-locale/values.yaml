@@ -1,18 +1,16 @@
-# Default values for arkouda-udp-locale chart
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Default values for the arkouda-udp-locale chart
 
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.03.01
+releaseVersion: v2023.04.07
 imagePullPolicy: IfNotPresent
 
 ################ Arkouda Locale Configuration ################
 
 server: 
-  port: 5555
-  numLocales: 2
+  port: # Arkouda port, defaults to 5555
+  numLocales: # number of arkouda-udp-locale pods
   memTrack: true
   resources:
     limits:
@@ -21,9 +19,13 @@ server:
     requests:
       cpu: 1000m
       memory: 1024Mi
-  threadsPerLocale: 4
+  threadsPerLocale: # number of CPU cores for each locale
 external:
   persistence: 
     enabled: false
     path: /opt/locale
     hostPath:
+secrets:
+  tls: # name of tls secret used to access Kubernetes API
+  ssh: # name of ssh secret used to launch Arkouda locales
+

@@ -83,8 +83,6 @@ spec:
               value: {{ .Values.server.verbose | quote }}   
             - name: MEMTRACK
               value: {{ .Values.server.memTrack | quote }}
-            - name: MEMMAX
-              value: {{ .Values.server.memMax | quote }}
             - name: CHPL_RT_NUM_THREADS_PER_LOCALE
               value: {{ .Values.server.threadsPerLocale | quote }}
             - name: GASNET_SUPERNODE_MAXSIZE
@@ -122,10 +120,10 @@ spec:
       volumes:              
         - name: ssl
           secret:
-            secretName: arkouda-server 
+            secretName: {{ .Values.secrets.tls }}
         - name: ssh
           secret:
-            secretName: arkouda-ssh
+            secretName: {{ .Values.secrets.ssh }}
         {{- if eq .Values.external.persistence.enabled true }}
         - name: locale
           hostPath:

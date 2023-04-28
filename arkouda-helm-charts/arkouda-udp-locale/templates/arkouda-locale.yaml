@@ -51,10 +51,10 @@ spec:
       volumes:
         - name: ssl
           secret:
-            secretName: arkouda-tls
+            secretName: {{ .Values.secrets.tls }}
         - name: ssh
           secret:
-            secretName: arkouda-ssh
+            secretName: {{ .Values.secrets.ssh }}
         {{- if eq .Values.external.persistence.enabled true }}
         - name: locale
           hostPath:
