@@ -29,6 +29,8 @@ class MetricCategory(Enum):
     NUM_REQUESTS = "NUM_REQUESTS"
     RESPONSE_TIME = "RESPONSE_TIME"
     AVG_RESPONSE_TIME = "AVG_RESPONSE_TIME"
+    TOTAL_RESPONSE_TIME = 'TOTAL_RESPONSE_TIME'
+    TOTAL_MEMORY_USED = 'TOTAL_MEMORY_USED'
     SERVER = "SERVER"
     SERVER_INFO = "SERVER_INFO"
     SYSTEM = "SYSTEM"
@@ -253,7 +255,9 @@ class ArkoudaMetrics:
         "_updateMetric",
         "responseTimesPerCommand",
         "avgResponseTimesPerCommand",
+        "totalResponseTimesPerCommand",
         "memoryUsedPerLocale",
+        "totalMemoryUsedPerCommand",
         "pctMemoryUsedPerLocale",
         "systemMemoryPerLocale",
         "systemProcessingUnitsPerLocale",
@@ -273,7 +277,9 @@ class ArkoudaMetrics:
     numberOfConnections: Gauge
     responseTimesPerCommand: Gauge
     avgResponseTimesPerCommand: Gauge
+    totalResponseTimesPerCommand: Gauge
     memoryUsedPerLocale: Gauge
+    totalMemoryUsedPerCommand: Gauge
     pctMemoryUsedPerLocale: Gauge
     systemMemoryPerLocale: Gauge
     systemProcessingUnitsPerLocale: Gauge
@@ -324,6 +330,16 @@ class ArkoudaMetrics:
         self.avgResponseTimesPerCommand = Gauge(
             "arkouda_avg_response_times_per_command",
             "Average response times of Arkouda commands",
+            labelnames=["command", "arkouda_server_name"],
+        )
+        self.totalResponseTimesPerCommand = Gauge(
+            "arkouda_total_response_times_per_command",
+            "Total response times of Arkouda commands",
+            labelnames=["command", "arkouda_server_name"],
+        )
+        self.totalMemoryUsedPerCommand = Gauge(
+            "arkouda_total_memory_used_per_command",
+            "Total memory used by each Arkouda command",
             labelnames=["command", "arkouda_server_name"],
         )
         self.memoryUsedPerLocale = Gauge(
@@ -382,6 +398,8 @@ class ArkoudaMetrics:
             MetricCategory.NUM_REQUESTS: lambda x: self._updateNumberOfRequests(x),
             MetricCategory.RESPONSE_TIME: lambda x: self._updateResponseTimes(x),
             MetricCategory.AVG_RESPONSE_TIME: lambda x: self._updateAvgResponseTimes(x),
+            MetricCategory.TOTAL_RESPONSE_TIME: lambda x: self._updateTotalResponseTimes(x),
+            MetricCategory.TOTAL_MEMORY_USED: lambda x: self._updateTotalMemoryUsed(x),
             MetricCategory.SERVER: lambda x: self._updateServerMetrics(x),
             MetricCategory.SYSTEM: lambda x: self._updateSystemMetrics(x),
         }
@@ -486,6 +504,16 @@ class ArkoudaMetrics:
         self.avgResponseTimesPerCommand.labels(
             command=metric.name, arkouda_server_name=self.arkoudaMetricsServerName
         ).set(metric.value)
+        
+    def _updateTotalResponseTimes(self, metric: Metric) -> None:
+        self.totalResponseTimesPerCommand.labels(
+            command=metric.name, arkouda_server_name=self.arkoudaMetricsServerName
+        ).set(metric.value)
+        
+    def _updateTotalMemoryUsed(self, metric: Metric) -> None:
+        self.totalMemoryUsedPerCommand.labels(
+            command=metric.name, arkouda_server_name=self.arkoudaMetricsServerName
+        ).set(metric.value)
 
     def _updateServerMetrics(self, metric: Metric) -> None:
         self.numberOfConnections.labels(arkouda_server_name=self.arkoudaMetricsServerName).set(
@@ -584,8 +612,8 @@ class ArkoudaMetrics:
 
         for metric in metrics:
             self._updateMetric[metric.category](metric)
-            logger.debug("UPDATED METRIC {}".format(metric))
-
+            logger.debug(f"UPDATED METRIC {metric}")
+        
     def _assignTimestamp(self, metrics: List[Metric]) -> None:
         self.reportedTimestamp.labels(arkouda_server_name=self.arkoudaMetricsServerName).set(
             metrics[0].timestamp.timestamp()
