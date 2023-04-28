@@ -19,7 +19,7 @@ data:
 
      cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
 
-     export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=arkouda' '-a=arkouda-locale')"
+     export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')"
      export SSH_SERVERS="$MY_IP $LOCALE_IPS"
 
      {{- if eq .Values.server.metrics.collectMetrics true }}
