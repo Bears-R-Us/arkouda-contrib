@@ -8,13 +8,6 @@ The arkouda-udp-locale Helm chart deploys 1..n arkouda-udp-locale docker contain
 
 The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml) file.
 
-### Version
-
-```
-releaseVersion: v2023.03.01
-imagePullPolicy: IfNotPresent
-```
-
 ### Server
 
 The server configuration section sets the number of arkouda-locale containers to startup along with resources as shown below:

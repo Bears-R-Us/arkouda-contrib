@@ -27,7 +27,6 @@ server:
   service:
     type: # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
     port: # service port Arkouda is listening on, defaults to 5555
-    targetPort: # if service tyoe is ClusterIP or LoadBalancer, defaults to 5555
     nodeport: # if service type is Nodeport
     name: # service name
   metrics:
@@ -35,7 +34,6 @@ server:
     service:
       name: # k8s service name for the Arkouda metrics service endpoint
       port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
-      targetPort: # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
 locale:
   appName: arkouda-locale
   podMethod: GET_POD_IPS
@@ -51,7 +49,6 @@ external:
   service: 
     name: # k8s service name Arkouda will register
     port: # k8s service port Arkouda will register, defaults to 5555
-    targetPort: # k8s service targetPort Arkouda will register, defaults to 5555
 metricsExporter:
   imageRepository: bearsrus
   releaseVersion: # prometheus-arkouda-exporter release version
@@ -60,7 +57,6 @@ metricsExporter:
     name: # prometheus-arkouda-exporter service name
     port: # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
-  dynamicScrapeTarget: true
 secrets:
   tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales

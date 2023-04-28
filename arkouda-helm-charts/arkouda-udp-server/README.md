@@ -113,38 +113,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-#### Metrics Integration
-
-Arkouda utilizes the prometheus-arkouda-exporter to provide Prometheus metrics export capabilities. prometheus-arkouda-exporter registers as a dynamic scrape target for Prometheus, a process which  entails adding/deleting scrape targets to/from the Prometheus server ConfigMap. Accordingly, Arkouda requires update and patch permissions for Kubernetes ConfigMaps. The corresponding ClusterRole is as follows:
-
-```
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: prometheus-configmap-updater
-rules:
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get","patch","update"]
-``` 
-
-This ClusterRole is bound to the arkouda Kubernetes user as follows:
-
-```
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: arkouda-prometheus-configmap-updater
-subjects:
-- kind: User
-  name: arkouda
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: prometheus-configmap-updater
-  apiGroup: rbac.authorization.k8s.io
-```
-
 ### SSH Secret
 
 An SSH key pair deployed within Kubernetes as a secret is required for all Arkouda locales to startup via the GASNET udp with the S (SSH) spawner. _Since the arkouda pods launch as the ubuntu user, the SSH key pair must be generated as the ubuntu user._ The key pair can be generated as the ubuntu user either on a host system that is running ubuntu or within one of the bearsrus Arkouda docker images 
@@ -183,7 +151,7 @@ kubectl create secret generic arkouda-ssh --from-file=~/.ssh/id_rsa --from-file=
 
 ## Configuration
 
-The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml) as well as the [scrape target values.yaml](charts/dynamic-scrape-target) file, the latter of which is required when metrics capture and dynamic Prometheus scrape target are both enabled.
+The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml).
 
 ### values.yaml
 
@@ -245,6 +213,24 @@ metricsExporter:
     port: # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
   dynamicScrapeTarget: true
+```
+
+## Prometheus Configuration
+
+Prometheus is configured manually its prometheus.yaml file, the Prometheus [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#deploying-a-sample-application), or [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#using-podmonitors). ServiceMonitor and/or PodMonitor configuration(s) will be added soon to the arkouda-udp-server deployment. 
+
+In the meantime, adding the prometheus-arkouda-exporter as a scrape target to the prometheus.yaml is as follows: 
+
+Within the static_config section, add an entry for the prometheus-arkouda-exporter container:
+```
+    scrape_configs:
+      - job_name: # desired prometheus scrape target job name
+        static_configs:
+          - targets:
+            - metricsExporter.service.name.arkoudaNamespace:metricsExporter.service.port
+            labels:
+              arkouda_instance: # desired Arkouda instance name
+              launch_method: Kubernetes
 ```
 
 ## Helm Install Command
