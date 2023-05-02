@@ -18,7 +18,7 @@ setup(
     keywords="HPC exploratory analysis parallel distribute arrays Chapel sparse matrix linear",
     packages=find_packages(),
     classifiers=["Programming Language :: Python :: 3"],
-    install_requires=["numpy", "pandas", "scipy"],
+    install_requires=["arkouda", "typeguard"],
     python_requires=">= 3.8",
     project_urls={
         "Bug Reports": "https://github.com/Bear-R-Us/arkouda/issues",
