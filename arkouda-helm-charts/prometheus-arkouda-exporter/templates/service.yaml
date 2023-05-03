@@ -1,7 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.exporter.service.name }} 
+  name: {{ .Values.exporter.service.name }}
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "{{ .Values.exporter.service.port }}"
+    prometheus.io/scrape: "true" 
 spec:
   type: ClusterIP
   ports:
