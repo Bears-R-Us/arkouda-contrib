@@ -12,11 +12,10 @@ spec:
           image: {{ .Values.metricsExporter.imageRepository }}/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
           imagePullPolicy: {{ .Values.metricsExporter.imagePullPolicy }}
           ports:
-          - containerPort: {{ .Values.metricsExporter.service.port }}
-            hostPort: 5080
+          - containerPort: 5080
           env:
             - name: EXPORT_PORT
-              value: {{ .Values.metricsExporter.port | quote}}
+              value: "5080"
             - name: POLLING_INTERVAL_SECONDS
               value: {{ .Values.metricsExporter.pollingIntervalSeconds | quote}}
             - name: ARKOUDA_SERVER_NAME

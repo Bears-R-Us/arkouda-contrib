@@ -155,7 +155,7 @@ The arkouda-udp-server Helm deployment is configured within the [values.yaml](va
 
 ### values.yaml
 
-#### Server
+#### server
 
 ```
 server:
@@ -180,7 +180,7 @@ server:
       targetPort: # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
 ```
 
-#### External System
+#### external
 
 ```
 external:
@@ -198,10 +198,9 @@ external:
     targetPort: # k8s service targetPort Arkouda will register, defaults to 5555
 ```
 
-#### Metrics Server
+#### metricsExporter
 
-The metricsServer section configures the embedded prometheus-arkouda-exporter which is deployed
-if server.metrics.collectMetrics = true.
+The metricsExporter section configures the embedded prometheus-arkouda-exporter which is deployed if server.metrics.collectMetrics = true.
 
 ```
 metricsExporter:
@@ -212,28 +211,13 @@ metricsExporter:
     name: # prometheus-arkouda-exporter service name
     port: # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
-  dynamicScrapeTarget: true
 ```
 
-## Prometheus Configuration
-
-Prometheus is configured manually its prometheus.yaml file, the Prometheus [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#deploying-a-sample-application), or [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#using-podmonitors). ServiceMonitor and/or PodMonitor configuration(s) will be added soon to the arkouda-udp-server deployment. 
-
-In the meantime, adding the prometheus-arkouda-exporter as a scrape target to the prometheus.yaml is as follows: 
-
-Within the static_config section, add an entry for the prometheus-arkouda-exporter container:
-```
-    scrape_configs:
-      - job_name: # desired prometheus scrape target job name
-        static_configs:
-          - targets:
-            - metricsExporter.service.name.arkoudaNamespace:metricsExporter.service.port
-            labels:
-              arkouda_instance: # desired Arkouda instance name
-              launch_method: Kubernetes
-```
+The prometheus-arkouda-exporter registers as a Prometheus scrape target via the Prometheus [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md).
 
 ## Helm Install Command
+
+An example Helm install command is shown below:
 
 ```
 helm install -n arkouda arkouda-server arkouda-udp-server/
