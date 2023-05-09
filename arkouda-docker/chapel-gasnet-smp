@@ -1,0 +1,78 @@
+FROM ubuntu:22.04
+
+ARG CHPL_VERSION=${CHPL_VERSION}
+ENV CHPL_VERSION=${CHPL_VERSION}
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+ENV CHPL_GASNET_MORE_CFG_OPTIONS "--disable-pshm-posix --enable-pshm-sysv"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    ca-certificates \
+    cmake \
+    curl \
+    gcc \
+    g++ \
+    perl \
+    python2.7 \
+    python2.7-dev \
+    python-setuptools \
+    python3 \
+    python3-pip \
+    libgmp10 \
+    libgmp-dev \
+    locales \
+    bash \
+    make \
+    mawk \
+    file \
+    pkg-config \
+    git \
+    openssh-client \
+    openssh-server \
+    sshpass \
+    sudo \
+    procps \
+    dnsutils \
+    vim \
+    hdf5-tools \
+    libcurl4-openssl-dev \
+    clang \
+    lldb \
+    lld \
+    llvm-dev \
+    libclang-14-dev \
+    libclang-cpp-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m ubuntu && echo "ubuntu:ubuntu" | chpasswd && adduser ubuntu sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+           
+EXPOSE 22
+
+ENV CHPL_HOME=/opt/chapel/$CHPL_VERSION
+
+ENV CHPL_TARGET_PLATFORM=linux64
+ENV CHPL_COMM_SUBSTRATE=smp
+ENV CHPL_COMM=gasnet
+ENV CHPL_LAUNCHER=smp
+ENV CHPL_LLVM=system
+ENV CHPL_GMP=system
+ENV CHPL_RE2=bundled
+RUN chmod 777 /opt
+
+USER ubuntu
+RUN mkdir /home/ubuntu/.ssh
+
+RUN mkdir -p /opt/chapel \
+    && wget -q -O - https://github.com/chapel-lang/chapel/releases/download/$CHPL_VERSION/chapel-$CHPL_VERSION.tar.gz | tar -xzC /opt/chapel --transform 's/chapel-//' \
+    && make -C $CHPL_HOME \
+    && make -C $CHPL_HOME cleanall
+
+USER root
+RUN chmod -R 777 /opt/chapel/$CHPL_VERSION/bin
+
+USER ubuntu
+ENV PATH=/opt/chapel/$CHPL_VERSION/bin/linux64-x86_64/:$PATH
+

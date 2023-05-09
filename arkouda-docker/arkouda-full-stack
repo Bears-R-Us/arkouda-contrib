@@ -1,13 +1,11 @@
-ARG CHAPEL_SMP_IMAGE
-FROM $CHAPEL_SMP_IMAGE
+ARG CHAPEL_SMP_IMAGE=${CHAPEL_SMP_IMAGE}
 
-# hack needed for Kubernetes deployment
-RUN export CHPL_GASNET_MORE_CFG_OPTIONS=--enable-force-posix-realtime
-WORKDIR $CHPL_HOME
-RUN touch third-party/gasnet/Makefile
-RUN make -j
+FROM ${CHAPEL_SMP_IMAGE}
 
-# get env variables for arkouda download and install
+WORKDIR /opt
+RUN sudo chmod 777 /opt
+
+# Download Arkouda
 ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
 ENV ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
 ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
@@ -15,31 +13,44 @@ ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
 ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
 ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
 
-RUN apt-get update && apt install unzip libcurl4-openssl-dev -y
+# Install dependencies
+RUN sudo apt-get update && sudo apt upgrade -y && \
+    sudo apt-get install unzip libcurl4-openssl-dev -y
 
-WORKDIR /opt
-
-# Download desired Arkouda distro, move to common /opt/arkouda dir
-RUN chmod 777 /opt && \
-    wget $ARKOUDA_DOWNLOAD_URL && \
+# Download desired Arkouda distro, move to commont /opt/arkouda dir
+RUN wget $ARKOUDA_DOWNLOAD_URL && \
     unzip $ARKOUDA_DISTRO_NAME.zip && \
     mv /opt/arkouda-$ARKOUDA_BRANCH_NAME /opt/arkouda
 
 WORKDIR /opt/arkouda
 
+# Install Arkouda server
 RUN make install-deps && make
 
-# Install python client
-RUN pip3 install -e .[dev]
+# Install Arkouda python client, ipython, and jupyter
+RUN sudo python3 setup.py bdist_wheel --universal && \
+    sudo pip3 install dist/*.whl && \
+    sudo pip3 install jupyter ipython
 
-# Install jupyterlab
-RUN pip3 install jupyterlab
+# Remove unneeded files
+RUN sudo rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip && \
+    sudo rm -rf /opt/chapel && \
+    cd /opt/arkouda && \
+    sudo rm -rf benchmarks converter examples *.md pictures pydoc resources runs src test tests toys
 
-# Add startup script and set as entrypoint
-ADD scripts/start-smp-arkouda-full-stack.sh /opt/start-arkouda-full-stack.sh
-ADD scripts/start-smp-arkouda-full-stack-notebook.sh /opt/start-arkouda-full-stack-notebook.sh
-RUN chmod +x /opt/start-arkouda-full-stack.sh /opt/start-arkouda-full-stack-notebook.sh
-ENTRYPOINT sh /opt/start-arkouda-full-stack-notebook.sh
+# Add startup scripts
+ADD scripts/start-smp-arkouda-full-stack.sh /opt/arkouda/start-smp-arkouda-full-stack.sh 
+ADD scripts/start-smp-arkouda-full-stack-notebook.sh /opt/arkouda/start-smp-arkouda-full-stack-notebook.sh
 
-WORKDIR /opt/arkouda
+# Create jovyan user and make entrypoint scripts executable
+RUN sudo useradd -m jovyan && \
+    sudo chmod +x /opt/arkouda/start-smp-arkouda-full-stack.sh && \
+    sudo chmod +x /opt/arkouda/start-smp-arkouda-full-stack-notebook.sh
+
+# Switch to jovyan user
+USER jovyan
+WORKDIR /home/jovyan
+
+ENTRYPOINT /opt/arkouda/start-smp-arkouda-full-stack-notebook.sh 
+
 EXPOSE 8888
