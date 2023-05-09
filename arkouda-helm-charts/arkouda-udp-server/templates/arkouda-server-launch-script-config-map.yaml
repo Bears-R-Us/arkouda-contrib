@@ -1,0 +1,35 @@
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: arkouda-server-launch-script
+  labels:
+    name: arkouda-server-launch-script
+data:
+  script: |-
+  
+     #!/bin/bash
+     sudo service ssh start
+
+     mkdir ~/.ssh/
+     sudo cp ~/ssh-keys/id_rsa* ~/.ssh/
+     sudo chown -R ubuntu:ubuntu ~/.ssh/*
+     chmod -R 600 ~/.ssh/*
+
+     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+
+     export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')"
+     export SSH_SERVERS="$MY_IP $LOCALE_IPS"
+
+     {{- if eq .Values.server.metrics.collectMetrics true }}
+     /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
+                                                      --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
+                                                      --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
+     {{- else }}
+     /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
+                                                      --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
+                                                      --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
+     {{- end }}

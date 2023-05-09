@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.exporter.server.appName }}
+  labels:
+    app: {{ .Values.exporter.server.appName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.exporter.server.appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.exporter.server.appName }}
+    spec:
+      containers:
+        - name: arkouda-metrics-exporter
+          image: bearsrus/prometheus-arkouda-exporter:{{ .Values.releaseVersion }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+          - containerPort: 5080
+          env:
+            - name: EXPORT_PORT
+              value: {{ .Values.exporter.service.port | quote }}
+            - name: ARKOUDA_SERVER_NAME
+              value: {{ .Values.arkouda.metrics.server.name | quote }}
+            - name: POLLING_INTERVAL_SECONDS
+              value: {{ .Values.exporter.server.pollingIntervalSeconds | quote }}
+            - name: ARKOUDA_METRICS_SERVICE_HOST
+              value: {{ .Values.arkouda.metrics.service.name | quote }}
+            - name: ARKOUDA_METRICS_SERVICE_PORT
+              value: {{ .Values.arkouda.metrics.service.port | quote }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 5080
+            initialDelaySeconds: 30
+            periodSeconds: 60
+

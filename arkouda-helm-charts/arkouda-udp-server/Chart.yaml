@@ -1,0 +1,10 @@
+apiVersion: v2
+name: arkouda-udp-server
+description: The arkouda-udp-server Helm chart
+
+type: application
+
+version: 1.0.0
+
+appVersion: v2023.04.07
+
