@@ -1,4 +1,4 @@
-# Default values for arkouda-driver-chart.
+# Default values for udp-arkouda-server chart
 
 resources:
   limits:
@@ -26,16 +26,15 @@ server:
   logLevel: LogLevel.DEBUG
   service:
     type: ClusterIP # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
-    port: # service port Arkouda is listening on, defaults to 5555
-    targetPort: 5555 # if service type is ClusterIP or LoadBalancer, defaults to 5555
+    port: # k8s service port Arkouda is listening on, defaults to 5555
     nodeport: # if service type is Nodeport
-    name: arkouda # service name
+    name: # k8s service name
   metrics:
     collectMetrics: false # whether to collect metrics and make them available via  k8s service
     service:
-      name: arkouda-metrics # k8s service name for the Arkouda metrics service endpoint
+      name: # k8s service name for the Arkouda metrics service endpoint
       port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
-      targetPort: 5556 # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
+      targetPort: # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
 locale:
   appName: arkouda-locale
   podMethod: GET_POD_IPS
@@ -44,14 +43,11 @@ external:
     enabled: false
     path: /arkouda-files # pod directory path, must match arkouda-udp-locale
     hostPath: # host machine path, must match arkouda-udp-locale
-  certFile: /etc/ssl/arkouda/tls.crt
-  keyFile: /etc/ssl/arkouda/tls.key
   k8sHost:
-  namespace: arkouda # namespace Arkouda will register service
+  namespace: # namespace Arkouda will register service
   service: 
-    name: arkouda # k8s service name Arkouda will register
-    port: 5555 # k8s service port Arkouda will register, defaults to 5555
-    targetPort: 5555 # k8s service targetPort Arkouda will register, defaults to 5555
+    name: # k8s service name Arkouda will register
+    port: # k8s service port Arkouda will register, defaults to 5555
 metricsExporter:
   imageRepository: bearsrus
   releaseVersion: v2023.05.05 # prometheus-arkouda-exporter release version

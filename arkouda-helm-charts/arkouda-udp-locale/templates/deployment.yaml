@@ -22,7 +22,6 @@ spec:
           command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
           ports:
           - containerPort: 22
-            hostPort: 25
           volumeMounts:
           - name: ssl
             mountPath: "/etc/ssl/arkouda"
