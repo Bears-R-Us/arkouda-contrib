@@ -1,4 +1,4 @@
-# Default values for arkouda-udp-server chart.
+# Default values for arkouda-driver-chart.
 
 resources:
   limits:
@@ -11,53 +11,55 @@ resources:
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.04.07
+releaseVersion: v2023.05.05
 imagePullPolicy: IfNotPresent
 
-################ Arkouda Server Configuration ################
+################ Arkouda Driver Configuration ################
 
 server: 
   numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
-  authenticate: # whether to require token authentication
-  verbose: # enable verbose logging
-  memTrack: true
+  authenticate: false # whether to require token authentication
+  verbose: true # enable verbose logging
   threadsPerLocale: # number of cpu cores to be used per locale
   memMax: # maximum bytes of RAM to be used per locale
-  logLevel: LogLevel.INFO
+  memTrack: true
+  logLevel: LogLevel.DEBUG
   service:
-    type: # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
+    type: ClusterIP # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
     port: # service port Arkouda is listening on, defaults to 5555
+    targetPort: 5555 # if service type is ClusterIP or LoadBalancer, defaults to 5555
     nodeport: # if service type is Nodeport
-    name: # service name
+    name: arkouda # service name
   metrics:
-    collectMetrics: # whether to collect metrics and make them available via  k8s service
+    collectMetrics: false # whether to collect metrics and make them available via  k8s service
     service:
-      name: # k8s service name for the Arkouda metrics service endpoint
+      name: arkouda-metrics # k8s service name for the Arkouda metrics service endpoint
       port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
+      targetPort: 5556 # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
 locale:
   appName: arkouda-locale
   podMethod: GET_POD_IPS
 external:
   persistence:
     enabled: false
-    path: /opt/locale # pod directory path DO NOT CHANGE
-    hostPath: # host machine path
+    path: /arkouda-files # pod directory path, must match arkouda-udp-locale
+    hostPath: # host machine path, must match arkouda-udp-locale
   certFile: /etc/ssl/arkouda/tls.crt
   keyFile: /etc/ssl/arkouda/tls.key
-  k8sHost: # Kubernetes API url (result of kubectl cluster-info command) 
-  namespace: # namespace Arkouda will register service
+  k8sHost:
+  namespace: arkouda # namespace Arkouda will register service
   service: 
-    name: # k8s service name Arkouda will register
-    port: # k8s service port Arkouda will register, defaults to 5555
+    name: arkouda # k8s service name Arkouda will register
+    port: 5555 # k8s service port Arkouda will register, defaults to 5555
+    targetPort: 5555 # k8s service targetPort Arkouda will register, defaults to 5555
 metricsExporter:
   imageRepository: bearsrus
-  releaseVersion: # prometheus-arkouda-exporter release version
+  releaseVersion: v2023.05.05 # prometheus-arkouda-exporter release version
   imagePullPolicy: IfNotPresent
   service:
     name: # prometheus-arkouda-exporter service name
-    port: # prometheus-arkouda-exporter service port, defaults to 5080
+    port: 5080 # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
 secrets:
   tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
-

@@ -18,12 +18,7 @@ spec:
           image: {{ .Values.imageRepository }}/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           resources:
-            requests:
-              cpu: {{ .Values.server.resources.requests.cpu }}
-              memory: {{ .Values.server.resources.requests.memory }}
-            limits:
-              cpu: {{ .Values.server.resources.limits.cpu }}
-              memory: {{ .Values.server.resources.limits.memory }}
+            {{- toYaml .Values.resources | nindent 12 }}
           command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
           ports:
           - containerPort: 22
