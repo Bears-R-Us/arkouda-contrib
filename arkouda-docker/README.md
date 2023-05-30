@@ -189,6 +189,7 @@ docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME --build-arg AR
 export EXPORTER_VERSION=v2023.04.07
 
 docker run -e ARKOUDA_METRICS_SERVICE_NAME=localhost -e ARKOUDA_METRICS_SERVICE_PORT=5556 -e POLLING_INTERVAL_SECONDS=5 -e EXPORT_PORT=5080 -e EXPORT_PORT=5080 -p 5080:5080 bearsrus/prometheus-arkouda-exporter:$EXPORTER_VERSION
+```
 
 # Building Images with Python script
 
