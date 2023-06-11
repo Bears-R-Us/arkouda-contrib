@@ -1,12 +1,33 @@
 from __future__ import print_function
 import argparse
-import logging
+from typing import Union
 
 import grpc
 import arkouda_pb2
 import arkouda_pb2_grpc
 
-#$'localhost:50053
+from arkouda.client import Channel
+from arkouda.logger import getArkoudaLogger, LogLevel
+
+logger = getArkoudaLogger(name="Arkouda Client", logLevel=LogLevel.DEBUG)
+
+class GrpcChannel(Channel):
+    
+    def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> Union[str, memoryview]:
+        logger.debug("Sending request to Arkouda gRPC ...")
+        with grpc.insecure_channel(self.url) as channel:
+            stub = arkouda_pb2_grpc.ArkoudaStub(channel)
+            raw_response = stub.HandleRequest(arkouda_pb2.ArkoudaRequest(user=self.user,
+                                                                     token=self.token,
+                                                                     cmd=cmd,
+                                                                     format='STRING',
+                                                                     size=size,
+                                                                     args=args))
+            response = raw_response.message
+            logger.debug(f"Arkouda gRPC client received response {response}")
+            return response     
+
 def run(url: str, user: str, token: str, cmd: str, format: str, size: int, args: str):
     print("Sending request to Arkouda gRPC ...")
     with grpc.insecure_channel(url) as channel:
