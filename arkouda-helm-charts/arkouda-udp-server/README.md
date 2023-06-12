@@ -169,7 +169,6 @@ server:
   service:
     type: # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
     port: # service port Arkouda is listening on, defaults to 5555
-    targetPort: # if service tyoe is ClusterIP or LoadBalancer, defaults to 5555
     nodeport: # if service type is Nodeport
     name: # service name
   metrics:
@@ -177,7 +176,6 @@ server:
     service:
       name: # k8s service name for the Arkouda metrics service endpoint
       port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
-      targetPort: # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
 ```
 
 #### external
@@ -188,14 +186,11 @@ external:
     enabled: false
     path: /opt/locale # pod directory path DO NOT CHANGE
     hostPath: # host machine path
-  certFile: /etc/ssl/arkouda/tls.crt
-  keyFile: /etc/ssl/arkouda/tls.key
   k8sHost:
   namespace: # namespace Arkouda will register service
   service:
     name: # k8s service name Arkouda will register
     port: # k8s service port Arkouda will register, defaults to 5555
-    targetPort: # k8s service targetPort Arkouda will register, defaults to 5555
 ```
 
 #### metricsExporter

@@ -1,31 +1,31 @@
-# Default values for the arkouda-udp-locale chart
+# Default values for arkouda-udp-locale chart
 
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.04.07
+releaseVersion: v2023.05.05
 imagePullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 1000m
+    memory: 1024Mi
 
 ################ Arkouda Locale Configuration ################
 
 server: 
   port: # Arkouda port, defaults to 5555
-  numLocales: # number of arkouda-udp-locale pods
   memTrack: true
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1024Mi
-    requests:
-      cpu: 1000m
-      memory: 1024Mi
+  numLocales: # number of arkouda-udp-locale pods
   threadsPerLocale: # number of CPU cores for each locale
 external:
   persistence: 
-    enabled: false
-    path: /opt/locale
-    hostPath:
+    enabled: true
+    path: /arkouda-files # pod directory path, must match arkouda-udp-server 
+    hostPath: # host directory path, must match arkouda-udp-server
 secrets:
   tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
-

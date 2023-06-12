@@ -35,7 +35,7 @@ The external section sets the persistence parameters that enable/disable writing
 external:
   persistence:
     enabled: true
-    path: /opt/locale
+    path: /arkouda-files
     hostPath: /mnt/data/arkouda
 ```
 

@@ -21,9 +21,9 @@ spec:
             - name: ARKOUDA_SERVER_NAME
               value: {{ .Values.metricsExporter.service.name | quote}}
             - name: ARKOUDA_METRICS_SERVICE_HOST
-              value: {{ .Values.server.metrics.service.name | quote}}
+              value: {{ .Values.server.metrics.service.name | default "arkouda-metrics" | quote}}
             - name: ARKOUDA_METRICS_SERVICE_PORT
-              value: {{ .Values.server.metrics.service.port | quote}}
+              value: {{ .Values.server.metrics.service.port | default 5556 | quote}}
         {{- end }}
         - name: arkouda-server
           image: {{ .Values.imageRepository }}/arkouda-udp-server:{{ .Values.releaseVersion }}
@@ -38,17 +38,10 @@ spec:
                 command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
               {{- end }}
           resources:
-            requests:
-              cpu: {{ .Values.resources.requests.cpu }}
-              memory: {{ .Values.resources.requests.memory }}
-            limits:
-              cpu: {{ .Values.resources.limits.cpu }}
-              memory: {{ .Values.resources.limits.memory }}
+            {{- toYaml .Values.resources | nindent 12 }}
           ports:
-          - containerPort: {{ .Values.server.service.port }}
-            hostPort: 5555
+          - containerPort: {{ .Values.server.service.port | default 5555 }}
           - containerPort: 22
-            hostPort: 25
           volumeMounts:
           - name: ssl
             mountPath: "/etc/ssl/arkouda"
@@ -87,9 +80,9 @@ spec:
             - name: GASNET_SUPERNODE_MAXSIZE
               value: '1' 
             - name: CERT_FILE
-              value: {{ .Values.external.certFile | quote }}
+              value: '/etc/ssl/arkouda/tls.crt'
             - name: KEY_FILE
-              value: {{ .Values.external.keyFile | quote }}
+              value: '/etc/ssl/arkouda/tls.key'
             - name: K8S_HOST
               value: {{ .Values.external.k8sHost | quote }} 
             - name: NAMESPACE
@@ -101,21 +94,21 @@ spec:
             - name: POD_METHOD
               value: {{ .Values.locale.podMethod | quote }}
             - name: EXTERNAL_SERVICE_NAME
-              value: {{ .Values.external.service.name | quote }}
+              value: {{ .Values.external.service.name | default "arkouda" | quote }}
             - name: EXTERNAL_SERVICE_PORT
-              value: {{ .Values.external.service.port | quote }}
+              value: {{ .Values.external.service.port | default 5555 | quote }}
             - name: EXTERNAL_SERVICE_TARGET_PORT
-              value: {{ .Values.external.service.targetPort | quote }}
+              value: {{ .Values.external.service.port | default 5555 |quote }}
             - name: LOG_LEVEL  
               value: {{ .Values.server.logLevel }}    
             - name: COLLECT_METRICS
               value: {{ .Values.server.metrics.collectMetrics | quote }}
             - name: METRICS_SERVICE_NAME
-              value: {{ .Values.server.metrics.service.name }}
+              value: {{ .Values.server.metrics.service.name | default "arkouda metrics" }}
             - name: METRICS_SERVICE_PORT
-              value: {{ .Values.server.metrics.service.port | quote }}
+              value: {{ .Values.server.metrics.service.port | default 5556 | quote }}
             - name: METRICS_SERVICE_TARGET_PORT
-              value: {{ .Values.server.metrics.service.targetPort | quote }}
+              value: {{ .Values.server.metrics.service.port | default 5556 | quote }}
       volumes:              
         - name: ssl
           secret:
