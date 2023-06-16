@@ -1,6 +1,7 @@
 from __future__ import print_function
 import argparse
 from typing import Union
+import json
 
 import grpc
 import arkouda_pb2
@@ -24,10 +25,20 @@ class GrpcChannel(Channel):
                                                                      format='STRING',
                                                                      size=size,
                                                                      args=args))
-            response = raw_response.message
+            response = json.loads(raw_response.message)['msg']
             logger.debug(f"Arkouda gRPC client received response {response}")
-            return response     
+            return response
 
+    def send_binary_message(self, cmd: str, payload: memoryview, recv_binary: bool=False, 
+                            args: str=None, size:int = -1) -> Union[str, memoryview]:
+        pass
+    
+    def connect(self, timeout:int=0) -> None:
+        pass
+    
+    def disconnect(self) -> None:
+        pass
+ 
 def run(url: str, user: str, token: str, cmd: str, format: str, size: int, args: str):
     print("Sending request to Arkouda gRPC ...")
     with grpc.insecure_channel(url) as channel:
