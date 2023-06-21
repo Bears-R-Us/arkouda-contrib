@@ -3,9 +3,10 @@ import argparse
 from typing import Union
 import json
 
+import asyncio
 import grpc
-import arkouda_pb2
 import arkouda_pb2_grpc
+from arkouda_pb2 import ArkoudaRequest
 
 from arkouda.client import Channel
 from arkouda.logger import getArkoudaLogger, LogLevel
@@ -17,17 +18,38 @@ class GrpcChannel(Channel):
     def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> Union[str, memoryview]:
         logger.debug("Sending request to Arkouda gRPC ...")
-        with grpc.insecure_channel(self.url) as channel:
-            stub = arkouda_pb2_grpc.ArkoudaStub(channel)
-            raw_response = stub.HandleRequest(arkouda_pb2.ArkoudaRequest(user=self.user,
-                                                                     token=self.token,
-                                                                     cmd=cmd,
-                                                                     format='STRING',
-                                                                     size=size,
-                                                                     args=args))
-            response = json.loads(raw_response.message)['msg']
-            logger.debug(f"Arkouda gRPC client received response {response}")
-            return response
+
+        response = asyncio.run(self.async_send_string_message(cmd, recv_binary, args, size))
+
+        logger.debug(f"Arkouda gRPC client received response {response}")
+        return response
+
+
+    def _get_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> ArkoudaRequest:
+        return ArkoudaRequest(user=self.user,
+                              token=self.token,
+                              cmd=cmd,
+                              format='STRING',
+                              size=size,
+                              args=args)
+
+
+    async def async_send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> Union[str, memoryview]:
+        async with grpc.aio.insecure_channel(self.url) as channel:
+            raw_response = await self.handle_request(channel, self._get_request(
+                                                                        cmd,
+                                                                        recv_binary,
+                                                                        args,
+                                                                        size))
+        return json.loads(raw_response.message)['msg']     
+
+
+    async def handle_request(self, channel, request: ArkoudaRequest):
+        stub = arkouda_pb2_grpc.ArkoudaStub(channel)
+        raw_response = await stub.HandleRequest(request)
+        return raw_response
 
     def send_binary_message(self, cmd: str, payload: memoryview, recv_binary: bool=False, 
                             args: str=None, size:int = -1) -> Union[str, memoryview]:
@@ -38,18 +60,6 @@ class GrpcChannel(Channel):
     
     def disconnect(self) -> None:
         pass
- 
-def run(url: str, user: str, token: str, cmd: str, format: str, size: int, args: str):
-    print("Sending request to Arkouda gRPC ...")
-    with grpc.insecure_channel(url) as channel:
-        stub = arkouda_pb2_grpc.ArkoudaStub(channel)
-        response = stub.HandleRequest(arkouda_pb2.ArkoudaRequest(user=user,
-                                                                 token=token,
-                                                                 cmd=cmd,
-                                                                 format=format,
-                                                                 size=size,
-                                                                 args=args))
-    print(f"Arkouda gRPC client received response {response}")
 
 
 if __name__ == '__main__':
@@ -71,11 +81,6 @@ if __name__ == '__main__':
                         help='space-delimited list of args for the cmd')
 
     args = parser.parse_args()
-    run(url=args.arkouda_proxy_url, 
-        user=args.user,
-        token=args.token,
-        cmd=args.cmd,
-        format=args.format,
-        size=args.size,
-        args=args.args)                                                                                                                                                                                
 
+    channel = GrpcChannel(server='localhost', port=5555, connect_url=args.arkouda_proxy_url, user=args.user)
+    channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
