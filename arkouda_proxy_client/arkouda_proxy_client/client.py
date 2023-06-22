@@ -6,7 +6,7 @@ import json
 import asyncio
 import grpc
 import arkouda_pb2_grpc
-from arkouda_pb2 import ArkoudaRequest
+from arkouda_pb2 import ArkoudaRequest, ArkoudaResponse
 
 from arkouda.client import Channel
 from arkouda.logger import getArkoudaLogger, LogLevel
@@ -47,9 +47,14 @@ class GrpcChannel(Channel):
 
 
     async def handle_request(self, channel, request: ArkoudaRequest):
-        stub = arkouda_pb2_grpc.ArkoudaStub(channel)
-        raw_response = await stub.HandleRequest(request)
-        return raw_response
+        try:
+            stub = arkouda_pb2_grpc.ArkoudaStub(channel)
+            raw_response = await stub.HandleRequest(request)
+            return raw_response
+        except Exception:
+            response = ArkoudaResponse()
+            response.message = '{"msg": "Arkouda is unavailable"}'
+            return response
 
     def send_binary_message(self, cmd: str, payload: memoryview, recv_binary: bool=False, 
                             args: str=None, size:int = -1) -> Union[str, memoryview]:
