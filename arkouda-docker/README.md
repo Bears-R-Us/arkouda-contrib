@@ -14,9 +14,9 @@ and ipython interface to Arkouda. The arkouda-full-stack image extends bearsrus/
 ```
 # set env variables
 export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.30.0
-export ARKOUDA_BRANCH_NAME=2023.05.05
-export ARKOUDA_DISTRO_NAME=v2023.05.05
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.05.05.zip
+export ARKOUDA_BRANCH_NAME=2023.06.16
+export ARKOUDA_DISTRO_NAME=v2023.06.16
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.06.16.zip
 export ARKOUDA_IMAGE_REPO=bearsrus
 
 docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
@@ -35,7 +35,7 @@ By default arkouda-full-stack launches a jupyter notebook that is accessible via
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.05.05
+export ARKOUDA_VERSION=v2023.06.16
 
 docker run -it --rm -p 8888:8888 $ARKOUDA_IMAGE_REPO/arkouda-full-stack:$ARKOUDA_VERSION
 ```
@@ -47,7 +47,7 @@ To mount a directory containing files to be analyzed, execute the following comm
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.05.05
+export ARKOUDA_VERSION=v2023.06.16
 export HOST_DIR=/opt/datafiles
 export CONTAINER_DIR=/app/data
 
@@ -63,7 +63,7 @@ command is as follows:
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.05.05
+export ARKOUDA_VERSION=v2023.06.16
 
 docker run -it --rm -p 8888:8888 --entrypoint=/opt/arkouda/start-smp-arkouda-full-stack.sh \
                     $ARKOUDA_IMAGE_REPO/arkouda-full-stack:$ARKOUDA_VERSION
@@ -80,9 +80,9 @@ The arkouda-smp-server extends bearsrus/chapel-gasnet-smp to deliver a GASNET sm
 
 ```
 export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.30.0
-export ARKOUDA_DISTRO_NAME=v2023.05.05
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.05.05.zip
-export ARKOUDA_BRANCH_NAME=2023.05.05
+export ARKOUDA_DISTRO_NAME=v2023.06.16
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.06.16.zip
+export ARKOUDA_BRANCH_NAME=2023.06.16
 export ARKOUDA_IMAGE_REPO=bearsrus
 
 docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
@@ -97,7 +97,7 @@ docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
-export ARKOUDA_VERSION=v2023.05.05
+export ARKOUDA_VERSION=v2023.06.16
 
 docker run -it --rm -p 5555:5555 $ARKOUDA_IMAGE_REPO/arkouda-smp-server:$ARKOUDA_VERSION
 ```
@@ -133,9 +133,9 @@ The arkouda-udp-server image extends bearsrus/chapel-gasnet-udp to deliver a GAS
 
 ```
 export CHAPEL_UDP_IMAGE=bearsrus/chapel-gasnet-udp:1.30.0
-export ARKOUDA_DISTRO_NAME=v2023.05.05
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.05.05.zip
-export ARKOUDA_BRANCH_NAME=2023.05.05
+export ARKOUDA_DISTRO_NAME=v2023.06.16
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.06.16.zip
+export ARKOUDA_BRANCH_NAME=2023.06.16
 export ARKOUDA_INTEGRATION_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
 export ARKOUDA_INTEGRATION_DISTRO_NAME=main
 export ARKOUDA_IMAGE_REPO=bearsrus
@@ -173,10 +173,10 @@ There are six build arguments passed in to the docker build command:
 An example docker build command sequence is as follows:
 
 ```
-export EXPORTER_VERSION=v2023.05.05
-export ARKOUDA_DISTRO_NAME=v2023.05.05
-export ARKOUDA_BRANCH_NAME=2023.05.05
-export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.05.05.zip
+export EXPORTER_VERSION=v2023.06.16
+export ARKOUDA_DISTRO_NAME=v2023.06.16
+export ARKOUDA_BRANCH_NAME=2023.06.16
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.06.16.zip
 export ARKOUDA_CONTRIB_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
 export ARKOUDA_CONTRIB_DISTRO_NAME=main
 
@@ -186,7 +186,7 @@ docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME --build-arg AR
 ## Running prometheus-arkouda-exporter
 
 ```
-export EXPORTER_VERSION=v2023.05.05
+export EXPORTER_VERSION=v2023.06.16
 
 docker run -e ARKOUDA_METRICS_SERVICE_NAME=localhost -e ARKOUDA_METRICS_SERVICE_PORT=5556 -e POLLING_INTERVAL_SECONDS=5 -e EXPORT_PORT=5080 -e EXPORT_PORT=5080 -p 5080:5080 bearsrus/prometheus-arkouda-exporter:$EXPORTER_VERSION
 
@@ -230,7 +230,7 @@ Shown below are example build commands. To ensure the optimal, respective perfor
 ### arkouda-full-stack
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.05.05 --chapel_version=1.30.0 --image_type=arkouda-full-stack
+python build_docker_image.py --arkouda_tag=v2023.06.16 --chapel_version=1.30.0 --image_type=arkouda-full-stack
 ```
 
 ### chapel-gasnet-smp
@@ -242,7 +242,7 @@ python build_docker_image.py --chapel_version=1.30.0 --image_type=chapel-gasnet-
 ### arkouda-smp-server
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.05.05 --chapel_version=1.30.0 --image_type=arkouda-smp-server
+python build_docker_image.py --arkouda_tag=v2023.06.16 --chapel_version=1.30.0 --image_type=arkouda-smp-server
 ```
 
 ### chapel-gasnet-udp
@@ -254,12 +254,12 @@ python build_docker_image.py --chapel_version=1.30.0 --image_type=chapel-gasnet-
 ### arkouda-udp-server
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.05.05 --chapel_version=1.30.0 --image_type=arkouda-udp-server
+python build_docker_image.py --arkouda_tag=v2023.06.16 --chapel_version=1.30.0 --image_type=arkouda-udp-server
 ```
 
 ### prometheus-arkouda-exporter
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.05.05 --image_type=prometheus-arkouda-exporter
+python build_docker_image.py --arkouda_tag=v2023.06.16 --image_type=prometheus-arkouda-exporter
 ```
 
