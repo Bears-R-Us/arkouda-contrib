@@ -1,0 +1,47 @@
+ARG CHAPEL_SMP_IMAGE=${CHAPEL_SMP_IMAGE}
+
+FROM ${CHAPEL_SMP_IMAGE}
+
+# Set arkouda env variables
+ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ENV ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+
+WORKDIR /opt
+RUN sudo chmod 777 /opt
+
+# Install dependencies
+RUN sudo apt-get update && sudo apt upgrade -y && \
+    sudo apt-get install unzip libcurl4-openssl-dev -y
+
+# Download desired Arkouda distro, move to common /opt/arkouda dir
+RUN wget $ARKOUDA_DOWNLOAD_URL && \
+    unzip $ARKOUDA_DISTRO_NAME.zip && \
+    mv /opt/arkouda-$ARKOUDA_BRANCH_NAME /opt/arkouda 
+
+WORKDIR /opt/arkouda
+
+# Build and install deps
+RUN make install-deps
+
+# Build Arkouda
+RUN make
+
+# Remove unneeded files
+RUN sudo rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip && \
+    cd /opt/arkouda && \
+    sudo rm -rf benchmarks converter examples *.md pictures runs test toys
+
+RUN mkdir object-files && \
+    mv src/*.o object-files/
+
+# Add startup script and set entrypoint
+ADD scripts/start-smp-arkouda-server.sh /opt/arkouda/start-smp-arkouda-server.sh
+ADD scripts/start-developer-container.sh /opt/arkouda/start-developer-container.sh
+
+EXPOSE 5555
+
+ENTRYPOINT sh /opt/arkouda/start-developer-container.sh
