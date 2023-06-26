@@ -67,6 +67,19 @@ from . import arkouda_pb2 as arkouda__pb2
 
 Otherwise, an import error occurs in the [client](arkouda_proxy_client) module. 
 
+# Installation
+
+## Install Arkouda
+
+Since there currently is no pypi Arkouda install, Arkouda must first be installed locally.
+
+## Install arkouda\_proxy\_client
+
+From the arkouda\_proxy\_client root directory, execute the following command:
+
+```
+pip install -e .
+```
 
 # Accessing gRPC Proxy via arkouda_proxy_client
 

@@ -142,7 +142,6 @@ setup(
         'grpcio',
         'grpcio-tools',
         'typeguard==2.10.0',
-        'versioneer'
     ],
 
     # List additional groups of dependencies here (e.g. development
