@@ -1,6 +1,12 @@
 from setuptools import setup
 from os import path
-import versioneer
+
+from distutils.util import convert_path
+
+main_ns = {}
+ver_path = convert_path('arkouda_proxy_client/version.py')
+with open(ver_path) as ver_file:
+    exec(ver_file.read(), main_ns)
 
 
 here = path.abspath(path.dirname(__file__))
@@ -74,6 +80,8 @@ setup(
     # This should be a valid email address corresponding to the author listed
     # above.
     author_email='',  # Optional
+
+    version=main_ns['__version__'],
 
     # Classifiers help users find your project by categorizing it.
     #
