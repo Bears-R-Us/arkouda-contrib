@@ -1,5 +1,7 @@
 use std::env;
 
+use log::{info,debug};
+
 use tonic::{transport::Server, Request, Response, Status};
 
 use arkouda::arkouda_server::{Arkouda, ArkoudaServer};
@@ -37,7 +39,7 @@ impl Arkouda for ArkServer {
 
         socket.connect(&self.url).unwrap();
         
-        // Generate and send message
+        // Generate and send message to arkouda_server
         let am = json!(ArkoudaMessage{user: String::from(req.user),
                                 cmd:  String::from(req.cmd),
                                 format:  String::from(req.format),
@@ -46,12 +48,15 @@ impl Arkouda for ArkServer {
                                 args: String::from(req.args)
                                 });
         let msg = &am.to_string();
+        
+        debug!("Sending message to Arkouda: {}", msg);        
 
         send_message(&socket,msg);
 
         // Receive and process response
         let result = recv_message(&socket);
-        println!("Return message is {}",result);
+
+        debug!("Return message from Arkouda: {}", result);
 
         let reply = arkouda::ArkoudaReply {
             message: format!("{}", result).into(),
@@ -73,12 +78,19 @@ fn recv_message(socket: &zmq::Socket) -> String  {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
 
     let args: Vec<String> = env::args().collect();
-    let url = &args[1];
+    let port = &args[1];
+    let arkouda_url = &args[2].to_string();
+    
+    //Generate SocketAddr
+    let addr_str = "[::1]:${PORT}".to_string().replace("${PORT}",port);
+    let addr = addr_str.parse()?;
 
-    let addr = "[::1]:50053".parse()?;
-    let arkouda = ArkServer {url:url.to_string()};
+    let arkouda = ArkServer {url:arkouda_url.to_string()};
+
+    info!("listening on: {} configured for arkouda at {}", addr, arkouda_url);
 
     Server::builder()
         .add_service(ArkoudaServer::new(arkouda))
