@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import arkouda_pb2 as arkouda__pb2
+from . import arkouda_pb2 as arkouda__pb2
 
 
 class ArkoudaStub(object):

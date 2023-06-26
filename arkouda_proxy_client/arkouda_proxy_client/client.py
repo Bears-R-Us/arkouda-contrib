@@ -5,8 +5,8 @@ import json
 
 import asyncio
 import grpc
-import arkouda_pb2_grpc
-from arkouda_pb2 import ArkoudaRequest, ArkoudaResponse
+from .arkouda_pb2_grpc import ArkoudaStub
+from .arkouda_pb2 import ArkoudaRequest, ArkoudaResponse
 
 from arkouda.client import Channel
 from arkouda.logger import getArkoudaLogger, LogLevel
@@ -14,13 +14,6 @@ from arkouda.logger import getArkoudaLogger, LogLevel
 logger = getArkoudaLogger(name="Arkouda Client", logLevel=LogLevel.DEBUG)
 
 class GrpcChannel(Channel):
-    
-    __slots__ = ('arkouda_url')
-
-    def __init__(self, user: str, server: str='localhost', port: int=5555, token: str=None, 
-                 connect_url: str=None, arkouda_url: str=None) -> None:
-        Channel.__init__(self, user, server, port, token=token, connect_url=connect_url)
-        self.arkouda_url = arkouda_url
 
     def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> Union[str, memoryview]:
@@ -55,7 +48,7 @@ class GrpcChannel(Channel):
 
     async def handle_request(self, channel, request: ArkoudaRequest):
         try:
-            stub = arkouda_pb2_grpc.ArkoudaStub(channel)
+            stub = ArkoudaStub(channel)
             raw_response = await stub.HandleRequest(request)
             return raw_response
         except Exception:
@@ -65,24 +58,29 @@ class GrpcChannel(Channel):
 
     def send_binary_message(self, cmd: str, payload: memoryview, recv_binary: bool=False, 
                             args: str=None, size:int = -1) -> Union[str, memoryview]:
+        '''
+        TODO: implement send_binary_message
+        '''
         pass
-    
+
+
     def connect(self, timeout:int=0) -> None:
+        '''
+        noop implementation
+        '''
         pass
     
+
     def disconnect(self) -> None:
+        '''
+        noop implementation
+        '''
         pass
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test arkouda_proxy_server')
 
-    parser.add_argument('--arkouda_url', type=str,
-                        help='the arkouda url in the tcp://host:port format')
-    parser.add_argument('--arkouda_host', type=str,
-                        help='the arkouda host machine ip address, host, or service name')
-    parser.add_argument('--arkouda_port', type=int,
-                        help='the arkouda port')
     parser.add_argument('--arkouda_proxy_url', type=str, required=True,
                         help='the arkouda_proxy_server url in the host:port format')
     parser.add_argument('--user', type=str, required=True,
@@ -99,14 +97,6 @@ if __name__ == '__main__':
                         help='space-delimited list of args for the cmd')
 
     args = parser.parse_args()
-    
-    def generate_arkouda_url(host: str='localhost', port: int=5555) -> str:
-        return f'tcp://{host};{port}]'
-        
-    
-    arkouda_url = args.arkouda_url if args.arkouda_url else generate_arkouda_url(args.arkouda_host, 
-                                                                                 args.arkouda_port)
-            
 
-    channel = GrpcChannel(arkouda_url=args.arkouda_url, connect_url=args.arkouda_proxy_url, user=args.user)
+    channel = GrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
     channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
