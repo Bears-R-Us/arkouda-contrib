@@ -195,7 +195,7 @@ docker run -e ARKOUDA_METRICS_SERVICE_NAME=localhost -e ARKOUDA_METRICS_SERVICE_
 
 ## Background
 
-The arkouda-smp-developer image enables Arkouda developers to mount whichever directories they are working in (arkouda for Python, src for Chapel) to the arkouda-smp-developer docker container and be able to develop, build, and test within a pre-built Chapel and Arkouda dependencies stack. Since the GASNET\_COMM\_SUBSTRATE is smp, the developer can execute multi-locale Arkouda testing with the arkouda-smp-developer containre. 
+The arkouda-smp-developer image enables Arkouda developers to mount whichever directories they are working in (arkouda for Python, src for Chapel) to the arkouda-smp-developer docker container and be able to develop, build, and test within a pre-built Chapel and Arkouda dependencies stack. Since the GASNET\_COMM\_SUBSTRATE is smp, the developer can execute multi-locale Arkouda testing with the arkouda-smp-developer container. 
 
 ## Building arkouda-smp-developer Image
 
