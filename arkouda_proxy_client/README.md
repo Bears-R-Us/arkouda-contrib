@@ -102,7 +102,7 @@ The two required parameters are the connect_url and the user. The connect_url is
 
 ### Setting the Arkouda client Channel
 
-The Arkouda client Channel defaults to [ZmqChannel](https://github.com/Bears-R-Us/arkouda/blob/c5eb42f48c0f91e389b09d808f9d33e315975421/arkouda/client.py#L360). Passing the GrpcChannel object into the Arkouda client connect method Sets the GrpcChannel object as the Arkouda client channel as shown below:
+The Arkouda client Channel defaults to [ZmqChannel](https://github.com/Bears-R-Us/arkouda/blob/c5eb42f48c0f91e389b09d808f9d33e315975421/arkouda/client.py#L360). Passing the GrpcChannel object into the Arkouda client connect method sets the GrpcChannel object as the Arkouda client channel as shown below:
 
 ```
 >>> import arkouda as ak
