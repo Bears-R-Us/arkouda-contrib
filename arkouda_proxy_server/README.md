@@ -2,7 +2,7 @@
 
 # Background
 
-The arkouda\_proxy\_server is a gRPC server written in Rust that provides a proxy to the arkouda\_server. arkouda\_proxy\_server enables features such as multiplexed and bidirection comms that better support multiuser arkouda\_server instances. 
+The arkouda\_proxy\_server is a gRPC server written in Rust that provides a proxy to the arkouda\_server. arkouda\_proxy\_server enables features such as multiplexed and bidirectional comms that better support multiuser arkouda\_server instances. 
 
 # Running arkouda\_proxy\_server
 
