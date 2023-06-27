@@ -12,6 +12,7 @@ class ImageType(Enum):
     CHAPEL_GASNET_UDP = 'chapel-gasnet-udp'
     CHAPEL_GASNET_SMP = 'chapel-gasnet-smp'
     PROMETHEUS_ARKOUDA_EXPORTER = 'prometheus-arkouda-exporter'
+    ARKOUDA_SMP_DEVELOPER = 'arkouda-smp-developer'
 
 def getImageFile(imageType: ImageType) -> str:
     '''
@@ -105,6 +106,16 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                                                 '-t', f'{dockerTag}', '.'], stdout=subprocess.DEVNULL)
         print(result)
 
+    def buildArkoudaSmpDeveloper(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
+        result = subprocess.run(args=['docker','build',
+                                               '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
+                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
+                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
+                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
+                                               '-f',file,
+                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
+        print(result)
+
 
     dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
 
@@ -120,6 +131,8 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         buildChapelSmp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
     elif file == ImageType.PROMETHEUS_ARKOUDA_EXPORTER.value:
         buildPrometheusArkoudaExporter(dockerRepo=dockerRepo,file=file,distro=distro,dockerTag=dockerTag,tag=tag)
+    elif file == ImageType.ARKOUDA_SMP_DEVELOPER.value:
+        buildArkoudaSmpDeveloper(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
     else:
         raise ValueError(f'Dockerfile {file} is invalid, check command-line args')
 
