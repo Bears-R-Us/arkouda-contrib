@@ -22,7 +22,7 @@ cargo run --bin arkouda_proxy_server $ARKOUDA_PROXY_PORT $ARKOUDA_URL
 
 # Handling Arkouda Requests
 
-The arkouda\_proxy\_server processes the incoming protobuf ArkoudaRequest message, translates the messagee into an ArkoudaMessage and sends it to the arkouda\_server via the Rust zmq client. Once the incoming request has been received and processed by arkouda\_server, the arkouda\_proxy\_server parses the return message, creates a corresponding protobuf ArkoudaReply and returns it to the arkouda\_proxy\_client GrpcChannel.
+The arkouda\_proxy\_server processes the incoming protobuf ArkoudaRequest message, translates the message into an ArkoudaMessage and sends it to the arkouda\_server via the Rust zmq client. Once the incoming request has been received and processed by arkouda\_server, the arkouda\_proxy\_server parses the return message, creates a corresponding protobuf ArkoudaReply and returns it to the arkouda\_proxy\_client GrpcChannel.
 
 Example arkouda\_proxy_\server startup and logging:
 
