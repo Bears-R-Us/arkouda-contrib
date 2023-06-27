@@ -227,7 +227,10 @@ export ARKOUDA_VERSION=v2023.06.16
 docker run -it --rm -v $PWD/src:/opt/arkouda/src bearsrus/arkouda-smp-developer:v2023.06.16 
 ```
 
-Once the arkouda-smp-developer Docker container is started, any changes to the files within the mounted directory are permanent and retained after the Docker container is stopped. In the above example, the developer writes Chapel code and tests within the arkouda-smp-developer Docker container. Once development is complete, the Docker container can be stopped and the updated Chapel files are ready for further development, commit and check-in to github, etc...
+Once the arkouda-smp-developer Docker container is started, any changes to the files within the mounted directory are permanent and retained 
+after the Docker container is stopped. In the above example, the developer writes Chapel code and tests within the arkouda-smp-developer Docker 
+container. Once development is complete, the Docker container can be stopped and the updated Chapel files are ready for further development, 
+commit and check-in to github, etc...
 
 # Building Images with Python script
 
