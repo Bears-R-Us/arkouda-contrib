@@ -27,8 +27,8 @@ The arkouda\_proxy\_server processes the incoming protobuf ArkoudaRequest messag
 Example arkouda\_proxy_\server startup and logging:
 
 ```
-export ARKOUDA_PROXY_SERVER=50053
-export ARKOUDA-URL=tcp://shickadance:5555
+export ARKOUDA_PROXY_PORT=50053
+export ARKOUDA_URL=tcp://shickadance:5555
 export RUST_LOG=debug
 
 $ cargo run --bin arkouda_proxy_server $ARKOUDA_PROXY_PORT $ARKOUDA_URL

@@ -6,7 +6,8 @@ from . import arkouda_pb2 as arkouda__pb2
 
 
 class ArkoudaStub(object):
-    """Missing associated documentation comment in .proto file."""
+    """arkouda_proxy_server method for handling incoming arkouda requests
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -22,10 +23,12 @@ class ArkoudaStub(object):
 
 
 class ArkoudaServicer(object):
-    """Missing associated documentation comment in .proto file."""
+    """arkouda_proxy_server method for handling incoming arkouda requests
+    """
 
     def HandleRequest(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Captures request from arkouda client and forwards via zmq to arkouda_server
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -46,7 +49,8 @@ def add_ArkoudaServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class Arkouda(object):
-    """Missing associated documentation comment in .proto file."""
+    """arkouda_proxy_server method for handling incoming arkouda requests
+    """
 
     @staticmethod
     def HandleRequest(request,
