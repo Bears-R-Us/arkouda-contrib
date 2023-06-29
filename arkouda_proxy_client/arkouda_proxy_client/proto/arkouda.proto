@@ -1,0 +1,35 @@
+syntax = "proto3";
+package arkouda;
+
+// arkouda_proxy_server method for handling incoming arkouda requests
+service Arkouda {
+   // Captures request from arkouda client and forwards via zmq to arkouda_server
+   rpc HandleRequest(ArkoudaRequest) returns (ArkoudaResponse) {}
+}
+
+// Encapsulates the arkouda_server request payload
+message ArkoudaRequest {
+	// arkouda user connecting to arkouda_server via arkouda gRPC proxy
+    string user=1;
+
+    // token for arkouda_server configured for authentication
+    string token=2;
+
+    // arkouda_server command to be executed
+    string cmd=3;
+
+    // encapsulated message format, either STRING or BINARY
+    string format=4;
+
+    // number of args
+    int32 size=5;
+
+    // 0..n cmd args
+    string args=6;
+}
+
+// Encapsulates single-line response from the arkouda_server
+message ArkoudaResponse {
+	// arkouda_server response
+    string message=1;
+}

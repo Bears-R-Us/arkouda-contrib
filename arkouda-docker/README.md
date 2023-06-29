@@ -120,7 +120,9 @@ export CHPL_BASE_IMAGE=ubuntu:22.04
 export CHPL_VERSION=1.30.0
 export CHAPEL_UDP_IMAGE_REPO=bearsrus
 
-docker build --build-arg CHPL_BASE_IMAGE=$CHPL_BASE_IMAGE --build-arg CHPL_VERSION=$CHPL_VERSION -f chapel-gasnet-udp -t $CHAPEL_UDP_IMAGE_REPO/chapel-gasnet-udp:$CHPL_VERSION .
+docker build --build-arg CHPL_BASE_IMAGE=$CHPL_BASE_IMAGE \
+             --build-arg CHPL_VERSION=$CHPL_VERSION -f chapel-gasnet-udp \
+             -t $CHAPEL_UDP_IMAGE_REPO/chapel-gasnet-udp:$CHPL_VERSION .
 ```
 
 # arkouda-udp-server
@@ -180,7 +182,12 @@ export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/t
 export ARKOUDA_CONTRIB_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
 export ARKOUDA_CONTRIB_DISTRO_NAME=main
 
-docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME --build-arg ARKOUDA_BRANCH_NAME=$ARKOUDA_BRANCH_NAME --build-arg ARKOUDA_DOWNLOAD_URL=$ARKOUDA_DOWNLOAD_URL --build-arg ARKOUDA_CONTRIB_DOWNLOAD_URL=$ARKOUDA_CONTRIB_DOWNLOAD_URL --build-arg ARKOUDA_CONTRIB_DISTRO_NAME=$ARKOUDA_CONTRIB_DISTRO_NAME -f prometheus-arkouda-exporter -t bearsrus/prometheus-arkouda-exporter:$EXPORTER_VERSION .
+docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME \
+             --build-arg ARKOUDA_BRANCH_NAME=$ARKOUDA_BRANCH_NAME \
+             --build-arg ARKOUDA_DOWNLOAD_URL=$ARKOUDA_DOWNLOAD_URL \
+             --build-arg ARKOUDA_CONTRIB_DOWNLOAD_URL=$ARKOUDA_CONTRIB_DOWNLOAD_URL \
+             --build-arg ARKOUDA_CONTRIB_DISTRO_NAME=$ARKOUDA_CONTRIB_DISTRO_NAME \
+             -f prometheus-arkouda-exporter -t bearsrus/prometheus-arkouda-exporter:$EXPORTER_VERSION .
 ```
 
 ## Running prometheus-arkouda-exporter
