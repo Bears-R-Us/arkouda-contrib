@@ -232,6 +232,7 @@ module Aksparse {
                 var cumsum_symentry = toSymEntry(gEntCumSum,int);
                 var cumsum_arr = cumsum_symentry.a;
 
+                // RIGHT HERE?????
                 for i in 0..shape_height - ind_ptr.size - 1{
                     cumsum_arr = concatArrays(cumsum_arr, cumsum_arr[segs.size - 2..segs.size - 2]);
                 }
@@ -335,6 +336,7 @@ module Aksparse {
     }
 
     proc spgemm(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
+        // Prepare argument arrays
         var gEnt: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("other_indptr"), st);
         var gEnt2: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("other_data"), st);
         var gEnt3: borrowed GenSymEntry = getGenericTypedArrayEntry(msgArgs.getValueOf("self_data"), st);
@@ -369,21 +371,26 @@ module Aksparse {
         var gEnt_other_gb_rep_uk1: borrowed GenSymEntry = getGenericTypedArrayEntry(other_gb_rep_uklist[1], st);
         var other_gb_rep_uk1 = toSymEntry(gEnt_other_gb_rep_uk1,int);
 
+        // Identify number of multiplications needed
         var starts = other_indptr.a[self_gb_rep_uk0.a];
         var ends = other_indptr.a[self_gb_rep_uk0.a + 1];
-
         var fullsize = + reduce (ends - starts);
         var nonzero = ends > starts;
-
-        // gen_ranges
         var lengths = (ends - starts);
         var segs = (+ scan lengths) - lengths;
+
+        var fsegs = boolIndexer(segs, nonzero);
+        var fstarts = boolIndexer(starts, nonzero);
+        var fends = boolIndexer(ends, nonzero);
+
         var totlen = + reduce lengths;
         var slices: [0..totlen - 1] int = 1;
-        var arg2 = starts[1..starts.size - 1] - starts[0..starts.size - 2] - (lengths[0..lengths.size - 2] - 1);
-        var diffs = concatArrays(starts[0..0], arg2);
-        slices[segs] = diffs;
-        var fullsegs = segs;
+        var arg2 = fstarts[1..fstarts.size - 1] - fends[0..fends.size - 2] + 1;
+        var diffs = concatArrays(fstarts[0..0], arg2);
+
+        // Set up arrays for multiplication
+        slices[fsegs] = diffs;
+        var fullsegs = fsegs;
         var ranges = (+ scan slices);
 
         var fullBdom = other_gb_rep_uk1.a[ranges];
@@ -393,13 +400,15 @@ module Aksparse {
         var fullBval = other_data.a[ranges];
         var nonzero_data = boolIndexer(self_data.a, nonzero);
         var fullAval = broadcast(fullsegs, nonzero_data, fullsize);
-
         var fullprod = fullAval * fullBval;
+
+        //GroupBy indices and perform aggregate sum
         var Adomname = st.nextName();
         st.addEntry(Adomname, new shared SymEntry(fullAdom));
         var Bdomname = st.nextName();
         st.addEntry(Bdomname, new shared SymEntry(fullBdom));
         var proddomGB = getGroupBy(2, [Adomname, Bdomname], ["pdarray", "pdarray"], false, st);
+        
         var permuted_array = fullprod[proddomGB.segments.a];
         var result3 = segSum(permuted_array, proddomGB.segments.a);
         var result1_uklist = get_unique_keys(proddomGB, st);
@@ -414,13 +423,35 @@ module Aksparse {
         st.addEntry(result2name, new shared SymEntry(result1_uk1.a));
         var result3name = st.nextName();
         st.addEntry(result3name, new shared SymEntry(result3));
+
+        var gb_row_val = getGroupBy(2, [result1name, result3name], ["pdarray", "pdarray"], false, st);
+        var gb_row_val_uklist = get_unique_keys(gb_row_val, st);
+        var gEnt_gb_row_val_uk0: borrowed GenSymEntry = getGenericTypedArrayEntry(gb_row_val_uklist[0], st);
+        var gb_row_val_symentry = toSymEntry(gEnt_gb_row_val_uk0,int);
+        var gb_row_val_uk = getGroupBy(1, [gb_row_val_symentry.name], ["pdarray"], false, st);
+        var gb_row_val_uk_uklist = get_unique_keys(gb_row_val_uk, st);
+        var gEnt_gb_row_val_uk_uk0: borrowed GenSymEntry = getGenericTypedArrayEntry(gb_row_val_uk_uklist[0], st);
+        var gb_row_val_uk_uk_symentry = toSymEntry(gEnt_gb_row_val_uk_uk0,int);
+
+        var len_arr: [0..0] int = result3.size;
+        var segs2 = concatArrays(gb_row_val_uk.segments.a, len_arr); //Fix this?
+        var diffs2 = segs2[1..segs2.size - 1] - segs2[0..segs2.size - 2];
+        var ind_ptr: [0..self_shape_height] int = 0; //Maybe wrong shape var?
+        ind_ptr[gb_row_val_uk_uk_symentry.a + 1] = diffs2;
+        
+        ind_ptr = + scan ind_ptr;
+        for i in 0..(self_shape_height - (ind_ptr.size - 1)) {
+            ind_ptr = concatArrays(ind_ptr, ind_ptr[ind_ptr.size - 2..ind_ptr.size - 1]);
+        }
+        var ind_ptrname = st.nextName();
+        st.addEntry(ind_ptrname, new shared SymEntry(ind_ptr));
         
         var reorderedname = st.nextName();
         st.addEntry(reorderedname, new shared SymEntry(result3[proddomGB.permutation.a]));
         var gEnt_reorder: borrowed GenSymEntry = getGenericTypedArrayEntry(reorderedname, st);
         var reordered_result3 = toSymEntry(gEnt_reorder,int);
 
-        var repMsg = st.attrib(result1name) + "+" + st.attrib(result2name) + "+" +
+        var repMsg = st.attrib(ind_ptrname) + "+" + st.attrib(result2name) + "+" +
                     st.attrib(reorderedname);
         return new MsgTuple(repMsg, MsgType.NORMAL);
     }
