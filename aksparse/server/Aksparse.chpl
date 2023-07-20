@@ -18,6 +18,7 @@ module Aksparse {
 
     use GroupBy;
     use List;
+    use Map;
 
     proc coo_init(args...?n) {
         if args.size == 4 {
@@ -32,12 +33,12 @@ module Aksparse {
             const total_indexes: int = dense_matrix[0].size * dense_matrix.size;
             var val_count: int;
 
-            var temp_data: [0..total_indexes] int;
-            var temp_rows: [0..total_indexes] int;
-            var temp_columns: [0..total_indexes] int;
+            var temp_data: makeDistArray(total_indexes + 1, int);
+            var temp_rows: makeDistArray(total_indexes + 1, int);
+            var temp_columns: makeDistArray(total_indexes + 1, int);
         
-            for i in 0..dense_matrix.size - 1 {
-                for j in 0..dense_matrix[0].size - 1 {
+            forall i in 0..dense_matrix.size - 1 {
+                forall j in 0..dense_matrix[0].size - 1 {
                     var val = dense_matrix[i][j];
                     if val != 0 then {
                         temp_data[val_count] = val;
@@ -70,17 +71,19 @@ module Aksparse {
                 var r = toSymEntry(gEnt3,int);
             }
         }
-        var repMsg = st.attrib(valname) + "+" + st.attrib(colname) + "+" + st.attrib(rowname);
-        return new MsgTuple(repMsg, MsgType.NORMAL);
+        var rtnMap: map(string, string) = new map(string, string);
+        rtnMap.add("valname", "created " + st.attrib(valname));
+        rtnMap.add("colname", "created " + st.attrib(colname));
+        rtnMap.add("rowname", "created " + st.attrib(rowname));
+        return new MsgTuple("%jt".format(rtnMap), MsgType.NORMAL);
     }
 
     proc pdarrayIntIndexing(name: string, iname: string, st: borrowed SymTab): string throws {
         param pn = Reflection.getRoutineName();
         var rname = st.nextName();
         var gX: borrowed GenSymEntry = getGenericTypedArrayEntry(name, st);
-        var gIV: borrowed GenSymEntry = getGenericTypedArrayEntry(iname, st);     //create a custom message instead of args  
+        var gIV: borrowed GenSymEntry = getGenericTypedArrayEntry(iname, st);
 
-        // Former helper function begins
         var e = toSymEntry(gX,int);
         var iv = toSymEntry(gIV,int);
         if (e.size == 0) && (iv.size == 0) {
@@ -100,8 +103,8 @@ module Aksparse {
         ref a2 = e.a;
         ref iva = iv.a;
         ref aa = a.a;
-        forall (a1,idx) in zip(aa,iva) with (var agg = newSrcAggregator(int)) {
-            agg.copy(a1,a2[idx]); //Performance note
+        forall (a1, idx) in zip(aa, iva) with (var agg = newSrcAggregator(int)) {
+            agg.copy(a1, a2[idx]);
         }
         a.max_bits = e.max_bits;
 
@@ -117,7 +120,7 @@ module Aksparse {
                     select g.dtype {
                         when DType.Int64   {
                             var ukindname = st.nextName();
-                            st.addEntry(ukindname, new shared SymEntry(gb.uniqueKeyIndexes.a)); //gb.uniquekeyindexes.name
+                            st.addEntry(ukindname, new shared SymEntry(gb.uniqueKeyIndexes.a));
                             var uk_name = pdarrayIntIndexing(g.name, ukindname, st);
                             dimension_list.append(uk_name);
                         }
@@ -185,11 +188,6 @@ module Aksparse {
                 var rname = st.nextName();
                 st.addEntry(rname, new shared SymEntry(r.a));
 
-                var oldcolname = st.nextName();
-                st.addEntry(oldcolname, new shared SymEntry(c.a));
-                var oldrowname = st.nextName();
-                st.addEntry(oldrowname, new shared SymEntry(r.a));
-
                 var gb = getGroupBy(1, [rname], ["pdarray"], false, st);
                 var gb_row_col = getGroupBy(2, [rname, cname], ["pdarray", "pdarray"], false, st);
                 
@@ -215,7 +213,7 @@ module Aksparse {
                 var arr_symentry = toSymEntry(gEntArr,int);
 
                 var segs = concatArrays(gb_row_val_uk.segments.a, arr_symentry.a);
-                var diffs = segs[1..segs.size - 1] - segs[0..segs.size - 2];  // <--- Might crash with small array
+                var diffs = segs[1..segs.size - 1] - segs[0..segs.size - 2];
                 var ind_ptr: [0..shape_height] int;
 
                 var uk2name = st.nextName();
@@ -232,7 +230,6 @@ module Aksparse {
                 var cumsum_symentry = toSymEntry(gEntCumSum,int);
                 var cumsum_arr = cumsum_symentry.a;
 
-                // RIGHT HERE?????
                 for i in 0..shape_height - ind_ptr.size - 1{
                     cumsum_arr = concatArrays(cumsum_arr, cumsum_arr[segs.size - 2..segs.size - 2]);
                 }
@@ -240,10 +237,15 @@ module Aksparse {
                 st.addEntry(finalrowsname, new shared SymEntry(cumsum_arr));
 
                 // Creating final return message
-                var repMsg = st.attrib(valsname) + "+" + st.attrib(colsname) + "+" +
-                    st.attrib(oldcolname) + "+" + st.attrib(oldrowname) + "+" + gb_row_col.name + "+" +
-                    gb_row.name + "+" + gb_row_val.name + "+" + gb_row_val_uk.name + "+" + st.attrib(finalrowsname);
-                return new MsgTuple(repMsg, MsgType.NORMAL);
+                var rtnMap: map(string, string) = new map(string, string);
+                rtnMap.add("valsname", "created " + st.attrib(valsname));
+                rtnMap.add("colsname", "created " + st.attrib(colsname));
+                rtnMap.add("gb_row_col_name", gb_row_col.name);
+                rtnMap.add("gb_row_name", gb_row.name);
+                rtnMap.add("gb_row_val_name", gb_row_val.name);
+                rtnMap.add("gb_row_val_uk_name", gb_row_val_uk.name);
+                rtnMap.add("final_rows_name", "created " + st.attrib(finalrowsname));
+                return new MsgTuple("%jt".format(rtnMap), MsgType.NORMAL);
             }
         }
         var repMsg = st.attrib(gEnt.name);
@@ -269,13 +271,6 @@ module Aksparse {
                 var rname = st.nextName();
                 st.addEntry(rname, new shared SymEntry(r.a));
 
-                var oldcolname = st.nextName();
-                st.addEntry(oldcolname, new shared SymEntry(c.a));
-                var oldrowname = st.nextName();
-                st.addEntry(oldrowname, new shared SymEntry(r.a));
-                var oldvalname = st.nextName();
-                st.addEntry(oldvalname, new shared SymEntry(v.a));
-
                 var gb_col_row = getGroupBy(2, [c.name, r.name], ["pdarray", "pdarray"], false, st);
                 var gb_row = getGroupBy(1, [r.name], ["pdarray"], false, st);
 
@@ -298,14 +293,14 @@ module Aksparse {
                 var arr_symentry = toSymEntry(gEntArr,int);
 
                 var segs = concatArrays(gb_col_row_uk.segments.a, arr_symentry.a);
-                var diffs = segs[1..segs.size - 1] - segs[0..segs.size - 2];  // <--- Might crash with small array?
+                var diffs = segs[1..segs.size - 1] - segs[0..segs.size - 2];
                 var ind_ptr: [0..shape_width] int;
 
                 var uk2name = st.nextName();
                 var uk2list = get_unique_keys(gb_col_row_uk, st);
                 var gEnt_uk2: borrowed GenSymEntry = getGenericTypedArrayEntry(uk2list[0], st);
                 var uk2 = toSymEntry(gEnt_uk2,int);
-                st.addEntry(uk2name, new shared SymEntry(uk2.a)); // Possibly comment out?
+                st.addEntry(uk2name, new shared SymEntry(uk2.a));
                 ind_ptr[uk2.a + 1] = diffs;
 
                 var cumsumname = st.nextName();
@@ -314,21 +309,25 @@ module Aksparse {
                 var gEntCumSum: borrowed GenSymEntry = getGenericTypedArrayEntry(cumsumname, st);
                 var cumsum_symentry = toSymEntry(gEntCumSum,int);
                 var cumsum_arr = cumsum_symentry.a;
-                // writeln("ind_ptr(cumsum) = ", cumsum_symentry.a);
 
                 for i in 0..shape_width - ind_ptr.size - 1{
                     cumsum_arr = concatArrays(cumsum_arr, cumsum_arr[segs.size - 2..segs.size - 2]);
                 }
-                // writeln("self.rows = ", cumsum_arr);
                 var finalcolsname = st.nextName();
                 st.addEntry(finalcolsname, new shared SymEntry(cumsum_arr));
 
                 // Creating final return message
-                var repMsg = st.attrib(valsname) + "+" + st.attrib(rowsname) + "+" +
-                    st.attrib(oldcolname) + "+" + st.attrib(oldrowname) + "+" + st.attrib(oldvalname) + "+" +
-                    gb_row.name + "+" + gb_col_row.name + "+" + gb_col_row_uk.name + "+" + st.attrib(finalcolsname) + "+" +
-                    vname + "+" + cname + "+" + rname;
-                return new MsgTuple(repMsg, MsgType.NORMAL);
+                var rtnMap: map(string, string) = new map(string, string);
+                rtnMap.add("valsname", "created " + st.attrib(valsname));
+                rtnMap.add("rowsname", "created " + st.attrib(rowsname));
+                rtnMap.add("gb_row_name", gb_row.name);
+                rtnMap.add("gb_col_row_name", gb_col_row.name);
+                rtnMap.add("gb_col_row_uk_name", gb_col_row_uk.name);
+                rtnMap.add("final_cols_name", "created " + st.attrib(finalcolsname));
+                rtnMap.add("vname", vname);
+                rtnMap.add("cname", cname);
+                rtnMap.add("rname", rname);
+                return new MsgTuple("%jt".format(rtnMap), MsgType.NORMAL);
             }
         }
         var repMsg = st.attrib(gEnt.name);
@@ -433,11 +432,21 @@ module Aksparse {
         var gEnt_gb_row_val_uk_uk0: borrowed GenSymEntry = getGenericTypedArrayEntry(gb_row_val_uk_uklist[0], st);
         var gb_row_val_uk_uk_symentry = toSymEntry(gEnt_gb_row_val_uk_uk0,int);
 
-        var len_arr: [0..0] int = result3.size;
-        var segs2 = concatArrays(gb_row_val_uk.segments.a, len_arr); //Fix this?
-        var diffs2 = segs2[1..segs2.size - 1] - segs2[0..segs2.size - 2];
-        var ind_ptr: [0..self_shape_height] int = 0; //Maybe wrong shape var?
-        ind_ptr[gb_row_val_uk_uk_symentry.a + 1] = diffs2;
+        ref segs2 = gb_row_val_uk.segments.a;
+        const sD = segs2.domain;
+        var diffs2: [sD] int;
+        forall (i, d, s) in zip(sD, diffs2, segs2) {
+            if i == sD.high {
+                d = result3.size - s;
+            } else {
+                d = segs2[i + 1] - s;
+            }
+        }
+
+        var ind_ptr = makeDistArray(self_shape_height + 1, int);
+        forall (d, idx) in zip(diffs2, gb_row_val_uk_uk_symentry.a) with (var agg = newDstAggregator(int)) {
+            agg.copy(ind_ptr[idx + 1], d);
+        }
         
         ind_ptr = + scan ind_ptr;
         for i in 0..(self_shape_height - (ind_ptr.size - 1)) {
@@ -451,9 +460,11 @@ module Aksparse {
         var gEnt_reorder: borrowed GenSymEntry = getGenericTypedArrayEntry(reorderedname, st);
         var reordered_result3 = toSymEntry(gEnt_reorder,int);
 
-        var repMsg = st.attrib(ind_ptrname) + "+" + st.attrib(result2name) + "+" +
-                    st.attrib(reorderedname);
-        return new MsgTuple(repMsg, MsgType.NORMAL);
+        var rtnMap: map(string, string) = new map(string, string);
+        rtnMap.add("ind_ptrname", "created " + st.attrib(ind_ptrname));
+        rtnMap.add("result2name", "created " + st.attrib(result2name));
+        rtnMap.add("reorderedname", "created " + st.attrib(reorderedname));
+        return new MsgTuple("%jt".format(rtnMap), MsgType.NORMAL);
     }
 
     use CommandMap;
