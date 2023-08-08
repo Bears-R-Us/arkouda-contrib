@@ -33,8 +33,8 @@ arkouda:
 exporter:
   server:
     appName: # prometheus-arkouda-exporter app name (binds service to prometheus-arkouda-exporter)
-    pollingIntervalSeconds: # number of seconds between metrics pulls from Arkouda
+    pollingIntervalSeconds: 30 # number of seconds between metrics pulls from Arkouda
     namespace: # namespace prometheus-arkouda-exporter is deployed to
   service:
     name: # prometheus-arkouda-exporter service name (used by Prometheus to scrape)
-    port: # prometheus-arkouda-exporter service port (used by Prometheus to scrape)
+    port: 5080 # prometheus-arkouda-exporter service port (used by Prometheus to scrape)
