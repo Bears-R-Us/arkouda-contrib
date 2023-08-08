@@ -3,22 +3,22 @@
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.05.05
+releaseVersion: v2023.06.20
 imagePullPolicy: IfNotPresent
 
 resources:
   limits:
-    cpu: 1000m
-    memory: 1024Mi
+    cpu: 2000m
+    memory: 4096Mi
   requests:
-    cpu: 1000m
-    memory: 1024Mi
+    cpu: 2000m
+    memory: 2048Mi
 
 ################ Arkouda Locale Configuration ################
 
 server: 
   port: # Arkouda port, defaults to 5555
-  memTrack: true
+  memTrack: true # needs to be true to enable memory metrics and memory use forecasting 
   numLocales: # number of arkouda-udp-locale pods
   threadsPerLocale: # number of CPU cores for each locale
 external:

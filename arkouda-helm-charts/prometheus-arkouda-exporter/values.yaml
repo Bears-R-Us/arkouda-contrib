@@ -16,7 +16,7 @@ resources: {}
 
 ########################## Pod Settings ###########################
 
-releaseVersion: # prometheus-arkouda-exporter release version
+releaseVersion: v2023.06.20 # prometheus-arkouda-exporter release version
 imagePullPolicy: IfNotPresent
 
 ############ prometheus-arkouda-exporter Configuration ############
