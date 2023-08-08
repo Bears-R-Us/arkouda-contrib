@@ -159,7 +159,7 @@ The arkouda-udp-server Helm deployment is configured within the [values.yaml](va
 
 ```
 server:
-  numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  totalNumLocales: # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
   authenticate: # whether to require token authentication
   verbose: # enable verbose logging
   memTrack: true
