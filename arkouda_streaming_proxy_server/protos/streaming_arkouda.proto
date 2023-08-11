@@ -1,0 +1,19 @@
+syntax = "proto3";
+package streaming_arkouda;
+
+service StreamingArkouda {
+   rpc HandleRequestStream(stream ArkoudaRequest) returns (stream ArkoudaReply) {}
+}
+
+message ArkoudaRequest {
+    string user=1;
+    string token=2;
+    string cmd=3;
+    string format=4;
+    int32 size=5;
+    string args=6;
+}
+
+message ArkoudaReply {
+    string message=1;
+}
