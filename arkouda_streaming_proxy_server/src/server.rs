@@ -4,8 +4,7 @@ pub mod streaming_arkouda {
 
 use std::env;
 use log::{info,debug};
-use tokio::sync::mpsc::{Receiver};
-use tokio_stream::{wrappers::ReceiverStream, Stream};
+use tokio_stream::StreamExt;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use serde::{Deserialize, Serialize};
@@ -33,39 +32,49 @@ pub struct StreamingArkServer {
 
 #[tonic::async_trait]
 impl StreamingArkouda for StreamingArkServer {
-    type HandleRequestStreamStream=Receiver<Result<ArkoudaReply,Status>>;
 
-    async fn handle_request_stream(&self, request:Request<Streaming<ArkoudaRequest>>) -> Result<Response<Receiver<Result<ArkoudaReply, Status>>>, Status> {
-        let req = request.into_inner();
+    async fn handle_request_stream(&self, request: Request<Streaming<ArkoudaRequest>>) -> Result<Response<ArkoudaReply>, Status> {
+        debug!("polling message from Arkouda");
+        let mut stream = request.into_inner();
 
         let ctx = zmq::Context::new();
         let socket = ctx.socket(zmq::REQ).unwrap();
 
         socket.connect(&self.url).unwrap();
         
-        // Generate and send message to arkouda_server
-        let am = json!(ArkoudaMessage{user: String::from(req.user),
-                                cmd:  String::from(req.cmd),
-                                format:  String::from(req.format),
-                                token:  String::from(req.token),
-                                size: req.size,
-                                args: String::from(req.args)
-                                });
-        let msg = &am.to_string();
+        let mut reply = ArkoudaReply::default();
         
-        debug!("Sending message to Arkouda: {}", msg);        
+        while let Some(arkouda_request) = stream.next().await {
+            let ar = arkouda_request?;
+            debug!("Received message from Arkouda client");
 
-        send_message(&socket,msg);
+            // Generate and send message to arkouda_server
+            let am = json!(ArkoudaMessage{user: String::from(ar.user),
+                                          cmd:  String::from(ar.cmd),
+                                          format:  String::from(ar.format),
+                                          token:  String::from(ar.token),
+                                          size: ar.size,
+                                          args: String::from(ar.args)
+                                          });
+            let msg = &am.to_string();
+        
+            debug!("Sending message to Arkouda: {}", msg);        
 
-        // Receive and process response
-        let result = recv_message(&socket);
+            send_message(&socket,msg);
 
-        debug!("Return message from Arkouda: {}", result);
+            // Receive and process response
+            let result = recv_message(&socket);
 
-        let reply = streaming_arkouda::ArkoudaReply {
-            message: format!("{}", result).into(),
-        };
+            debug!("Return message from Arkouda: {}", result);
 
+            //let reply = streaming_arkouda::ArkoudaReply {
+            //    message: format!("{}", result).into(),
+            //};
+            reply.message = format!("{}", result).into();
+
+            //Ok(Response::new(reply))
+        }
+        
         Ok(Response::new(reply))
     }
 }
@@ -92,12 +101,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr_str = "[::1]:${PORT}".to_string().replace("${PORT}",port);
     let addr = addr_str.parse()?;
 
-    let arkouda = StreamingArkServer {url:arkouda_url.to_string()};
+    let streaming_arkouda = StreamingArkServer {url:arkouda_url.to_string()};
 
     info!("listening on: {} configured for arkouda at {}", addr, arkouda_url);
 
     Server::builder()
-        .add_service(StreamingArkoudaServer::new(arkouda))
+        .add_service(StreamingArkoudaServer::new(streaming_arkouda))
         .serve(addr)
         .await?;
 
