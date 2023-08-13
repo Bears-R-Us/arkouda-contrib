@@ -8,6 +8,11 @@ import grpc
 from .arkouda_pb2_grpc import ArkoudaStub
 from .arkouda_pb2 import ArkoudaRequest, ArkoudaResponse
 
+from .streaming_arkouda_pb2_grpc import StreamingArkoudaStub 
+from .streaming_arkouda_pb2 import ArkoudaRequest as StreamingArkoudaRequest
+from .streaming_arkouda_pb2 import ArkoudaReply as StreamingArkoudaResponse
+
+
 from arkouda.client import Channel
 from arkouda.logger import getArkoudaLogger, LogLevel
 
@@ -195,6 +200,78 @@ class AsyncGrpcChannel(GrpcChannel):
             return response
 
 
+class StreamingGrpcChannel(GrpcChannel):
+    """
+    The StreamingGrpcChannel class is a gRPC implementation of Arkouda Channel that streams 
+    messages to the Arkouda proxy server.
+
+
+    Attributes
+    ----------
+    url : str
+        Channel url used to connect to the Arkouda server which is either set
+        to the connect_url or generated from supplied server and port values
+    user : str
+        Arkouda user who will use the Channel to connect to the arkouda_server
+    token : str, optional
+        Token used to connect to the arkouda_server if authentication is enabled
+    logger : ArkoudaLogger
+        ArkoudaLogger used for logging
+    """
+    def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> Union[str, memoryview]:
+        response = asyncio.run(self._send_request(cmd, recv_binary, args, size))
+        logger.debug(f"send_string_message received response {response}")
+        return response
+
+    def _generate_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> StreamingArkoudaRequest:
+        return StreamingArkoudaRequest(user=self.user,
+                              token=self.token,
+                              cmd=cmd,
+                              format='STRING',
+                              size=size,
+                              args=args)
+
+
+    async def _send_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> Union[str, memoryview]:
+
+        async with grpc.aio.insecure_channel(self.url) as channel:
+            channel.channel_ready()
+            raw_response = await self.handle_request(channel, self._generate_request(cmd,
+                                                                          recv_binary,
+                                                                          args,
+                                                                          size))
+        return json.loads(raw_response.message)['msg']     
+
+
+    async def handle_request(self, channel, request: StreamingArkoudaRequest):
+        try:
+            stub = StreamingArkoudaStub(channel)
+            raw_response = await stub.HandleRequestStream().write(request)
+            return raw_response
+        except Exception as e:
+            raise Exception(e)
+            response = StreamingArkoudaResponse()
+            response.message = json.dumps({"msg": f"Arkouda address {self.url} is unavailable"})
+            return response
+
+
+    def connect(self, timeout:int=0) -> None:
+        '''
+        noop implementation
+        '''
+        pass
+    
+
+    def disconnect(self) -> None:
+        '''
+        noop implementation
+        '''
+        pass
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test arkouda_proxy_server')
 
@@ -215,5 +292,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    channel = GrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
+    channel = StreamingGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
     channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
