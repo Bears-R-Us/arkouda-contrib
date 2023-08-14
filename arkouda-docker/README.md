@@ -239,6 +239,26 @@ after the Docker container is stopped. In the above example, the developer write
 container. Once development is complete, the Docker container can be stopped and the updated Chapel files are ready for further development, 
 commit and check-in to github, etc...
 
+## Known Issue and Resolution
+
+Occasionally there are 1..n breaking changes introduced into Arkouda post-release tag that require the arkouda-smp-developer image to be built off the Arkouda master branch. For example, if new Chapel [compat](https://github.com/Bears-R-Us/arkouda/tree/master/src/compat) module(s) are added, the arkouda-smp-developer must be built off the Arkouda master branch.
+
+An example arkouda-smp-developer master branch build is as follows:
+
+```
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.30.0
+export ARKOUDA_BRANCH_NAME=master
+export ARKOUDA_DISTRO_NAME=master
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/heads/master.zip
+export ARKOUDA_IMAGE_REPO=bearsrus
+
+docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
+             --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME \
+             --build-arg ARKOUDA_DOWNLOAD_URL=$ARKOUDA_DOWNLOAD_URL \
+             --build-arg ARKOUDA_BRANCH_NAME=$ARKOUDA_BRANCH_NAME \
+             -f arkouda-smp-developer -t $ARKOUDA_IMAGE_REPO/arkouda-smp-developer:$ARKOUDA_DISTRO_NAME .
+``` 
+
 # Building Images with Python script
 
 ## Background
