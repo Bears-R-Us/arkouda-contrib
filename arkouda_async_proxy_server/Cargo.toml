@@ -1,0 +1,24 @@
+[package]
+name = "arkouda_proxy_server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]] # bin to run the arkouda_proxy_server
+name = "arkouda_proxy_server"
+path = "src/server.rs"
+
+[dependencies]
+tonic = "0.9"
+prost = "0.11"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+zmq = '0.10.0'
+async_zmq = '0.4.0'
+json = '0.12.4'
+serde = { version = '1.0.163', features = ['derive'] }
+serde_json = '1.0.96'
+env_logger = "0.9.0"
+log = "0.4.16"
+
+[build-dependencies]
+tonic-build = "0.9"
+
