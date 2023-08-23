@@ -10,7 +10,7 @@ use arkouda::{ArkoudaReply, ArkoudaRequest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use tokio::task;
+use tokio::task::{spawn,JoinHandle};
 
 #[derive(Serialize, Deserialize)]
 struct ArkoudaMessage {
@@ -26,13 +26,14 @@ pub mod arkouda {
     tonic::include_proto!("arkouda");
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct ArkServer {
-    url: String
+    url: String,
 }
 
 #[tonic::async_trait]
 impl Arkouda for ArkServer {
+
     async fn handle_request(&self, request: Request<ArkoudaRequest>) -> Result<Response<ArkoudaReply>, Status> {
         let req = request.into_inner();
 
@@ -53,14 +54,11 @@ impl Arkouda for ArkServer {
         
         debug!("Sending message to Arkouda: {}", msg);        
 
-        let url = self.url.clone();
+        let url:String = self.url.to_owned();
         
         let reply = ArkoudaReply::default();
 
-        task::spawn( async move { 
-            // need to add in future logic
-            async_process_message(url, msg).await;    
-        });
+        TASKS.add_task(spawn( async move { async_process_message(url, msg).await; }));
 
         Ok(Response::new(reply))
     }
@@ -77,6 +75,18 @@ async fn async_process_message(url: String, msg: String) -> String {
     let result = return_msg.as_str().unwrap();
     return result.to_string();  
 }
+
+pub struct TaskList{
+    tasks: Vec<JoinHandle<()>>
+}
+
+impl TaskList {
+    pub fn add_task(&mut self, task: JoinHandle<()>) {
+        self.tasks.push(task);
+    }
+}
+
+const TASKS:TaskList = TaskList{tasks:Vec::<JoinHandle<()>>::new()};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
