@@ -12,6 +12,14 @@ use serde_json::json;
 
 use tokio::task::{spawn,JoinHandle};
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
+
 #[derive(Serialize, Deserialize)]
 struct ArkoudaMessage {
     user: String,
@@ -29,6 +37,11 @@ pub mod arkouda {
 #[derive(Debug, Default)]
 pub struct ArkServer {
     url: String,
+    tasks: Arc<RwLock<HashMap<String, JoinHandle<()>>>>
+}
+
+trait ArkoudaProxy: Arkouda {
+    fn new(proxy_url: &'static str) -> Self;
 }
 
 #[tonic::async_trait]
@@ -42,8 +55,12 @@ impl Arkouda for ArkServer {
 
         socket.connect(&self.url).unwrap();
         
+        let user:String = String::from(req.user.clone());
+        let requesting_user:String = String:: from(req.user.clone());
+        let cmd:String = String::from(req.cmd.clone());
+        
         // Generate and send message to arkouda_server
-        let am = json!(ArkoudaMessage{user: String::from(req.user),
+        let am = json!(ArkoudaMessage{user: user.clone(),
                                 cmd:  String::from(req.cmd),
                                 format:  String::from(req.format),
                                 token:  String::from(req.token),
@@ -57,8 +74,17 @@ impl Arkouda for ArkServer {
         let url:String = self.url.to_owned();
         
         let reply = ArkoudaReply::default();
-
-        TASKS.add_task(spawn( async move { async_process_message(url, msg).await; }));
+        
+        let mut map = self.tasks.write().await;
+        
+        if cmd != "get_request_status" {
+            let handle = spawn( async move { async_process_message(url, msg).await; });
+            map.insert(String::from(user), handle);
+            debug!("Sent message to Arkouda, current tasks cache {:?}", map);  
+        } else {
+            let user_request = map.get(&String::from(user));
+            debug!("Current tasks cache for {:?} {:?}", requesting_user, user_request);
+        }
 
         Ok(Response::new(reply))
     }
@@ -76,18 +102,6 @@ async fn async_process_message(url: String, msg: String) -> String {
     return result.to_string();  
 }
 
-pub struct TaskList{
-    tasks: Vec<JoinHandle<()>>
-}
-
-impl TaskList {
-    pub fn add_task(&mut self, task: JoinHandle<()>) {
-        self.tasks.push(task);
-    }
-}
-
-const TASKS:TaskList = TaskList{tasks:Vec::<JoinHandle<()>>::new()};
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
@@ -100,7 +114,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr_str = "[::1]:${PORT}".to_string().replace("${PORT}",port);
     let addr = addr_str.parse()?;
 
-    let arkouda = ArkServer {url:arkouda_url.to_string()};
+    //let mut tasks: Vec<JoinHandle<()>> = vec![];
+    let tasks:Arc<RwLock<HashMap<String, JoinHandle<()>>>> = Arc::new(RwLock::new(HashMap::new()));
+
+    let arkouda = ArkServer {url:arkouda_url.to_string(), tasks:tasks};
 
     info!("listening on: {} configured for arkouda at {}", addr, arkouda_url);
 
