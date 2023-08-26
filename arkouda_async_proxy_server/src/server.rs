@@ -83,7 +83,7 @@ impl Arkouda for ArkServer {
             debug!("Sent message to Arkouda, current tasks cache {:?}", map);  
         } else {
             let user_request = map.get(&String::from(user));
-            debug!("Current tasks cache for {:?} {:?}", requesting_user, user_request);
+            debug!("Current tasks cache for {:?} {:?}", requesting_user, user_request.unwrap().is_finished());
         }
 
         Ok(Response::new(reply))
