@@ -37,11 +37,7 @@ pub mod arkouda {
 #[derive(Debug, Default)]
 pub struct ArkServer {
     url: String,
-    tasks: Arc<RwLock<HashMap<String, JoinHandle<()>>>>
-}
-
-trait ArkoudaProxy: Arkouda {
-    fn new(proxy_url: &'static str) -> Self;
+    tasks: Arc<RwLock<HashMap<String, JoinHandle<String>>>>
 }
 
 #[tonic::async_trait]
@@ -76,14 +72,21 @@ impl Arkouda for ArkServer {
         let reply = ArkoudaReply::default();
         
         let mut map = self.tasks.write().await;
-        
+
         if cmd != "get_request_status" {
-            let handle = spawn( async move { async_process_message(url, msg).await; });
+            let handle = spawn( async { return async_process_message(url, msg).await; });
             map.insert(String::from(user), handle);
             debug!("Sent message to Arkouda, current tasks cache {:?}", map);  
         } else {
-            let user_request = map.get(&String::from(user));
-            debug!("Current tasks cache for {:?} {:?}", requesting_user, user_request.unwrap().is_finished());
+            let user_request = map.get(&String::from(user)).unwrap();
+            debug!("Current tasks cache for {:?} {:?}", requesting_user, user_request.is_finished());
+
+            if user_request.is_finished() {
+                debug!("Result for {:?} {:?}", requesting_user, user_request);
+                // Remove the JoinHandle from the map to get ownership and access to result via await
+                let request_result = map.remove(&String::from(req.user.clone())).unwrap().await;
+                debug!("Result for {:?} {:?}", requesting_user, request_result);
+            }
         }
 
         Ok(Response::new(reply))
@@ -99,6 +102,7 @@ async fn async_process_message(url: String, msg: String) -> String {
     
     let return_msg = socket.recv_msg(0).unwrap();
     let result = return_msg.as_str().unwrap();
+    debug!("The result: {:?}", result);
     return result.to_string();  
 }
 
@@ -114,8 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr_str = "[::1]:${PORT}".to_string().replace("${PORT}",port);
     let addr = addr_str.parse()?;
 
-    //let mut tasks: Vec<JoinHandle<()>> = vec![];
-    let tasks:Arc<RwLock<HashMap<String, JoinHandle<()>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let tasks:Arc<RwLock<HashMap<String, JoinHandle<String>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let arkouda = ArkServer {url:arkouda_url.to_string(), tasks:tasks};
 
