@@ -6,14 +6,32 @@ service Arkouda {
 }
 
 message ArkoudaRequest {
+	// arkouda user connecting to arkouda_server via arkouda gRPC proxy
     string user=1;
+
+    // token for arkouda_server configured for authentication
     string token=2;
+
+    // arkouda_server command to be executed
     string cmd=3;
+
+    // encapsulated message format, either STRING or BINARY
     string format=4;
+
+    // number of args
     int32 size=5;
+
+    // 0..n cmd args
     string args=6;
+
+    // optional request_id
+    optional string request_id=7;
 }
 
 message ArkoudaReply {
+	// arkouda_server response
     string message=1;
+
+    // optional request_id corresponding to the response
+    optional string request_id=2;
 }

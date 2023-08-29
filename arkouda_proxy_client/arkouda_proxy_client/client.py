@@ -2,6 +2,7 @@ from __future__ import print_function
 import argparse
 from typing import Union
 import json
+from enum import Enum
 
 import asyncio
 import grpc
@@ -18,6 +19,26 @@ from arkouda.logger import getArkoudaLogger, LogLevel
 
 logger = getArkoudaLogger(name="Arkouda Client", logLevel=LogLevel.DEBUG)
 
+class RequestStatus(Enum):
+    """
+    The RequestStatus Enum indicates whether an asynchronous method
+    invocation has completed.
+    """
+    PENDING = 'PENDING'
+    RUNNING = 'RUNNING'
+    COMPLETE = 'COMPLETE'
+
+    def __str__(self) -> str:
+        """
+        Overridden method returns value.
+        """
+        return self.value
+
+    def __repr__(self) -> str:
+        """
+        Overridden method returns value.
+        """
+        return self.value
 
 class GrpcChannel(Channel):
     """
@@ -26,7 +47,7 @@ class GrpcChannel(Channel):
 
     Attributes
     ----------
-    url : str
+    connect_url : str
         Channel url used to connect to the Arkouda server which is either set
         to the connect_url or generated from supplied server and port values
     user : str
@@ -36,6 +57,31 @@ class GrpcChannel(Channel):
     logger : ArkoudaLogger
         ArkoudaLogger used for logging
     """
+    def get_request_status(self, request_id: str) -> RequestStatus:
+        """
+        Retrieves the status of the Arkouda request corresponding to the request_id.
+
+        Parameters
+        ----------
+        request_id : Optional[str]
+            id of the request of interest
+
+        Returns
+        -------
+        RequestStatus
+            The RequestStatus enum that indicates if the request is pending, running, or complete
+
+
+        Raises
+        ------
+        RuntimeError
+            Raised if there is a server-side error in executing get_request_status request
+        """
+        raw_message = self.send_string_message(cmd="getrequeststatus", 
+                                               args={'request_id': f'{request_id}'})
+        return json.loads(raw_message)
+
+
     def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> Union[str, memoryview]:
         logger.debug("Sending request to Arkouda gRPC ...")
@@ -46,6 +92,20 @@ class GrpcChannel(Channel):
         return response
 
 
+    def _generate_request_id(self) -> str:
+        """
+        Returns a randomized 32 character alphanumeric string that serves as a means
+        of differentiating each incoming Arkouda request.
+
+        Returns
+        -------
+        str
+            A randomized alphanumeric string that serves as a request id
+        """
+        import random
+        import string
+        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
+
     def _generate_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> ArkoudaRequest:
         return ArkoudaRequest(user=self.user,
@@ -53,6 +113,7 @@ class GrpcChannel(Channel):
                               cmd=cmd,
                               format='STRING',
                               size=size,
+                              request_id=self._generate_request_id(),
                               args=args)
 
 
@@ -77,7 +138,7 @@ class GrpcChannel(Channel):
                                                                             recv_binary,
                                                                             args,
                                                                             size))
-        return json.loads(raw_response.message)['msg']     
+        return json.loads(raw_response.message)  
 
 
     async def handle_request(self, channel, request: ArkoudaRequest):
@@ -168,6 +229,7 @@ class AsyncGrpcChannel(GrpcChannel):
         response = future.result()
         return response   
 
+
     def _generate_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> ArkoudaRequest:
         return ArkoudaRequest(user=self.user,
@@ -227,15 +289,15 @@ class StreamingGrpcChannel(GrpcChannel):
     def _generate_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> StreamingArkoudaRequest:
         return StreamingArkoudaRequest(user=self.user,
-                              token=self.token,
-                              cmd=cmd,
-                              format='STRING',
-                              size=size,
-                              args=args)
+                                       token=self.token,
+                                       cmd=cmd,
+                                       format='STRING',
+                                       size=size,
+                                       args=args)
 
 
     async def _send_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
-                            size: int = -1) -> Union[str, memoryview]:
+                            size: int = -1):
 
         async with grpc.aio.insecure_channel(self.url) as channel:
             channel.channel_ready()
@@ -289,8 +351,17 @@ if __name__ == '__main__':
                         help='number of args, defaults to -1')
     parser.add_argument('--args', type=str,
                         help='space-delimited list of args for the cmd')
+    parser.add_argument('--request_id', type=str,
+                        help='request_id for the asnyc request')
 
     args = parser.parse_args()
 
-    channel = StreamingGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
+    channel = GrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
     channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
+
+    #channel = AsyncGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
+    #channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
+
+
+    #channel = StreamingGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
+    #channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)

@@ -26,10 +26,16 @@ message ArkoudaRequest {
 
     // 0..n cmd args
     string args=6;
+
+    // optional request_id
+    optional string request_id=7;
 }
 
 // Encapsulates single-line response from the arkouda_server
 message ArkoudaResponse {
 	// arkouda_server response
     string message=1;
+
+    // optional request_id corresponding to the response
+    optional string request_id=2;
 }
