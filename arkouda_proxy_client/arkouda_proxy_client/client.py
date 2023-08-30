@@ -6,6 +6,7 @@ from enum import Enum
 
 import asyncio
 import grpc
+
 from .arkouda_pb2_grpc import ArkoudaStub
 from .arkouda_pb2 import ArkoudaRequest, ArkoudaResponse
 
@@ -132,13 +133,13 @@ class GrpcChannel(Channel):
     async def _send_async_request(self, cmd: str, recv_binary: bool = False, args: str = None, 
                             size: int = -1) -> Union[str, memoryview]:
         async with grpc.aio.insecure_channel(self.url) as channel:
-            raw_response = await self.handle_request(channel, 
+            response = await self.handle_request(channel, 
                                                      self._generate_request(
                                                                             cmd,
                                                                             recv_binary,
                                                                             args,
                                                                             size))
-        return json.loads(raw_response.message)  
+        return f'{{"arkouda_request_status": "{response.request_status}"}}'
 
 
     async def handle_request(self, channel, request: ArkoudaRequest):

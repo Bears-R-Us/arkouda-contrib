@@ -5,10 +5,10 @@ use log::{info,debug};
 use tonic::{transport::Server, Request, Response, Status};
 
 use arkouda::arkouda_server::{Arkouda, ArkoudaServer};
-use arkouda::{ArkoudaReply, ArkoudaRequest};
+use arkouda::{ArkoudaRequest, ArkoudaResponse};
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{json};
 use serde_json;
 use tokio::task::{spawn,JoinHandle};
 
@@ -43,7 +43,7 @@ pub struct ArkServer {
 #[tonic::async_trait]
 impl Arkouda for ArkServer {
 
-    async fn handle_request(&self, request: Request<ArkoudaRequest>) -> Result<Response<ArkoudaReply>, Status> {
+    async fn handle_request(&self, request: Request<ArkoudaRequest>) -> Result<Response<ArkoudaResponse>, Status> {
         let req = request.into_inner();
         
         debug!("Incoming message from client: {:?}", req); 
@@ -56,8 +56,8 @@ impl Arkouda for ArkServer {
         let user:String = String::from(req.user.clone());
         let requesting_user:String = String:: from(req.user.clone());
         let cmd:String = String::from(req.cmd.clone());
-        let request_id:String = String::from(req.request_id.unwrap().clone());
-        let args = String::from(req.args.clone());
+        let request_id:String = String::from(req.request_id.clone());
+        //let args = String::from(req.args.clone());
         
         
         // Generate and send message to arkouda_server
@@ -70,53 +70,46 @@ impl Arkouda for ArkServer {
                                 });
         let msg = am.to_string();
         
-        
-        //let args_data = format!(r#"{args}"#);
-        let request_args: Value = serde_json::from_str(r#"{args}"#).unwrap();
-        
-        
         debug!("Sending message to Arkouda: {}", msg);        
 
         let url:String = self.url.to_owned();
+
+        let mut response = ArkoudaResponse::default();
+        response.request_id = request_id.clone();
         
-        let mut reply = ArkoudaReply::default();
-        reply.request_id = Some(request_id.clone());
-       
         let mut map = self.tasks.write().await;
 
         if cmd != "getrequeststatus" {
             let handle = spawn( async { return async_process_message(url, msg).await; });
             map.insert(String::from(request_id.clone()), handle);
             debug!("Sent message to Arkouda, current tasks cache {:?}", map);  
-
-            let cmd_response = cmd.clone();
-            //let message = format!(r#"{{"cmd": "{cmd_response}", "request_id": Some(request_id)}}"#);
-            //reply.message = String::from(r#"{"request_id": "{:?}", "cmd": "{:?}"}"#, request_id, cmd);
-            let reply_request_id = request_id.clone();
-            let reply_args = String::from(req.args);
-            reply.message = format!(r#"{{"cmd": "{cmd_response}", "args": "{reply_args}", "request_id": "{reply_request_id}" }}"#);
+            
+            response.user = user.clone();
+            response.cmd = cmd.clone();
+            response.args = req.args.clone();
+            response.request_id = request_id.clone();
+            response.request_status = String::from("SUBMITTED");
+            response.message = String::from("submitted request to Arkouda");           
         } else {
-            debug!("REQUEST ARGS {:?}", request_args);
-            debug!("Current tasks cache for {:?} {:?}", requesting_user, request_id.clone());
-            let user_request = map.get(&String::from(request_id.clone())).unwrap();
-            //let user_request = map.get(&String::from(request_id.clone()));
-
-            //debug!("Current tasks cache for {:?} {:?}", requesting_user, user_request.is_finished());
+            let lookup_request_id = request_id.clone();
+            debug!("lookup_request_id:  {:?}", lookup_request_id.clone());
+            
+            let user_request = map.get(&lookup_request_id.clone()).unwrap();
 
             if user_request.is_finished() {
-                debug!("Result for {:?} {:?}", requesting_user, request_id.clone());
+                debug!("Result for {:?} {:?}", requesting_user, lookup_request_id.clone());
                 
                 // Remove the JoinHandle from the map to get ownership and access to result via await
-                let request_result = map.remove(&String::from(request_id.clone())).unwrap().await;
+                let request_result = map.remove(&lookup_request_id.clone()).unwrap().await;
                 debug!("result: {:?} for user: {:?} request_id: {:?}", request_result, requesting_user, request_id.clone());
                 
-                //reply.message = String::from(request_result.unwrap());
+                //response.message = String::from(request_result.unwrap());
                 let result_string = String::from(request_result.unwrap());
-                reply.message = format!(r#"{{"request_id": Some(request_id), "request_result": "{result_string}"}}"#);
+                response.message = format!(r#"{{"request_id": Some(request_id), "request_result": "{result_string}"}}"#);
             }
         }
 
-        Ok(Response::new(reply))
+        Ok(Response::new(response))
     }
 }
 
