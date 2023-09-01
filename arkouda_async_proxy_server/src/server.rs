@@ -102,10 +102,10 @@ impl Arkouda for ArkServer {
                 // Remove the JoinHandle from the map to get ownership and access to result via await
                 let request_result = map.remove(&lookup_request_id.clone()).unwrap().await;
                 debug!("result: {:?} for user: {:?} request_id: {:?}", request_result, requesting_user, request_id.clone());
-                
-                //response.message = String::from(request_result.unwrap());
+
                 let result_string = String::from(request_result.unwrap());
-                response.message = format!(r#"{{"request_id": Some(request_id), "request_result": "{result_string}"}}"#);
+                response.message = format!(r#"{{"request_id": "{request_id}", "request_result": {result_string}}}"#);
+                debug!("response {:?}", response.clone());
             }
         }
 
