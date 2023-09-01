@@ -12,7 +12,7 @@ from .arkouda_pb2 import ArkoudaRequest, ArkoudaResponse
 
 from .streaming_arkouda_pb2_grpc import StreamingArkoudaStub 
 from .streaming_arkouda_pb2 import ArkoudaRequest as StreamingArkoudaRequest
-from .streaming_arkouda_pb2 import ArkoudaRequest as StreamingArkoudaResponse
+from .streaming_arkouda_pb2 import ArkoudaReply as StreamingArkoudaReply
 
 
 from arkouda.client import Channel
@@ -40,7 +40,6 @@ class RequestStatus(Enum):
         Overridden method returns value.
         """
         return self.value
-
 
 
 class GrpcChannel(Channel):
