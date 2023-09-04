@@ -13,11 +13,10 @@ module DistanceCalcMsg{
     private config const logLevel = ServerConfig.logLevel;
     const dcLogger = new Logger(logLevel);
 
-    proc dotProductMsg(cmd: string, payload: string, argSize: int, st: borrowed SymTab): MsgTuple throws {
+    proc dotProductMsg(cmd: string, msgArgs: borrowed MessageArgs, st: borrowed SymTab): MsgTuple throws {
         param pn = Reflection.getRoutineName();
         var repMsg: string; // response message
         // split request into fields
-        var msgArgs = parseMessageArgs(payload, argSize);
         const name = msgArgs.getValueOf("array");
         const name2 = msgArgs.getValueOf("vector");
 
