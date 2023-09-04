@@ -57,7 +57,7 @@ impl Arkouda for ArkServer {
         let requesting_user:String = String:: from(req.user.clone());
         let cmd:String = String::from(req.cmd.clone());
         let request_id:String = String::from(req.request_id.clone());
-        //let args = String::from(req.args.clone());
+        let args = String::from(req.args.clone());
         
         
         // Generate and send message to arkouda_server
@@ -70,7 +70,6 @@ impl Arkouda for ArkServer {
                                 });
         let msg = am.to_string();
         
-        debug!("Sending message to Arkouda: {}", msg);        
 
         let url:String = self.url.to_owned();
 
@@ -80,6 +79,7 @@ impl Arkouda for ArkServer {
         let mut map = self.tasks.write().await;
 
         if cmd != "getrequeststatus" {
+            debug!("Sending message to Arkouda: {}", msg); 
             let handle = spawn( async { return async_process_message(url, msg).await; });
             map.insert(String::from(request_id.clone()), handle);
             debug!("Sent message to Arkouda, current tasks cache {:?}", map);  
@@ -101,11 +101,18 @@ impl Arkouda for ArkServer {
                 
                 // Remove the JoinHandle from the map to get ownership and access to result via await
                 let request_result = map.remove(&lookup_request_id.clone()).unwrap().await;
-                debug!("result: {:?} for user: {:?} request_id: {:?}", request_result, requesting_user, request_id.clone());
 
+                // Extract Arkouda reply and encapsulate within JSON response
                 let result_string = String::from(request_result.unwrap());
                 response.message = format!(r#"{{"request_id": "{request_id}", "request_result": {result_string}}}"#);
                 debug!("response {:?}", response.clone());
+            } else {
+                // Since request has not completed, set the status as PENDING for now
+                response.user = user.clone();
+                response.cmd = cmd.clone();
+                response.args = args.clone();
+                response.message = format!(r#"{{"request_id": "{request_id}", "request_status": "PENDING"}}"#);
+                debug!("response {:?}", response.clone());           
             }
         }
 
@@ -122,7 +129,7 @@ async fn async_process_message(url: String, msg: String) -> String {
     
     let return_msg = socket.recv_msg(0).unwrap();
     let result = return_msg.as_str().unwrap();
-    debug!("The result: {:?}", result);
+    debug!("Result returned from Arkouda: {:?}", result);
     return result.to_string();  
 }
 
