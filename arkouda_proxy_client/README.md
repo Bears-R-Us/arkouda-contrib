@@ -1,12 +1,12 @@
 # arkouda\_proxy\_client
 
-The arkouda\_proxy\_client is a Python client module that accesses the arkouda\_proxy\_server gRPC server.
+The arkouda\_proxy\_client is a Python client module encapsulating Arkouda [Channel](https://github.com/Bears-R-Us/arkouda/blob/f4694ad97fef0decda389d2648668eab1a59da24/arkouda/client.py#L238) implementions that access Arkouda via an Arkouda gRPC proxy server implementation.
 
 # Artifacts
 
 ## arkouda.proto file
 
-The [arkouda.proto](proto/arkouda.proto) file contains the protobuf ArkoudaRequest and ArkoudaResponse message definitions:
+The [arkouda.proto](proto/arkouda.proto) file contains the protobuf ArkoudaRequest and ArkoudaResponse message definitions used to generate the protobuf objects that are the transport message formats used to communicate with the Arkouda gRPC proxy server:
 
 ```
 syntax = "proto3";
@@ -17,16 +17,47 @@ service Arkouda {
 }
 
 message ArkoudaRequest {
+	// arkouda user connecting to arkouda_server via arkouda gRPC proxy
     string user=1;
+
+    // token for arkouda_server configured for authentication
     string token=2;
+
+    // arkouda_server command to be executed
     string cmd=3;
+
+    // encapsulated message format, either STRING or BINARY
     string format=4;
+
+    // number of args
     int32 size=5;
+
+    // 0..n cmd args
     string args=6;
+
+    // optional request_id
+    optional string request_id=7;
 }
 
+// Encapsulates single-line response from the arkouda_server
 message ArkoudaResponse {
+	// arkouda_server response
     string message=1;
+
+    // optional request_id corresponding to the response
+    optional string request_id=2;
+
+    // status of request (PENDING, RUNNING, FINISHED)
+    optional string request_status=3;
+
+	// arkouda user connecting to arkouda_server via arkouda gRPC proxy
+    optional string user=4;
+
+    // cmd requested via async proxy
+    optional string cmd=5;
+
+    // 0..n cmd args
+    optional string args=6;
 }
 ```
 
@@ -36,7 +67,7 @@ Python protobuf wrapper modules and classes enable translation of protobuf Arkou
 
 ## Generation of protobuf Modules
 
-The Python protobuf modules and classes are generated via the following python3 command executed from the [arkouda\_proxy\_client](arkouda_proxy_client) directory:
+The Python protobuf modules and classes are generated via the following python3 command executed from the [arkouda\_proxy\_client](arkouda_proxy_client) directory containing Python and proto files:
 
 ```
 python3 -m grpc_tools.protoc -I./proto --python_out=. --pyi_out=. --grpc_python_out=. ./proto/arkouda.proto
@@ -52,7 +83,7 @@ arkouda_pb2_grpc.py
 
 ## Post-Generation protobuf Module Updates
 
-As of the original version of arkouda\_proxy\_client a slight update is needed within the [arkouda_pb2_grpc](./arkouda_proxy_client/arkouda_pb2_grpc.py). Specifically, the import statement must be changed as follows:
+As of the original version of arkouda\_proxy\_client, a slight update is needed within the [arkouda_pb2_grpc](./arkouda_proxy_client/arkouda_pb2_grpc.py) file. Specifically, the import statement must be changed as follows:
 
 from...
 
@@ -85,11 +116,19 @@ pip install -e .
 
 ## Background
 
-The arkouda_proxy [client](arkouda_proxy_client) module contains the GrpcChannel, which encapsulates all logic for connecting to the Arkouda gRPC proxy server as well as sending/receiving protobuf request/response messages. The GrpcChannel extends the Arkouda [Channel](https://github.com/Bears-R-Us/arkouda/blob/c5eb42f48c0f91e389b09d808f9d33e315975421/arkouda/client.py#L150) class, which will enable eventual integration of the arkouda_proxy_client into Arkouda.
+The [arkouda\_proxy_client](arkouda_proxy_client) module contains the GrpcChannel, AsyncGrpcChannel, and 
+PollingGrpcChannel classes, which each encapsulate all logic for connecting to the Arkouda gRPC proxy server as well as sending/receiving protobuf request/response messages. 
+
+The GrpcChannel extends the Arkouda [Channel](https://github.com/Bears-R-Us/arkouda/blob/c5eb42f48c0f91e389b09d808f9d33e315975421/arkouda/client.py#L150) class, which will enable eventual integration of the arkouda\_proxy\_client into Arkouda.
+
+The PollingAsyncGrpcChannel class is a gRPC implementation of Arkouda Channel that supports polling asynchronous gRPC requests to the arkouda\_proxy\_server. Specifically, PollingAsyncGrpcChannel launches a gRPC request asynchronously, invokes asyncio.sleep for a configurable amount of time, rechecks the status of the request, continuing this cycle until arkouda_server sends back the response,
+
+Finally, the prototype AsyncGrpcChannel class extends the GrpcChannel class by enabling non-blocking async requests to the arkouda\_async\_proxy]\_server via the "fire-and-forget" pattern where the eventual Arkouda result is either retrieved from the arkouda\_async\_proxy\_server (current implementation) or is streamed back to the client via bidirectional gRPC (future implementation). Important note: the AsyncGrpcChannel is not currently operational due to one or both of the two following issues. Firstly, several client methods encapsulate 2..n Arkouda client-server roundtrips, which will require additional metadata to ensure all execute in the correct order. Secondly, several methods such as get_config_msg parse the return message from Arkouda and, as a consequence, 1..n KeyErrors occur when the arkouda_async_proxy_server returns a handle to an async method invocation instead of the expected Arkouda payload. Additional design and development are required to enable the AsyncGrpcChannel 
+
 
 ## Command Sequence for Using arkouda\_proxy\_client
 
-### Creating the GrpcChannel Object
+### Creating the GrpcChannel, PollingAsyncGrpcChannel, or AsyncGrpcChannel Object
 
 An example command sequence of creating the GrpcChannel object is as follows: 
 
@@ -98,7 +137,7 @@ from arkouda_proxy_client.client import GrpcChannel
 channel = GrpcChannel(connect_url='localhost:50053', user='kjyost')
 ```
 
-The two required parameters are the connect_url and the user. The connect_url is composed of the arkouda_proxy_server host ip address, host name, or service name and the port in the form of host:port. 
+The two required parameters are the connect_url and the user. The connect\_url is composed of the arkouda\_proxy\_server/arkouda\_async\_proxy\_server host ip address, host name, or service name and the port in the form of host:port. 
 
 ### Setting the Arkouda client Channel
 

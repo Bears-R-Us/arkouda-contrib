@@ -137,11 +137,102 @@ class GrpcChannel(Channel):
         pass
 
 
+class PollingGrpcChannel(GrpcChannel):
+    """
+    The PollingGrpcChannel class is a gRPC implementation of Arkouda Channel that
+    supports polling asynchronous gRPC requests to the arkouda-proxy-server. 
+    Specifically, PollingGrpcChannel launches a gRPC request asynchronously, invokes
+    asyncio.sleep for a configurable amount of time, rechecks the status of the 
+    request, continuing this cycle until arkouda_server sends back the response.
+    Consequently, it is clear if request is still being processed/waiting to be 
+    processed and that the arkouda_server is still running.
+
+    Attributes
+    ----------
+    url : str
+        Channel url used to connect to the Arkouda server which is either set
+        to the connect_url or generated from supplied server and port values
+    user : str
+        Arkouda user who will use the Channel to connect to the arkouda_server
+    token : str, optional
+        Token used to connect to the arkouda_server if authentication is enabled
+    logger : ArkoudaLogger
+        ArkoudaLogger used for logging
+    """
+    def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1, request_id: str=None) -> Union[str, memoryview]:
+        loop = asyncio.get_event_loop()
+        
+        if not request_id:
+            request_id = self._generate_request_id()
+
+        task = loop.create_task(self._send_string_message(cmd, recv_binary, args, size, request_id, loop))
+        
+        loop.run_until_complete(task)
+        
+        response = task.result()
+
+        logger.debug(f"send_string_message received response {response}")
+        return response
+
+
+    async def _send_string_message(self, cmd, recv_binary, args, size, request_id, loop) -> str:
+        
+        if not loop:
+            loop = asyncio.get_event_loop()
+
+        future = loop.run_in_executor(None,
+                                      self._send_request,
+                                      cmd,
+                                      request_id,
+                                      recv_binary,
+                                      args,
+                                      size)
+            
+        while not future.done():
+            logger.info("Awaiting response from Arkouda...")
+            await asyncio.sleep(5)
+
+        response = future.result()
+        return response   
+
+
+    def _generate_request(self, cmd: str, request_id: str, recv_binary: bool = False, args: str = None, 
+                            size: int = -1) -> ArkoudaRequest:
+        return ArkoudaRequest(user=self.user,
+                              token=self.token,
+                              cmd=cmd,
+                              format='STRING',
+                              size=size,
+                              args=args,
+                              request_id=request_id)
+
+
+    def _send_request(self, cmd: str, request_id: str, recv_binary: bool = False,
+                      args: str = None, size: int = -1) -> Union[str, memoryview]:
+        with grpc.insecure_channel(self.url) as channel:
+            raw_response = self.handle_request(channel, self._generate_request(cmd=cmd,
+                                                                          recv_binary=recv_binary,
+                                                                          args=args,
+                                                                          size=size,
+                                                                          request_id=request_id))
+        return json.loads(raw_response.message)['msg']     
+
+
+    def handle_request(self, channel, request: ArkoudaRequest):
+        try:
+            stub = ArkoudaStub(channel)
+            raw_response = stub.HandleRequest(request)
+            return raw_response
+        except Exception:
+            response = ArkoudaResponse()
+            response.message = json.dumps({"msg": f"Arkouda address {self.url} is unavailable"})
+            return response
 
 class AsyncGrpcChannel(GrpcChannel):
     """
     The AsyncGrpcChannel class extends the GrpcChannel class by enabling non-blocking
-    async requests to the arkouda-proxy-server
+    async requests to the arkouda_proxy_server
 
     Attributes
     ----------
@@ -263,104 +354,13 @@ class AsyncGrpcChannel(GrpcChannel):
         pass
 
 
-class PollingAsyncGrpcChannel(GrpcChannel):
+class StreamingAsyncGrpcChannel(GrpcChannel):
     """
-    The PollingAsyncGrpcChannel class is a gRPC implementation of Arkouda Channel that
-    supports polling asynchronous gRPC requests to the arkouda-proxy-server. 
-    Specifically, PollingAsyncGrpcChannel launches a gRPC request asynchronously, invokes
-    asyncio.sleep for a configurable amount of time, rechecks the status of the 
-    request, continuing this cycle until arkouda_server sends back the response.
-    Consequently, it is clear if request is still being processed/waiting to be 
-    processed and that the arkouda_server is still running.
-
-    Attributes
-    ----------
-    url : str
-        Channel url used to connect to the Arkouda server which is either set
-        to the connect_url or generated from supplied server and port values
-    user : str
-        Arkouda user who will use the Channel to connect to the arkouda_server
-    token : str, optional
-        Token used to connect to the arkouda_server if authentication is enabled
-    logger : ArkoudaLogger
-        ArkoudaLogger used for logging
-    """
-    def send_string_message(self, cmd: str, recv_binary: bool = False, args: str = None, 
-                            size: int = -1, request_id: str=None) -> Union[str, memoryview]:
-        loop = asyncio.get_event_loop()
-        
-        if not request_id:
-            request_id = self._generate_request_id()
-
-        task = loop.create_task(self._send_string_message(cmd, recv_binary, args, size, request_id, loop))
-        
-        loop.run_until_complete(task)
-        
-        response = task.result()
-
-        logger.debug(f"send_string_message received response {response}")
-        return response
-
-
-    async def _send_string_message(self, cmd, recv_binary, args, size, request_id, loop) -> str:
-        
-        if not loop:
-            loop = asyncio.get_event_loop()
-
-        future = loop.run_in_executor(None,
-                                      self._send_request,
-                                      cmd,
-                                      request_id,
-                                      recv_binary,
-                                      args,
-                                      size)
-            
-        while not future.done():
-            logger.info("Awaiting response from Arkouda...")
-            await asyncio.sleep(5)
-
-        response = future.result()
-        return response   
-
-
-    def _generate_request(self, cmd: str, request_id: str, recv_binary: bool = False, args: str = None, 
-                            size: int = -1) -> ArkoudaRequest:
-        return ArkoudaRequest(user=self.user,
-                              token=self.token,
-                              cmd=cmd,
-                              format='STRING',
-                              size=size,
-                              args=args,
-                              request_id=request_id)
-
-
-    def _send_request(self, cmd: str, request_id: str, recv_binary: bool = False,
-                      args: str = None, size: int = -1) -> Union[str, memoryview]:
-        with grpc.insecure_channel(self.url) as channel:
-            raw_response = self.handle_request(channel, self._generate_request(cmd=cmd,
-                                                                          recv_binary=recv_binary,
-                                                                          args=args,
-                                                                          size=size,
-                                                                          request_id=request_id))
-        return json.loads(raw_response.message)['msg']     
-
-
-    def handle_request(self, channel, request: ArkoudaRequest):
-        try:
-            stub = ArkoudaStub(channel)
-            raw_response = stub.HandleRequest(request)
-            return raw_response
-        except Exception:
-            response = ArkoudaResponse()
-            response.message = json.dumps({"msg": f"Arkouda address {self.url} is unavailable"})
-            return response
-
-
-class StreamingGrpcChannel(GrpcChannel):
-    """
-    The StreamingGrpcChannel class is a gRPC implementation of Arkouda Channel that streams 
+    The StreamingAsynGrpcChannel class is a gRPC implementation of Arkouda Channel that streams 
     messages to the Arkouda proxy server.
 
+
+    TODO: The StreamingAsyncGrpcChannel is a work-in-progress and is not currently operational.
 
     Attributes
     ----------
@@ -447,15 +447,14 @@ if __name__ == '__main__':
                         help='space-delimited list of args for the cmd')
     parser.add_argument('--request_id', type=str,
                         help='request_id for the asnyc request')
+    parser.add_argument('--channel_type', type=str,
+                        help='client type for the asnyc request')    
+    
 
     args = parser.parse_args()
 
     channel = GrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
     channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
 
-    #channel = PollingAsyncGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
-    #channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
-
-
-    #channel = StreamingGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
+    #channel = PollingGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
     #channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
