@@ -7,7 +7,10 @@ The [arkouda\_async\_proxy\_server](src/server.rs) implements an async gRPC serv
 
 ## Status
 
-The AsyncGrpcChannel-arkouda\_async\_proxy\_server stack is currently under development and not currently operational.
+The AsyncGrpcChannel-arkouda\_async\_proxy\_server stack is currently under development and not currently operational due to the following:
+
+1. Multiple arkouda\_server commands--some methods such as ak.connect and ak.ones send 2..n commmands to arkouda\_server. Consequently, it's possible the commands could get out of sync given the current, respective Arkouda client and AsyncGrpcChannel design and implementation. More research is required to confirm best approach.
+2. Processing of return message--some methods such as ak.connect parses the returned message str. More research is required to confirm best approach.
 
 ## Running arkouda\_async\_arkouda\_server
 
