@@ -449,12 +449,8 @@ if __name__ == '__main__':
                         help='request_id for the asnyc request')
     parser.add_argument('--channel_type', type=str,
                         help='client type for the asnyc request')    
-    
 
     args = parser.parse_args()
 
     channel = GrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
     channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
-
-    #channel = PollingGrpcChannel(connect_url=args.arkouda_proxy_url, user=args.user)
-    #channel.send_string_message(args.cmd, recv_binary=False, args=args.args, size=args.size)
