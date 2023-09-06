@@ -16,10 +16,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
-}
-
 #[derive(Serialize, Deserialize)]
 struct ArkoudaMessage {
     user: String,
