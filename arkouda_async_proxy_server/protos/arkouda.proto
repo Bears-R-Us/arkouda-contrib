@@ -28,7 +28,7 @@ message ArkoudaRequest {
     string args=6;
 
     // optional request_id
-    optional string request_id=7;
+    string request_id=7;
 }
 
 // Encapsulates single-line response from the arkouda_server
@@ -37,17 +37,17 @@ message ArkoudaResponse {
     string message=1;
 
     // optional request_id corresponding to the response
-    optional string request_id=2;
+    string request_id=2;
 
     // status of request (PENDING, RUNNING, FINISHED)
-    optional string request_status=3;
+    string request_status=3;
 
 	// arkouda user connecting to arkouda_server via arkouda gRPC proxy
-    optional string user=4;
+    string user=4;
 
     // cmd requested via async proxy
-    optional string cmd=5;
+    string cmd=5;
 
     // 0..n cmd args
-    optional string args=6;
+    string args=6;
 }

@@ -13,17 +13,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rarkouda.proto\x12\x07\x61rkouda\"f\n\x0e\x41rkoudaRequest\x12\x0c\n\x04user\x18\x01 \x01(\t\x12\r\n\x05token\x18\x02 \x01(\t\x12\x0b\n\x03\x63md\x18\x03 \x01(\t\x12\x0e\n\x06\x66ormat\x18\x04 \x01(\t\x12\x0c\n\x04size\x18\x05 \x01(\x05\x12\x0c\n\x04\x61rgs\x18\x06 \x01(\t\"\"\n\x0f\x41rkoudaResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2O\n\x07\x41rkouda\x12\x44\n\rHandleRequest\x12\x17.arkouda.ArkoudaRequest\x1a\x18.arkouda.ArkoudaResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rarkouda.proto\x12\x07\x61rkouda\"\x8e\x01\n\x0e\x41rkoudaRequest\x12\x0c\n\x04user\x18\x01 \x01(\t\x12\r\n\x05token\x18\x02 \x01(\t\x12\x0b\n\x03\x63md\x18\x03 \x01(\t\x12\x0e\n\x06\x66ormat\x18\x04 \x01(\t\x12\x0c\n\x04size\x18\x05 \x01(\x05\x12\x0c\n\x04\x61rgs\x18\x06 \x01(\t\x12\x17\n\nrequest_id\x18\x07 \x01(\tH\x00\x88\x01\x01\x42\r\n\x0b_request_id\"\xcc\x01\n\x0f\x41rkoudaResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x17\n\nrequest_id\x18\x02 \x01(\tH\x00\x88\x01\x01\x12\x1b\n\x0erequest_status\x18\x03 \x01(\tH\x01\x88\x01\x01\x12\x11\n\x04user\x18\x04 \x01(\tH\x02\x88\x01\x01\x12\x10\n\x03\x63md\x18\x05 \x01(\tH\x03\x88\x01\x01\x12\x11\n\x04\x61rgs\x18\x06 \x01(\tH\x04\x88\x01\x01\x42\r\n\x0b_request_idB\x11\n\x0f_request_statusB\x07\n\x05_userB\x06\n\x04_cmdB\x07\n\x05_args2O\n\x07\x41rkouda\x12\x44\n\rHandleRequest\x12\x17.arkouda.ArkoudaRequest\x1a\x18.arkouda.ArkoudaResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'arkouda_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _ARKOUDAREQUEST._serialized_start=26
-  _ARKOUDAREQUEST._serialized_end=128
-  _ARKOUDARESPONSE._serialized_start=130
-  _ARKOUDARESPONSE._serialized_end=164
-  _ARKOUDA._serialized_start=166
-  _ARKOUDA._serialized_end=245
+  _ARKOUDAREQUEST._serialized_start=27
+  _ARKOUDAREQUEST._serialized_end=169
+  _ARKOUDARESPONSE._serialized_start=172
+  _ARKOUDARESPONSE._serialized_end=376
+  _ARKOUDA._serialized_start=378
+  _ARKOUDA._serialized_end=457
 # @@protoc_insertion_point(module_scope)
