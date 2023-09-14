@@ -4,12 +4,12 @@ metadata:
   name: {{ .Values.exporter.service.name }}
   annotations:
     prometheus.io/path: /metrics
-    prometheus.io/port: "{{ .Values.exporter.service.port }}"
+    prometheus.io/port: "5080"
     prometheus.io/scrape: "true" 
 spec:
   type: ClusterIP
   ports:
-    - port: {{ .Values.exporter.service.port }}
+    - port: 5080
       targetPort: 5080
       protocol: TCP
   selector:

@@ -22,7 +22,7 @@ spec:
           - containerPort: 5080
           env:
             - name: EXPORT_PORT
-              value: {{ .Values.exporter.service.port | quote }}
+              value: "5080"
             - name: ARKOUDA_SERVER_NAME
               value: {{ .Values.arkouda.metrics.server.name | quote }}
             - name: POLLING_INTERVAL_SECONDS
