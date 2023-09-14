@@ -28,15 +28,12 @@ server:
   logLevel: LogLevel.DEBUG
   service:
     type: ClusterIP # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
-    port: # k8s service port Arkouda is listening on, defaults to 5555
     nodeport: # if service type is Nodeport
-    name: arkouda # k8s service name
+    name: # k8s service name
   metrics:
-    collectMetrics: true # whether to collect metrics and make them available via  k8s service
+    collectMetrics: # whether to collect metrics and make them available via k8s service
     service:
       name: # k8s service name for the Arkouda metrics service endpoint
-      port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
-      targetPort: # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
 
 locale:
   appName: arkouda-locale
@@ -47,11 +44,10 @@ external:
     enabled: false
     path: /arkouda-files # pod directory path, must match arkouda-udp-locale
     hostPath: # host machine path, must match arkouda-udp-locale
-  k8sHost:  # result of kubectl cluster-info command
+  k8sHost: # result of kubectl cluster-info command
   namespace: # namespace Arkouda will register service
   service: 
-    name: # k8s service name Arkouda will register
-    port: # k8s service port Arkouda will register, defaults to 5555
+    name: # k8s service name Arkouda will register, defaults to arkouda
 
 metricsExporter:
   imageRepository: bearsrus
@@ -59,7 +55,6 @@ metricsExporter:
   imagePullPolicy: IfNotPresent
   service:
     name: # prometheus-arkouda-exporter service name
-    port: # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
 
 secrets:

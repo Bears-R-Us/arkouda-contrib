@@ -23,7 +23,7 @@ spec:
             - name: ARKOUDA_METRICS_SERVICE_HOST
               value: {{ .Values.server.metrics.service.name | default "arkouda-metrics" | quote}}
             - name: ARKOUDA_METRICS_SERVICE_PORT
-              value: {{ .Values.server.metrics.service.port | default 5556 | quote}}
+              value: "5556"
         {{- end }}
         - name: arkouda-server
           image: {{ .Values.imageRepository }}/arkouda-udp-server:{{ .Values.releaseVersion }}
@@ -40,7 +40,8 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           ports:
-          - containerPort: {{ .Values.server.service.port | default 5555 }}
+          - containerPort: 5555
+          - containerPort: 5556
           - containerPort: 22
           volumeMounts:
           - name: ssl
@@ -96,9 +97,9 @@ spec:
             - name: EXTERNAL_SERVICE_NAME
               value: {{ .Values.external.service.name | default "arkouda" | quote }}
             - name: EXTERNAL_SERVICE_PORT
-              value: {{ .Values.external.service.port | default 5555 | quote }}
+              value: "5555"
             - name: EXTERNAL_SERVICE_TARGET_PORT
-              value: {{ .Values.external.service.port | default 5555 |quote }}
+              value: "5555"
             - name: LOG_LEVEL  
               value: {{ .Values.server.logLevel }}    
             - name: COLLECT_METRICS
@@ -106,9 +107,9 @@ spec:
             - name: METRICS_SERVICE_NAME
               value: {{ .Values.server.metrics.service.name | default "arkouda metrics" }}
             - name: METRICS_SERVICE_PORT
-              value: {{ .Values.server.metrics.service.port | default 5556 | quote }}
+              value: "5556"
             - name: METRICS_SERVICE_TARGET_PORT
-              value: {{ .Values.server.metrics.service.port | default 5556 | quote }}
+              value: "5556"
       volumes:              
         - name: ssl
           secret:
