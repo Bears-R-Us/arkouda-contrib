@@ -3,7 +3,7 @@
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.06.20
+releaseVersion: v2023.09.06
 imagePullPolicy: IfNotPresent
 
 resources:
@@ -23,7 +23,7 @@ server:
   threadsPerLocale: # number of CPU cores for each locale
 external:
   persistence: 
-    enabled: true
+    enabled: false
     path: /arkouda-files # pod directory path, must match arkouda-udp-server 
     hostPath: # host directory path, must match arkouda-udp-server
 secrets:
