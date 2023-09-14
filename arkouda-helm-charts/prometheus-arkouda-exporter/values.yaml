@@ -16,7 +16,7 @@ resources: {}
 
 ########################## Pod Settings ###########################
 
-releaseVersion: v2023.06.20 # prometheus-arkouda-exporter release version
+releaseVersion: v2023.09.06 # prometheus-arkouda-exporter release version
 imagePullPolicy: IfNotPresent
 
 ############ prometheus-arkouda-exporter Configuration ############
@@ -28,7 +28,7 @@ arkouda:
       namespace: # namespace Arkouda is deployed to
     service:
       name: # Arkouda metrics service endpoint name including namespace
-      port: 5556 # Arkouda metrics service port
+      port: # Arkouda metrics service port
 
 exporter:
   server:
@@ -37,4 +37,3 @@ exporter:
     namespace: # namespace prometheus-arkouda-exporter is deployed to
   service:
     name: # prometheus-arkouda-exporter service name (used by Prometheus to scrape)
-    port: 5080 # prometheus-arkouda-exporter service port (used by Prometheus to scrape)
