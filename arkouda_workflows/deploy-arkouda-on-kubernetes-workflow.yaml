@@ -18,7 +18,6 @@ spec:
     - name: arkouda-total-number-of-locales
     - name: kubernetes-api-url
     - name: arkouda-namespace
-    - name: arkouda-server-name
     - name: arkouda-log-level
     - name: image-pull-policy
     - name: metrics-polling-interval-seconds    
