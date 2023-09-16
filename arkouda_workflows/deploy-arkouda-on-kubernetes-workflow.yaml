@@ -19,11 +19,8 @@ spec:
     - name: kubernetes-api-url
     - name: arkouda-namespace
     - name: arkouda-server-name
-    - name: arkouda-service-port
-    - name: arkouda-metrics-service-port
     - name: arkouda-log-level
     - name: image-pull-policy
-    - name: metrics-exporter-service-port
     - name: metrics-polling-interval-seconds    
   templates:
   - name: deploy-arkouda-on-kubernetes
@@ -253,7 +250,7 @@ spec:
                   image: bearsrus/prometheus-arkouda-exporter:{{ workflow.parameters.arkouda-release-version }}
                   imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
                   ports:
-                  - containerPort: {{ workflow.parameters.metrics-exporter-service-port }}
+                  - containerPort: 5080
                   env:
                     - name: EXPORT_PORT
                       value: '5080'
@@ -264,7 +261,7 @@ spec:
                     - name: ARKOUDA_METRICS_SERVICE_HOST
                       value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
                     - name: ARKOUDA_METRICS_SERVICE_PORT
-                      value: '{{ workflow.parameters.arkouda-metrics-service-port }}'
+                      value: '5556'
 
                 - name: arkouda-udp-server
                   image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
@@ -272,6 +269,7 @@ spec:
                   command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
                   ports:
                   - containerPort: 5555
+                  - containerPort: 5556
                   - containerPort: 22
                   resources:
                     limits:
@@ -332,7 +330,7 @@ spec:
                     - name: EXTERNAL_SERVICE_NAME
                       value: '{{ workflow.parameters.arkouda-instance-name }}'
                     - name: EXTERNAL_SERVICE_PORT
-                      value: '{{ workflow.parameters.arkouda-service-port }}'
+                      value: '5555'
                     - name: EXTERNAL_SERVICE_TARGET_PORT
                       value: '5555'
                     - name: LOG_LEVEL
@@ -342,7 +340,7 @@ spec:
                     - name: METRICS_SERVICE_NAME
                       value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
                     - name: METRICS_SERVICE_PORT
-                      value: '{{ workflow.parameters.arkouda-metrics-service-port }}'
+                      value: '5556'
                     - name: METRICS_SERVICE_TARGET_PORT
                       value: '5556'
               volumes:              
@@ -398,6 +396,6 @@ spec:
         spec: 
           type: ClusterIP
           ports:
-            - port: {{ workflow.parameters.metrics-exporter-service-port }}
+            - port: 5080
           selector:
             app: {{ workflow.parameters.arkouda-instance-name }}-server
