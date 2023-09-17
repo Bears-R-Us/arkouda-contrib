@@ -1,6 +1,7 @@
 #!/bin/bash
 
-argo submit -n arkouda deploy-arkouda-on-kubernetes-workflow.yaml \
+argo submit -n $ARKOUDA_NAMESPACE \
+            deploy-arkouda-on-kubernetes-workflow.yaml \
             -p arkouda-release-version=$ARKOUDA_VERSION \
             -p arkouda-ssl-secret=$ARKOUDA_SSL_SECRET \
             -p arkouda-ssh-secret=$ARKOUDA_SSH_SECRET \
@@ -12,4 +13,4 @@ argo submit -n arkouda deploy-arkouda-on-kubernetes-workflow.yaml \
             -p arkouda-log-level=LogLevel.DEBUG \
             -p arkouda-user=$ARKOUDA_USER  \
             -p metrics-polling-interval-seconds=15 \
-            -p image-pull-policy=IfNotPresent 
+            -p image-pull-policy=IfNotPresent

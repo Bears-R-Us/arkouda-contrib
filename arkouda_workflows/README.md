@@ -2,7 +2,7 @@
 
 ## Background
 
-[Argo Workflows](https://argoproj.github.io/argo-workflows/) is an ideal approach to manage all the dependencies involved in deploying Arkouda on Kubernetes (AoK) via [arkouda-udp-locale](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-locale) and [arkouda-udp-server](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server) as well as the [prometheus-arkouda-exporter](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/prometheus-arkouda-exporter) deployment.
+[Argo Workflows](https://argoproj.github.io/argo-workflows/) is an ideal approach to manage all the dependencies involved in deploying Arkouda on Kubernetes (AoK) via [arkouda-udp-locale](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-locale) and [arkouda-udp-server](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server) as well as the [prometheus-arkouda-exporter](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/prometheus-arkouda-exporter) deployment. Specifically, all arkouda-udp-locale pods must be up and running so that arkouda-udp-server can discover the locale pod ip addresses and launch the Arkouda cluster via the GASNET/UDP CHAPEL_COMM_SUBSTRATE.
 
 ## Workflows
 
@@ -12,6 +12,8 @@ There are four Arkouda argo workflows:
 2. delete-arkouda-on-kubernetes
 3. deploy-prometheus-arkouda-exporter
 4. delete-prometheus-arkouda-exporter
+
+The first two workflows are for deploying/deleting AoK while the latter two are for deploying prometheus-arkouda-exporter that exports Arkouda metrics for non-AoK deployments such as Arkouda-on-Slurm.
 
 ## Prerequisites
 
@@ -36,7 +38,7 @@ Information regarding the Arkouda SSH and TLS secrets is [here](https://github.c
 
 ### deploy arkouda workflow
 
-The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy  Arkouda-on-Kubernetes, an example of which is shown below:
+The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK, an example of which is shown below:
 
 ```
 export ARKOUDA_USER=arkouda
@@ -51,6 +53,8 @@ sh deploy-arkouda-on-kubernetes-command.sh
 
 ### delete arkouda workflow
 
+The [delete-arkouda-on-kubernetes-command.sh](delete-arkouda-on-kubernetes-command.sh) script is used to delete AoK, an example of which is shown below:
+
 ```
 export ARKOUDA_USER=arkouda
 export ARKOUDA_NAMESPACE=arkouda
@@ -58,4 +62,33 @@ export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
 ARKOUDA_SSL_SECRET=arkouda-tls
 
 sh delete-arkouda-on-kubernetes-command.sh 
+```
+
+### deploy prometheus-arkouda-exporter workflow
+
+The [deploy-prometheus-arkouda-exporter-command.sh](deploy-prometheus-arkouda-exporter-command.sh) script is used to deploy prometheus-arkouda-exporter, an example of which is shown below:
+
+```
+export ARKOUDA_EXPORTER_VERSION=v2023.09.06
+export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-slurm-exporter
+export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-slurm-exporter
+export ARKOUDA_EXPORTER_POLLING_INTERVAL=15
+export ARKOUDA_EXPORTER_NAMESPACE=arkouda
+export ARKOUDA_METRICS_SERVICE_HOST=arkouda-metrics.arkouda
+export ARKOUDA_METRICS_SERVICE_PORT=5556
+export ARKOUDA_SERVER_NAME=arkouda-on-slurm
+
+sh deploy-prometheus-arkouda-exporter-command.sh
+```
+
+### delete prometheus-arkouda-exporter workflow
+
+The [delete-prometheus-arkouda-exporter-command.sh](delete-prometheus-arkouda-exporter-command.sh) script is used to delete prometheus-arkouda-exporter, an example of which is shown below:
+
+```
+export ARKOUDA_EXPORTER_NAMESPACE=arkouda
+export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-slurm-exporter
+export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-slurm-exporter
+
+sh delete-prometheus-arkouda-exporter-command.sh
 ```
