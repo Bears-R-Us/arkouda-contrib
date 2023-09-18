@@ -20,7 +20,11 @@ spec:
     - name: arkouda-namespace
     - name: arkouda-log-level
     - name: image-pull-policy
-    - name: metrics-polling-interval-seconds    
+    - name: metrics-polling-interval-seconds
+    - name: num-cpu-cores
+    - name: memory    
+    - name: chpl-mem-max
+    - name: chpl-num-threads-per-locale
   templates:
   - name: deploy-arkouda-on-kubernetes
     dag:
@@ -85,11 +89,11 @@ spec:
                   - containerPort: 22
                   resources:
                     limits:
-                      cpu: 2000m
-                      memory: 2048Mi
+                      cpu: {{ workflow.parameters.num-cpu-cores }}
+                      memory: {{ workflow.parameters.memory }}
                     requests:
-                      cpu: 2000m
-                      memory: 2048Mi
+                      cpu: {{ workflow.parameters.num-cpu-cores }}
+                      memory: {{ workflow.parameters.memory }}
                   volumeMounts:
                     - name: ssl
                       mountPath: "/etc/ssl/arkouda"
@@ -101,11 +105,11 @@ spec:
                         fieldRef:
                           fieldPath: status.podIP
                     - name: NUM_LOCALES
-                      value: '2'
+                      value: '{{ workflow.parameters.arkouda-number-of-locales }}'
                     - name: MEMTRACK
                       value: 'true'
                     - name: CHPL_RT_NUM_THREADS_PER_LOCALE
-                      value: '4'
+                      value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
               volumes:
                 - name: ssl
                   secret:
@@ -272,11 +276,11 @@ spec:
                   - containerPort: 22
                   resources:
                     limits:
-                      cpu: 2000m
-                      memory: 2048Mi
+                      cpu: {{ workflow.parameters.num-cpu-cores }}
+                      memory: {{ workflow.parameters.memory }}
                     requests:
-                      cpu: 2000m
-                      memory: 2048Mi
+                      cpu: {{ workflow.parameters.num-cpu-cores }}
+                      memory: {{ workflow.parameters.memory }}
                   volumeMounts:
                     - name: ssl
                       mountPath: "/etc/ssl/arkouda"
@@ -307,7 +311,7 @@ spec:
                     - name: MEMTRACK
                       value: 'true'
                     - name: CHPL_RT_NUM_THREADS_PER_LOCALE
-                      value: '2'
+                      value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
                     - name: GASNET_SUPERNODE_MAXSIZE
                       value: '1'
                     - name: CERT_FILE

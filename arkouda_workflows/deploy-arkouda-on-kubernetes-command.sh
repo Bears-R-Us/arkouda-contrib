@@ -13,4 +13,8 @@ argo submit -n $ARKOUDA_NAMESPACE \
             -p arkouda-log-level=LogLevel.DEBUG \
             -p arkouda-user=$ARKOUDA_USER  \
             -p metrics-polling-interval-seconds=15 \
-            -p image-pull-policy=IfNotPresent
+            -p image-pull-policy=IfNotPresent \
+            -p num-cpu-cores=$ARKOUDA_CPU_CORES \
+            -p memory=$ARKOUDA_MEMORY \
+            -p chpl-num-threads-per-locale=$CHPL_NUM_THREADS_PER_LOCALE \
+            -p chpl-mem-max=$CHPL_MEM_MAX
