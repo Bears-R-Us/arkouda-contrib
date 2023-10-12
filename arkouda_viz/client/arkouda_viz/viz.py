@@ -4,7 +4,7 @@ import panel as pn
 import panel.widgets as pnw
 from arkouda.dataframe import DataFrame
 from typeguard import typechecked
-from holoviews.operation import datashader as ds
+from holoviews.operation.datashader import datashade as ds
 
 pn.extension()
 
