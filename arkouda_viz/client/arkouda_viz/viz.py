@@ -88,20 +88,6 @@ def datashade(
 
     return tabs.servable()
 
-    @pn.depends(x_widget.param.value, y_widget.param.value)
-    def update_data(x_col, y_col):
-        data_points = make_data(x_col, y_col)
-        shaded_data = ds(data_points, cmap="viridis", color_key="log").opts(
-            hv.opts.RGB(width=width, height=height)
-        )
-        return shaded_data
-
-    logo = "../pictures/logo.png"
-    layout = pn.Row(
-        pn.Column("## Datashader Plot", logo_image, x_widget, y_widget), update_data
-    )
-    return layout.servable()
-
 
 @typechecked
 def crossfilter(
