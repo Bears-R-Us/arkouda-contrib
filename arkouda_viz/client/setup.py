@@ -15,5 +15,5 @@ setup(
     long_description_content_type="text/markdown",
     packages=["arkouda_viz"],
     python_requires=">=3.8",
-    install_requires=["arkouda"],
+    install_requires=["arkouda", "holoviews", "datashader"],
 )

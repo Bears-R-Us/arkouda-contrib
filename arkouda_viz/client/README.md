@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="pictures/logo.png"/>
+  <img src="../pictures/logo.png"/>
 </p>
 
 This is a client only implementation of vizualizations using Arkouda. Thus, all code is python and uses only server elements currently included in the main arkouda repository. 

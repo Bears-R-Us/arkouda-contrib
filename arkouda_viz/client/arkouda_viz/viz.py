@@ -70,7 +70,7 @@ def datashade(
 
         return shaded_data
 
-    logo = "/home/quinnmoore/Desktop/logo.png"
+    logo = "../pictures/logo.png"
     logo_image = pn.panel(logo, width=x_widget.width, height=x_widget.height)
     layout = pn.Row(
         pn.Column(
@@ -96,7 +96,7 @@ def datashade(
         )
         return shaded_data
 
-    logo = "/home/quinnmoore/Desktop/logo.png"
+    logo = "../pictures/logo.png"
     layout = pn.Row(
         pn.Column("## Datashader Plot", logo_image, x_widget, y_widget), update_data
     )
