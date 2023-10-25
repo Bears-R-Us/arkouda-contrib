@@ -224,7 +224,7 @@ docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
 
 ## Running arkouda-smp-developer
 
-Running arkouda-smp-developer with a directory mounted enables building, testing, and running Arkouda in GASNET smp mode within a Docker container. An example docker run command is shown below, where arkouda-smp-developer Docker container is launched from the Arkouda project root directory and the Chapel src directory is mounted:
+Running arkouda-smp-developer with a directory mounted enables building, testing, and running Arkouda in GASNET smp mode within a Docker container. An example docker run command is shown below, where arkouda-smp-developer Docker container is launched from the Arkouda project root directory and the src/ directory containing Arkouda .chpl files is mounted:
 
 ```
 # set env variables
