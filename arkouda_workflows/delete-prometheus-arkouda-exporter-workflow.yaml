@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: delete-prometheus-arkouda-exporter-
+spec:
+  entrypoint: delete-prometheus-arkouda-exporter
+  serviceAccountName: arkouda-workflows-service-account
+  podGC:
+    strategy: OnWorkflowSuccess
+  arguments:
+    parameters:
+    - name: exporter-app-name
+    - name: exporter-service-name
+
+  templates:
+  - name: delete-prometheus-arkouda-exporter
+    steps:
+      - - name: delete-prometheus-arkouda-exporter
+          template: delete-deployment  
+        - name: delete-prometheus-arkouda-exporter-service
+          template: delete-exporter-service
+ 
+  - name: delete-deployment
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {{ workflow.parameters.exporter-app-name }}
+          labels:
+            app: {{ workflow.parameters.exporter-app-name }}
+
+  - name: delete-exporter-service
+    resource:
+      action: delete
+      flags: ["--ignore-not-found"]
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: "{{ workflow.parameters.exporter-service-name }}"
