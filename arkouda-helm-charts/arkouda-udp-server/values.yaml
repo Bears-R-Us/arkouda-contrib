@@ -11,10 +11,12 @@ resources:
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.06.20
+releaseVersion: v2023.09.06
 imagePullPolicy: IfNotPresent
 
 ################ Arkouda Driver Configuration ################
+
+user: # the Kubernetes user that accesses the Kubernetes API
 
 server: 
   totalNumLocales: # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
@@ -26,18 +28,17 @@ server:
   logLevel: LogLevel.DEBUG
   service:
     type: ClusterIP # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
-    port: # k8s service port Arkouda is listening on, defaults to 5555
     nodeport: # if service type is Nodeport
     name: # k8s service name
   metrics:
-    collectMetrics: false # whether to collect metrics and make them available via  k8s service
+    collectMetrics: # whether to collect metrics and make them available via k8s service
     service:
       name: # k8s service name for the Arkouda metrics service endpoint
-      port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
-      targetPort: # k8s targetPort mapping to the Arkouda metrics port, defaults to 5556
+
 locale:
   appName: arkouda-locale
   podMethod: GET_POD_IPS
+
 external:
   persistence:
     enabled: false
@@ -46,16 +47,16 @@ external:
   k8sHost: # result of kubectl cluster-info command
   namespace: # namespace Arkouda will register service
   service: 
-    name: # k8s service name Arkouda will register
-    port: # k8s service port Arkouda will register, defaults to 5555
+    name: # k8s service name Arkouda will register, defaults to arkouda
+
 metricsExporter:
   imageRepository: bearsrus
-  releaseVersion: v2023.06.20 # prometheus-arkouda-exporter release version
+  releaseVersion: v2023.09.06 # prometheus-arkouda-exporter release version
   imagePullPolicy: IfNotPresent
   service:
     name: # prometheus-arkouda-exporter service name
-    port: 5080 # prometheus-arkouda-exporter service port, defaults to 5080
   pollingIntervalSeconds: 5
+
 secrets:
   tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales

@@ -8,15 +8,15 @@ The arkouda-udp-server Helm chart deploys the containerized Arkouda server (loca
 
 arkouda-udp-server generates GASNET udp connections with all previously-deployed arkouda-udp-locale pods, registers itself as a service, and creates a Prometheus scrape target via Kubernetes API CRUD operations. Accordingly, the following Kubernetes artifacts are required:
 
-1. Kubernetes user that is to be bound to the requisite ClusterRoles
+1. Kubernetes user that is to be bound to the requisite Roles
 2. TLS secret composed of the .key and .crt files used to create the Kubernetes user and enable Kubernetes API requests
-3. ClusterRoles with permissions to enable Kubernetes API requests
-4. ClusterRoleBindings that bind the ClusterRoles to the Kubernetes user
+3. Roles with permissions to enable Kubernetes API requests
+4. RoleBindings that bind the k8s Roles to the Kubernetes user
 5. SSH secret to enable GASNET udp startup of all Arkouda locale pods
 
 ### Kubernetes User
 
-The workflow for creating an a Kubernetes user that can be bound to Roles/ClusterRoles possessing the required Kubernetes API permissions is as follows:
+The workflow for creating an a Kubernetes user that can be bound to Roles possessing the required Kubernetes API permissions is as follows:
 
 ```
 # Generate base key file
@@ -37,7 +37,7 @@ Note: the cert CN is the Kubernetes user name
 
 ### TLS Secret
 
-The .key and .crt files created above are used to create a Kubernetes secret, which is used to connect to the Kubernetes API and load permissions from the Roles and/or ClusterRoles bound to the user. Important note: the secret must be deployed to the same namespace arkouda-udp-server and arkouda-udp-locale are deployed.
+The .key and .crt files created above are used to create a Kubernetes secret, which is used to connect to the Kubernetes API and load permissions from the Roles bound to the user. Important note: the secret must be deployed to the same namespace arkouda-udp-server and arkouda-udp-locale are deployed.
 
 An example Kubernetes secret create command is as follows:
 
@@ -45,17 +45,17 @@ An example Kubernetes secret create command is as follows:
 kubectl create secret tls arkouda-tls --cert=arkouda.crt --key=arkouda.key -n arkouda
 ```
 
-### ClusterRoles
+### Roles
 
-The Kubernetes API permissions are in the form of a ClusterRole (scoped to all namespaces). For the purposes of this demonstration, the ClusterRoles are as follows. Corresponding Role definitions only differ in that that the Kind field is Role and metadata has a namespace element.
+The Kubernetes API permissions are in the form of a Role (scoped to the arkouda-udp-locale/arkouda-udp-server deployment namespace). For the purposes of this demonstration, the Roles are as follows:
 
 #### GASNET udp Integration
 
-The arkouda-udp-server deployment discovers all arkouda-udp-locale pods on startup to create the GASNET udp connections between all Arkouda locales. Accordingly, Arkouda requires Kubernetes pod list and get permissions. The corresponding ClusterRole is as follows:
+The arkouda-udp-server deployment discovers all arkouda-udp-locale pods on startup to create the GASNET udp connections between all Arkouda locales. Accordingly, Arkouda requires Kubernetes pod list and get permissions. The corresponding Role is as follows:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: arkouda-pod-reader
 rules:
@@ -64,54 +64,58 @@ rules:
   verbs: ["get", "watch", "list"]
 ```
 
-This ClusterRole is bound to the arkouda Kubernetes user as follows:
+This Role is bound to the arkouda Kubernetes user as follows:
 
 ```
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: arkouda-pod-reader-binding
+  name: arkouda-pod-reader
 subjects:
 - kind: User
-  name: arkouda
+  name: {{ .Values.user }}
   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: ClusterRole
+  kind: Role
   name: pod-reader
   apiGroup: rbac.authorization.k8s.io
 ```
 
 #### Service Integration
 
-Arkouda-on-Kubernetes integrates with Kubernetes service discovery by creating a Kubernetes service upon arkouda-udp-server startup and deleting the Kubernetes service upon teardown. Consequently, Arkouda-on-Kubernetes requires full Kubernetes service CRUD permissions to enable service discovery. The corresponding ClusterRole is as follows:
+Arkouda-on-Kubernetes integrates with Kubernetes service discovery by creating a Kubernetes service upon arkouda-udp-server startup and deleting the Kubernetes service upon teardown. Consequently, Arkouda-on-Kubernetes requires full Kubernetes service CRUD permissions to enable service discovery. The corresponding Role is as follows:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: service-endpoints-crud
+  name: arkouda-service-endpoints-crud
 rules:
 - apiGroups: [""]
   resources: ["services","endpoints"]
   verbs: ["get","watch","list","create","delete","update"]
 ```
 
-This ClusterRole is bound to the arkouda Kubernetes user as follows:
+This Role is bound to the arkouda Kubernetes user as follows:
 
 ```
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: arkouda-service-endpoints-crud
 subjects:
 - kind: User
-  name: arkouda
+  name: {{ .Values.user }}
   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: ClusterRole
-  name: service-endpoints-crud
+  kind: Role
+  name: arkouda-service-endpoints-crud
   apiGroup: rbac.authorization.k8s.io
 ```
+
+#### Role and RoleBinding Files
+
+While the Role and RoleBinding file contents are detailed above, all required Role and RoleBinding files are located in the [templates](templates) directory, and, consequently, are deployed with arkouda-udp-server.
 
 ### SSH Secret
 
@@ -154,6 +158,11 @@ kubectl create secret generic arkouda-ssh --from-file=~/.ssh/id_rsa --from-file=
 The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml).
 
 ### values.yaml
+
+#### user
+
+Ther user value is the Kubernetes user bound to the TLS secret as well as the Roles discussed
+above via the corresponding RoleBindings.
 
 #### server
 

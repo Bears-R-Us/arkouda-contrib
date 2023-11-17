@@ -4,14 +4,13 @@ metadata:
   name: arkouda-metrics-exporter
   annotations:
     prometheus.io/path: /metrics
-    prometheus.io/port: "{{ .Values.metricsExporter.service.port }}"
+    prometheus.io/port: "5080"
     prometheus.io/scrape: "true"
 
 spec:
   type: ClusterIP
   ports:
-    - port: {{ .Values.metricsExporter.service.port }}
-      targetPort: 5080
+    - port: 5080
       protocol: TCP
   selector:
     app: arkouda-server
