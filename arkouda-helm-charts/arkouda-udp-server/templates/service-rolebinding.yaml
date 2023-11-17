@@ -4,7 +4,7 @@ metadata:
   name: arkouda-service-crud
 subjects:
 - kind: User
-  name: arkouda
+  name: {{ .Values.user }}
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
