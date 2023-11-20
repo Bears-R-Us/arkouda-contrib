@@ -10,6 +10,7 @@ module lshMinMax
   use Reflection;
   use ServerErrors;
   use Logging;
+  use Math;
 
 
   require '-lgsl','-lgslcblas';
@@ -113,7 +114,7 @@ module lshMinMax
                  benefit from parallelism for skewed distributions, e.g. such as
                  adjacency lists of "power-law" graphs */
 
-	      var setD: domain = {o..#l};
+	      var setD: domain(1) = {o..#l};
               var hashes: [setD] (real, int, real);
 
 	      [z in setD] {
