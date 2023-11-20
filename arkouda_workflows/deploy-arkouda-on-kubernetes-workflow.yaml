@@ -349,10 +349,10 @@ spec:
               volumes:              
                 - name: ssl
                   secret:
-                    secretName: arkouda 
+                    secretName: "{{ workflow.parameters.arkouda-ssl-secret }}"
                 - name: ssh
                   secret:
-                    secretName: arkouda-ssh
+                    secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
                 - name: arkouda-server-launch-script
                   configMap:
                     name: arkouda-server-launch-script
