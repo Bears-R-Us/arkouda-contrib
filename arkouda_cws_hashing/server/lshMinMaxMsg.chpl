@@ -10,6 +10,7 @@ module lshMinMaxMsg
   use Reflection;
   use ServerErrors;
   use Logging;
+  use ArkoudaSymEntryCompat;
 
 
   private config const logLevel = ServerConfig.logLevel;
