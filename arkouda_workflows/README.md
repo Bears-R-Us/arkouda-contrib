@@ -38,19 +38,23 @@ Information regarding the Arkouda SSH and TLS secrets is [here](https://github.c
 
 ### deploy arkouda workflow
 
-The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK, an example of which is shown below:
+The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK, utilizing several environment variables. An example is shown below:
 
 ```
-export ARKOUDA_USER=arkouda
-export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-ARKOUDA_SSH_SECRET=arkouda-ssh
-ARKOUDA_SSL_SECRET=arkouda-tls
-ARKOUDA_VERSION=v2023.09.06
-ARKOUDA_CPU_CORES=2000m
-ARKOUDA_MEMORY=2048Mi
-CHPL_MEM_MAX=1000000000
-CHPL_NUM_THREADS_PER_LOCALE=2
+export ARKOUDA_NAMESPACE=arkouda
+export ARKOUDA_VERSION=v2023.11.15
+export ARKOUDA_SSH_SECRET=arkouda-ssh
+export ARKOUDA_SSL_SECRET=arkouda-tls
+export NUMBER_OF_LOCALES=2 # number of arkouda-locale instances 
+export TOTAL_NUMBER_OF_LOCALES=3 # number of arkouda-locale instances + arkouda-server instance
+export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
+export ARKOUDA_VERSION=v2023.11.15
+export ARKOUDA_CPU_CORES=2000m
+export ARKOUDA_MEMORY=2048Mi
+export CHPL_MEM_MAX=1000000000
+export CHPL_NUM_THREADS_PER_LOCALE=2
+export ARKOUDA_USER=arkouda
 
 sh deploy-arkouda-on-kubernetes-command.sh 
 ```
@@ -63,7 +67,8 @@ The [delete-arkouda-on-kubernetes-command.sh](delete-arkouda-on-kubernetes-comma
 export ARKOUDA_USER=arkouda
 export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-ARKOUDA_SSL_SECRET=arkouda-tls
+export ARKOUDA_SSL_SECRET=arkouda-tls
+export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
 
 sh delete-arkouda-on-kubernetes-command.sh 
 ```
@@ -73,7 +78,7 @@ sh delete-arkouda-on-kubernetes-command.sh
 The [deploy-prometheus-arkouda-exporter-command.sh](deploy-prometheus-arkouda-exporter-command.sh) script is used to deploy prometheus-arkouda-exporter, an example of which is shown below:
 
 ```
-export ARKOUDA_EXPORTER_VERSION=v2023.09.06
+export ARKOUDA_EXPORTER_VERSION=v2023.11.15
 export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-slurm-exporter
 export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-slurm-exporter
 export ARKOUDA_EXPORTER_POLLING_INTERVAL=15
