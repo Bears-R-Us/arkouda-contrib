@@ -127,7 +127,7 @@ export ARKOUDA_USER=arkouda
 sh deploy-arkouda-on-kubernetes-cronworkflow.sh
 ```
 
-The default deploy-arkouda-on-kubernetes-cronworkflow configuration is to deploy arkouda-on-kubernetes daily at 0700 EST. The cron configuration can be changed in the spec.schedule section of the [deploy-arkouda-on-kubernetes-cronworkflow.yaml](deploy-arkouda-on-kubernetes-cronworkflow.yaml) file as shown below:
+The default deploy-arkouda-on-kubernetes-cronworkflow configuration is to deploy arkouda-on-kubernetes daily at 0700 EST. The cron configuration can be changed in the [spec.schedule](https://github.com/hokiegeek2/arkouda-contrib/blob/62c099130d78ed523951aac11893298f3b9c752f/arkouda_workflows/deploy-arkouda-on-kubernetes-cronworkflow.yaml#L5) section of the deploy-arkouda-on-kubernetes-cronworkflow.yaml file as shown below:
 
 ```
 apiVersion: argoproj.io/v1alpha1
@@ -152,7 +152,7 @@ export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
 sh delete-arkouda-on-kubernetes-cronworkflow.sh
 ```
 
-The default delete-arkouda-on-kubernetes-cronworkflow configuration is to delete arkouda-on-kubernetes daily at 1700 EST. The cron configuration can be changed in the spec.schedule section of the [delete-arkouda-on-kubernetes-cronworkflow.yaml](delete-arkouda-on-kubernetes-cronworkflow.yaml) file as shown below:
+The default delete-arkouda-on-kubernetes-cronworkflow configuration is to delete arkouda-on-kubernetes daily at 1700 EST. The cron configuration can be changed in the [spec.schedule](https://github.com/hokiegeek2/arkouda-contrib/blob/62c099130d78ed523951aac11893298f3b9c752f/arkouda_workflows/delete-arkouda-on-kubernetes-cronworkflow.yaml#L6) section of the delete-arkouda-on-kubernetes-cronworkflow.yaml file as shown below:
 
 ```
 apiVersion: argoproj.io/v1alpha1
