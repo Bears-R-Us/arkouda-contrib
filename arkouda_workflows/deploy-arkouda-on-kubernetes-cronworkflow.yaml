@@ -3,7 +3,7 @@ kind: CronWorkflow
 metadata:
   name: deploy-arkouda-on-kubernetes
 spec:
-  schedule: "20 11 * * *"
+  schedule: "15 07 * * *"
   timezone: "America/New_York"   # Default to local machine timezone
   startingDeadlineSeconds: 0
   concurrencyPolicy: "Replace"      # Default to "Allow"
@@ -12,91 +12,275 @@ spec:
   suspend: false                    # Set to "true" to suspend scheduling
   workflowSpec:
     entrypoint: deploy-arkouda-on-kubernetes
-  podGC:
-    strategy: OnWorkflowSuccess
-  arguments:
-    parameters:
-    - name: arkouda-user
-    - name: arkouda-release-version
-    - name: arkouda-instance-name
-    - name: arkouda-ssl-secret
-    - name: arkouda-ssh-secret
-    - name: arkouda-number-of-locales
-    - name: arkouda-total-number-of-locales
-    - name: kubernetes-api-url
-    - name: arkouda-namespace
-    - name: arkouda-log-level
-    - name: image-pull-policy
-    - name: metrics-polling-interval-seconds
-    - name: num-cpu-cores
-    - name: memory    
-    - name: chpl-mem-max
-    - name: chpl-num-threads-per-locale
-    volumes:
-      - name: arkouda-files
-        persistentVolumeClaim:
-          claimName: arkouda-files
+    serviceAccountName: arkouda-workflows-service-account
+    podGC:
+      strategy: OnWorkflowSuccess
+    arguments:
+      parameters:
+      - name: arkouda-user
+      - name: arkouda-release-version
+      - name: arkouda-instance-name
+      - name: arkouda-ssl-secret
+      - name: arkouda-ssh-secret
+      - name: arkouda-number-of-locales
+      - name: arkouda-total-number-of-locales
+      - name: kubernetes-api-url
+      - name: arkouda-namespace
+      - name: arkouda-log-level
+      - name: image-pull-policy
+      - name: metrics-polling-interval-seconds
+      - name: num-cpu-cores
+      - name: memory    
+      - name: chpl-mem-max
+      - name: chpl-num-threads-per-locale
     templates:
-    - name: deploy-arkouda-on-kubernetes
-      dag:
-        tasks:
-          - name: deploy-arkouda-locale
-            template: deploy-locale
-          - name: create-locale-headless-service
-            template: create-locale-headless-service
-          - name: create-locale-ssh-service
-            template: create-locale-ssh-service
-          - name: create-pod-role
-            template: create-pod-role
-          - name: create-pod-role-binding
-            template: create-pod-role-binding
-            depends: 'create-pod-role.Succeeded'
-          - name: create-service-role
-            template: create-service-role
-          - name: create-service-role-binding
-            template: create-service-role-binding
-            depends: 'create-service-role.Succeeded'
-          - name: create-server-launch-script-config-map
-            template: create-server-launch-script-config-map
-            depends: 'deploy-arkouda-locale.Succeeded'
-          - name: create-server-headless-service
-            template: create-server-headless-service
-            depends: 'deploy-arkouda-locale.Succeeded'
-          - name: create-server-ssh-service
-            template: create-server-ssh-service
-            depends: 'deploy-arkouda-locale.Succeeded'
-          - name: deploy-arkouda-server
-            template: deploy-server
-            depends: 'deploy-arkouda-locale.Succeeded && create-server-launch-script-config-map.Succeeded'
-          - name: create-metrics-exporter-service
-            template: create-metrics-exporter-service
+      - name: deploy-arkouda-on-kubernetes
+        dag:
+          tasks:
+            - name: deploy-arkouda-locale
+              template: deploy-locale
+            - name: create-locale-headless-service
+              template: create-locale-headless-service
+            - name: create-locale-ssh-service
+              template: create-locale-ssh-service
+            - name: create-pod-role
+              template: create-pod-role
+            - name: create-pod-role-binding
+              template: create-pod-role-binding
+              depends: 'create-pod-role.Succeeded'
+            - name: create-service-role
+              template: create-service-role
+            - name: create-service-role-binding
+              template: create-service-role-binding
+              depends: 'create-service-role.Succeeded'
+            - name: create-server-launch-script-config-map
+              template: create-server-launch-script-config-map
+              depends: 'deploy-arkouda-locale.Succeeded'
+            - name: create-server-headless-service
+              template: create-server-headless-service
+              depends: 'deploy-arkouda-locale.Succeeded'
+            - name: create-server-ssh-service
+              template: create-server-ssh-service
+              depends: 'deploy-arkouda-locale.Succeeded'
+            - name: deploy-arkouda-server
+              template: deploy-server
+              depends: 'deploy-arkouda-locale.Succeeded && create-server-launch-script-config-map.Succeeded'
+            - name: create-metrics-exporter-service
+              template: create-metrics-exporter-service
             
-    - name: deploy-locale
-      resource:
-        action: create
-        manifest: |
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-locale
-            labels: 
-              app: {{ workflow.parameters.arkouda-instance-name }}-locale
-          spec:
-            replicas: {{ workflow.parameters.arkouda-number-of-locales }}
-            selector:
-              matchLabels:
+      - name: deploy-locale
+        resource:
+          action: create
+          manifest: |
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-locale
+              labels: 
                 app: {{ workflow.parameters.arkouda-instance-name }}-locale
-            template:
-              metadata:
-                labels:
+            spec:
+              replicas: {{ workflow.parameters.arkouda-number-of-locales }}
+              selector:
+                matchLabels:
                   app: {{ workflow.parameters.arkouda-instance-name }}-locale
-              spec:
+              template:
+                metadata:
+                  labels:
+                    app: {{ workflow.parameters.arkouda-instance-name }}-locale
+                spec:
+                  containers:
+                    - name: arkouda-udp-locale
+                      image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
+                      imagePullPolicy: IfNotPresent
+                      command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
+                      ports:
+                      - containerPort: 22
+                      resources:
+                        limits:
+                          cpu: {{ workflow.parameters.num-cpu-cores }}
+                          memory: {{ workflow.parameters.memory }}
+                        requests:
+                          cpu: {{ workflow.parameters.num-cpu-cores }}
+                          memory: {{ workflow.parameters.memory }}
+                      volumeMounts:
+                        - name: ssl
+                          mountPath: "/etc/ssl/arkouda"
+                        - name: ssh
+                          mountPath: "/home/ubuntu/ssh-keys"      
+                      env:
+                        - name: MY_IP
+                          valueFrom:
+                            fieldRef:
+                              fieldPath: status.podIP
+                        - name: NUM_LOCALES
+                          value: '{{ workflow.parameters.arkouda-number-of-locales }}'
+                        - name: MEMTRACK
+                          value: 'true'
+                        - name: CHPL_RT_NUM_THREADS_PER_LOCALE
+                          value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
+                  volumes:
+                    - name: ssl
+                      secret:
+                        secretName: "{{ workflow.parameters.arkouda-ssl-secret }}"
+                    - name: ssh
+                      secret:
+                        secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
+
+      - name: create-locale-headless-service
+        resource:
+          action: create
+          manifest: |
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-locale-headless
+            spec: 
+              clusterIP: None
+              selector:
+                app: {{ workflow.parameters.arkouda-instance-name }}-locale
+  
+      - name: create-locale-ssh-service
+        resource:
+          action: create
+          manifest: |
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-locale-ssh
+            spec:
+              type: ClusterIP
+              ports:
+                - port: 22
+              selector:
+                app: {{ workflow.parameters.arkouda-instance-name }}-locale
+
+      - name: create-pod-role
+        resource: 
+          action: create
+          manifest: |
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: "{{ workflow.parameters.arkouda-instance-name }}-pod"
+            rules:
+              - apiGroups: [""]
+                resources: ["pods","deployments"]
+                verbs: ["get", "watch", "list"]
+ 
+      - name: create-pod-role-binding
+        resource:
+          action: create
+          manifest: |
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: "{{ workflow.parameters.arkouda-instance-name }}-pod-binding"
+            subjects:
+            - kind: User
+              name: "{{ workflow.parameters.arkouda-user }}"
+              apiGroup: rbac.authorization.k8s.io
+            roleRef:
+              kind: Role
+              name: "{{ workflow.parameters.arkouda-instance-name }}-pod"
+              apiGroup: rbac.authorization.k8s.io
+
+      - name: create-service-role
+        resource:
+          action: create
+          manifest: |
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-service
+            rules:
+              - apiGroups: [""]
+                resources: ["services","endpoints"]
+                verbs: ["get","watch","list","create","delete","update"]
+
+      - name: create-service-role-binding
+        resource:
+          action: create 
+          manifest: |
+            kind: RoleBinding
+            apiVersion: rbac.authorization.k8s.io/v1
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-service-binding
+            subjects:
+            - kind: User
+              name: {{ workflow.parameters.arkouda-user }}
+              apiGroup: rbac.authorization.k8s.io
+            roleRef:
+              kind: Role
+              name: {{ workflow.parameters.arkouda-instance-name }}-service
+              apiGroup: rbac.authorization.k8s.io
+
+      - name: create-server-launch-script-config-map
+        resource:
+          action: create
+          manifest: |
+            kind: ConfigMap
+            apiVersion: v1
+            metadata:
+              name: arkouda-server-launch-script
+              labels:
+                name: arkouda-server-launch-script
+            data:
+              script: |-
+
+                  #!/bin/bash
+                  sudo service ssh start
+
+                  mkdir ~/.ssh/
+                  sudo cp ~/ssh-keys/id_rsa* ~/.ssh/
+                  sudo chown -R ubuntu:ubuntu ~/.ssh/*
+                  chmod -R 600 ~/.ssh/*
+
+                  cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+
+                  export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=arkouda' '-a={{ workflow.parameters.arkouda-instance-name }}-locale')"
+                  export SSH_SERVERS="$MY_IP $LOCALE_IPS"
+
+                  /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
+                                              --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
+                                              --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+                                              --logLevel=${LOG_LEVEL:-LogLevel.INFO}
+
+      - name: deploy-server
+        resource:
+          action: create
+          manifest: |
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-server
+              labels:
+                app: {{ workflow.parameters.arkouda-instance-name }}-server
+            spec:
                 containers:
-                  - name: arkouda-udp-locale
-                    image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
-                    imagePullPolicy: IfNotPresent
-                    command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
+                  - name: arkouda-metrics-exporter
+                    image: bearsrus/prometheus-arkouda-exporter:{{ workflow.parameters.arkouda-release-version }}
+                    imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
                     ports:
+                    - containerPort: 5080
+                    env:
+                      - name: EXPORT_PORT
+                        value: '5080'
+                      - name: POLLING_INTERVAL_SECONDS
+                        value: '{{ workflow.parameters.metrics-polling-interval-seconds }}'
+                      - name: ARKOUDA_SERVER_NAME
+                        value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
+                      - name: ARKOUDA_METRICS_SERVICE_HOST
+                        value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
+                      - name: ARKOUDA_METRICS_SERVICE_PORT
+                        value: '5556'
+
+                  - name: arkouda-udp-server
+                    image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
+                    imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
+                    command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
+                    ports:
+                    - containerPort: 5555
+                    - containerPort: 5556
                     - containerPort: 22
                     resources:
                       limits:
@@ -109,307 +293,120 @@ spec:
                       - name: ssl
                         mountPath: "/etc/ssl/arkouda"
                       - name: ssh
-                        mountPath: "/home/ubuntu/ssh-keys"      
+                        mountPath: "/home/ubuntu/ssh-keys"
+                      - name: arkouda-server-launch-script
+                        mountPath: /opt/arkouda/start-arkouda-server.sh
+                        subPath: start-arkouda-server.sh
                     env:
                       - name: MY_IP
                         valueFrom:
                           fieldRef:
                             fieldPath: status.podIP
-                      - name: NUM_LOCALES
-                        value: '{{ workflow.parameters.arkouda-number-of-locales }}'
+                      - name: GASNET_MASTERIP
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: status.podIP
+                      - name: SSH_SERVERS
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: status.podIP
+                      - name: NUMLOCALES
+                        value: '{{ workflow.parameters.arkouda-total-number-of-locales }}'
+                      - name: AUTHENTICATE
+                        value: 'false'
+                      - name: VERBOSE
+                        value: 'true'
                       - name: MEMTRACK
                         value: 'true'
                       - name: CHPL_RT_NUM_THREADS_PER_LOCALE
                         value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
-                volumes:
+                      - name: GASNET_SUPERNODE_MAXSIZE
+                        value: '1'
+                      - name: CERT_FILE
+                        value: '/etc/ssl/arkouda/tls.crt'
+                      - name: KEY_FILE
+                        value: '/etc/ssl/arkouda/tls.key'
+                      - name: K8S_HOST
+                        value: "{{ workflow.parameters.kubernetes-api-url }}"
+                      - name: NAMESPACE
+                        value: '{{ workflow.parameters.arkouda-namespace }}'
+                      - name: APP_NAME
+                        value: '{{ workflow.parameters.arkouda-instance-name }}-locale'
+                      - name: ARKOUDA_SERVER_NAME
+                        value: '{{ workflow.parameters.arkouda-instance-name }}'
+                      - name: ARKOUDA_CLIENT_MODE
+                        value: 'API'
+                      - name: POD_METHOD
+                        value: 'GET_POD_IPS'
+                      - name: EXTERNAL_SERVICE_NAME
+                        value: '{{ workflow.parameters.arkouda-instance-name }}'
+                      - name: EXTERNAL_SERVICE_PORT
+                        value: '5555'
+                      - name: EXTERNAL_SERVICE_TARGET_PORT
+                        value: '5555'
+                      - name: LOG_LEVEL
+                        value: '{{ workflow.parameters.arkouda-log-level }}'
+                      - name: COLLECT_METRICS
+                        value: 'true'
+                      - name: METRICS_SERVICE_NAME
+                        value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
+                      - name: METRICS_SERVICE_PORT
+                        value: '5556'
+                      - name: METRICS_SERVICE_TARGET_PORT
+                        value: '5556'
+                volumes:              
                   - name: ssl
                     secret:
                       secretName: "{{ workflow.parameters.arkouda-ssl-secret }}"
                   - name: ssh
                     secret:
                       secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
+                  - name: arkouda-server-launch-script
+                    configMap:
+                      name: arkouda-server-launch-script
+                      items:
+                        - key: script
+                          path: start-arkouda-server.sh
 
-    - name: create-locale-headless-service
-      resource:
-        action: create
-        manifest: |
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-locale-headless
-          spec: 
-            clusterIP: None
-            selector:
-              app: {{ workflow.parameters.arkouda-instance-name }}-locale
-  
-    - name: create-locale-ssh-service
-      resource:
-        action: create
-        manifest: |
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-locale-ssh
-          spec:
-            type: ClusterIP
-            ports:
-              - port: 22
-            selector:
-              app: {{ workflow.parameters.arkouda-instance-name }}-locale
+      - name: create-server-headless-service
+        resource:
+          action: create
+          manifest: |
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-server-headless
+            spec:
+              clusterIP: None
+              selector:
+                app: {{ workflow.parameters.arkouda-instance-name }}-server
 
-    - name: create-pod-role
-      resource: 
-        action: create
-        manifest: |
-          apiVersion: rbac.authorization.k8s.io/v1
-          kind: Role
-          metadata:
-            name: "{{ workflow.parameters.arkouda-instance-name }}-pod"
-          rules:
-            - apiGroups: [""]
-              resources: ["pods","deployments"]
-              verbs: ["get", "watch", "list"]
+      - name: create-server-ssh-service
+        resource:
+          action: create
+          manifest: |
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-server-ssh
+            spec:
+              type: ClusterIP
+              ports:
+                - port: 22
+              selector:
+                app: {{ workflow.parameters.arkouda-instance-name }}-server
 
-    - name: create-pod-role-binding
-      resource:
-        action: create
-        manifest: |
-          apiVersion: rbac.authorization.k8s.io/v1
-          kind: RoleBinding
-          metadata:
-            name: "{{ workflow.parameters.arkouda-instance-name }}-pod-binding"
-          subjects:
-          - kind: User
-            name: "{{ workflow.parameters.arkouda-user }}"
-            apiGroup: rbac.authorization.k8s.io
-          roleRef:
-            kind: Role
-            name: "{{ workflow.parameters.arkouda-instance-name }}-pod"
-            apiGroup: rbac.authorization.k8s.io
-
-    - name: create-service-role
-      resource:
-        action: create
-        manifest: |
-          apiVersion: rbac.authorization.k8s.io/v1
-          kind: Role
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-service
-          rules:
-            - apiGroups: [""]
-              resources: ["services","endpoints"]
-              verbs: ["get","watch","list","create","delete","update"]
-
-    - name: create-service-role-binding
-      resource:
-        action: create 
-        manifest: |
-          kind: RoleBinding
-          apiVersion: rbac.authorization.k8s.io/v1
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-service-binding
-          subjects:
-          - kind: User
-            name: {{ workflow.parameters.arkouda-user }}
-            apiGroup: rbac.authorization.k8s.io
-          roleRef:
-            kind: Role
-            name: {{ workflow.parameters.arkouda-instance-name }}-service
-            apiGroup: rbac.authorization.k8s.io
-
-    - name: create-server-launch-script-config-map
-      resource:
-        action: create
-        manifest: |
-          kind: ConfigMap
-          apiVersion: v1
-          metadata:
-            name: arkouda-server-launch-script
-            labels:
-              name: arkouda-server-launch-script
-          data:
-            script: |-
-  
-                #!/bin/bash
-                sudo service ssh start
-
-                mkdir ~/.ssh/
-                sudo cp ~/ssh-keys/id_rsa* ~/.ssh/
-                sudo chown -R ubuntu:ubuntu ~/.ssh/*
-                chmod -R 600 ~/.ssh/*
-
-                cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
-
-                export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=arkouda' '-a={{ workflow.parameters.arkouda-instance-name }}-locale')"
-                export SSH_SERVERS="$MY_IP $LOCALE_IPS"
-
-                /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-                                            --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
-                                            --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-                                            --logLevel=${LOG_LEVEL:-LogLevel.INFO}
-
-    - name: deploy-server
-      resource:
-        action: create
-        manifest: |
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-server
-            labels:
-              app: {{ workflow.parameters.arkouda-instance-name }}-server
-          spec:
-              containers:
-                - name: arkouda-metrics-exporter
-                  image: bearsrus/prometheus-arkouda-exporter:{{ workflow.parameters.arkouda-release-version }}
-                  imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
-                  ports:
-                  - containerPort: 5080
-                  env:
-                    - name: EXPORT_PORT
-                      value: '5080'
-                    - name: POLLING_INTERVAL_SECONDS
-                      value: '{{ workflow.parameters.metrics-polling-interval-seconds }}'
-                    - name: ARKOUDA_SERVER_NAME
-                      value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
-                    - name: ARKOUDA_METRICS_SERVICE_HOST
-                      value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
-                    - name: ARKOUDA_METRICS_SERVICE_PORT
-                      value: '5556'
-
-                - name: arkouda-udp-server
-                  image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
-                  imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
-                  command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
-                  ports:
-                  - containerPort: 5555
-                  - containerPort: 5556
-                  - containerPort: 22
-                  resources:
-                    limits:
-                      cpu: {{ workflow.parameters.num-cpu-cores }}
-                      memory: {{ workflow.parameters.memory }}
-                    requests:
-                      cpu: {{ workflow.parameters.num-cpu-cores }}
-                      memory: {{ workflow.parameters.memory }}
-                  volumeMounts:
-                    - name: ssl
-                      mountPath: "/etc/ssl/arkouda"
-                    - name: ssh
-                      mountPath: "/home/ubuntu/ssh-keys"
-                    - name: arkouda-server-launch-script
-                      mountPath: /opt/arkouda/start-arkouda-server.sh
-                      subPath: start-arkouda-server.sh
-                  env:
-                    - name: MY_IP
-                      valueFrom:
-                        fieldRef:
-                          fieldPath: status.podIP
-                    - name: GASNET_MASTERIP
-                      valueFrom:
-                        fieldRef:
-                          fieldPath: status.podIP
-                    - name: SSH_SERVERS
-                      valueFrom:
-                        fieldRef:
-                          fieldPath: status.podIP
-                    - name: NUMLOCALES
-                      value: '{{ workflow.parameters.arkouda-total-number-of-locales }}'
-                    - name: AUTHENTICATE
-                      value: 'false'
-                    - name: VERBOSE
-                      value: 'true'
-                    - name: MEMTRACK
-                      value: 'true'
-                    - name: CHPL_RT_NUM_THREADS_PER_LOCALE
-                      value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
-                    - name: GASNET_SUPERNODE_MAXSIZE
-                      value: '1'
-                    - name: CERT_FILE
-                      value: '/etc/ssl/arkouda/tls.crt'
-                    - name: KEY_FILE
-                      value: '/etc/ssl/arkouda/tls.key'
-                    - name: K8S_HOST
-                      value: "{{ workflow.parameters.kubernetes-api-url }}"
-                    - name: NAMESPACE
-                      value: '{{ workflow.parameters.arkouda-namespace }}'
-                    - name: APP_NAME
-                      value: '{{ workflow.parameters.arkouda-instance-name }}-locale'
-                    - name: ARKOUDA_SERVER_NAME
-                      value: '{{ workflow.parameters.arkouda-instance-name }}'
-                    - name: ARKOUDA_CLIENT_MODE
-                      value: 'API'
-                    - name: POD_METHOD
-                      value: 'GET_POD_IPS'
-                    - name: EXTERNAL_SERVICE_NAME
-                      value: '{{ workflow.parameters.arkouda-instance-name }}'
-                    - name: EXTERNAL_SERVICE_PORT
-                      value: '5555'
-                    - name: EXTERNAL_SERVICE_TARGET_PORT
-                      value: '5555'
-                    - name: LOG_LEVEL
-                      value: '{{ workflow.parameters.arkouda-log-level }}'
-                    - name: COLLECT_METRICS
-                      value: 'true'
-                    - name: METRICS_SERVICE_NAME
-                      value: '{{ workflow.parameters.arkouda-instance-name }}-metrics'
-                    - name: METRICS_SERVICE_PORT
-                      value: '5556'
-                    - name: METRICS_SERVICE_TARGET_PORT
-                      value: '5556'
-              volumes:              
-                - name: ssl
-                  secret:
-                    secretName: "{{ workflow.parameters.arkouda-ssl-secret }}"
-                - name: ssh
-                  secret:
-                    secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
-                - name: arkouda-server-launch-script
-                  configMap:
-                    name: arkouda-server-launch-script
-                    items:
-                      - key: script
-                        path: start-arkouda-server.sh
-
-    - name: create-server-headless-service
-      resource:
-        action: create
-        manifest: |
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-server-headless
-          spec:
-            clusterIP: None
-            selector:
-              app: {{ workflow.parameters.arkouda-instance-name }}-server
-
-    - name: create-server-ssh-service
-      resource:
-        action: create
-        manifest: |
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-server-ssh
-          spec:
-            type: ClusterIP
-            ports:
-              - port: 22
-            selector:
-              app: {{ workflow.parameters.arkouda-instance-name }}-server
-
-    - name: create-metrics-exporter-service
-      resource: 
-        action: create
-        manifest: |
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter
-          spec: 
-            type: ClusterIP
-            ports:
-              - port: 5080
-            selector:
-              app: {{ workflow.parameters.arkouda-instance-name }}-server  
+      - name: create-metrics-exporter-service
+        resource: 
+          action: create
+          manifest: |
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter
+            spec: 
+              type: ClusterIP
+              ports:
+                - port: 5080
+              selector:
+                app: {{ workflow.parameters.arkouda-instance-name }}-server  
