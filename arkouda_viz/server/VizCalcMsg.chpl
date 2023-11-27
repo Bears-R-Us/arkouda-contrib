@@ -18,8 +18,8 @@ module VizCalcMsg{
         param pn = Reflection.getRoutineName();
         var repMsg: string;
 
-        const colX = msgArgs.getValueOf("column_1");
-        const colY = msgArgs.getValueOf("column_2");
+        const colX = msgArgs.getValueOf("colX");
+        const colY = msgArgs.getValueOf("colY");
         var xBins = msgArgs.get("xBins").getIntValue();
         var yBins = msgArgs.get("yBins").getIntValue();
 
@@ -34,24 +34,24 @@ module VizCalcMsg{
                 var rname = st.nextName();
                 var binCounts = st.addEntry(rname, xBins*yBins, int);
 
-                var minVal_1 = min reduce arr1.a;
-                var maxVal_1 = max reduce arr1.a;
+                var minValX = min reduce arr1.a;
+                var maxValX = max reduce arr1.a;
 
-                var minVal_2 = min reduce arr2.a;
-                var maxVal_2 = max reduce arr2.a;
+                var minValY = min reduce arr2.a;
+                var maxValY = max reduce arr2.a;
 
-                var binWidth_1 = ((maxVal_1 - minVal_1):real / xBins): real;
-                var binWidth_2 = ((maxVal_2 - minVal_2):real / yBins): real;
+                var binWidth_1 = ((maxValX - minValX):real / xBins): real;
+                var binWidth_2 = ((maxValY - minValY):real / yBins): real;
 
                 for (entry_1, entry_2) in zip(arr1.a, arr2.a) {
 
-                    var binIdx = [floor((entry_1 - minVal_1) / binWidth_1):int, floor((entry_2 - minVal_2) / binWidth_2):int];
+                    var binIdx = [floor((entry_1 - minValX) / binWidth_1):int, floor((entry_2 - minValY) / binWidth_2):int];
 
-                    if (entry_1 == maxVal_1){
+                    if (entry_1 == maxValX){
                         binIdx[0] = xBins - 1;
                     }
 
-                    if (entry_2 == maxVal_2){
+                    if (entry_2 == maxValY){
                         binIdx[1] = yBins - 1;
                     }
 
@@ -73,24 +73,24 @@ module VizCalcMsg{
                 var rname = st.nextName();
                 var binCounts = st.addEntry(rname, xBins*yBins, int);
 
-                var minVal_1 = min reduce arr1.a;
-                var maxVal_1 = max reduce arr1.a;
+                var minValX = min reduce arr1.a;
+                var maxValX = max reduce arr1.a;
 
-                var minVal_2 = min reduce arr2.a;
-                var maxVal_2 = max reduce arr2.a;
+                var minValY = min reduce arr2.a;
+                var maxValY = max reduce arr2.a;
 
-                var binWidth_1 = ((maxVal_1 - minVal_1):real / xBins): real;
-                var binWidth_2 = ((maxVal_2 - minVal_2):real / yBins): real;
+                var binWidth_1 = ((maxValX - minValX):real / xBins): real;
+                var binWidth_2 = ((maxValY - minValY):real / yBins): real;
 
                 for (entry_1, entry_2) in zip(arr1.a, arr2.a) {
 
-                    var binIdx = [floor((entry_1 - minVal_1) / binWidth_1):int, floor((entry_2 - minVal_2) / binWidth_2):int];
+                    var binIdx = [floor((entry_1 - minValX) / binWidth_1):int, floor((entry_2 - minValY) / binWidth_2):int];
 
-                    if (entry_1 == maxVal_1){
+                    if (entry_1 == maxValX){
                         binIdx[0] = xBins - 1;
                     }
 
-                    if (entry_2 == maxVal_2){
+                    if (entry_2 == maxValY){
                         binIdx[1] = yBins - 1;
                     }
 
@@ -111,24 +111,24 @@ module VizCalcMsg{
                 var rname = st.nextName();
                 var binCounts = st.addEntry(rname, xBins*yBins, int);
 
-                var minVal_1 = min reduce arr1.a;
-                var maxVal_1 = max reduce arr1.a;
+                var minValX = min reduce arr1.a;
+                var maxValX = max reduce arr1.a;
 
-                var minVal_2 = min reduce arr2.a;
-                var maxVal_2 = max reduce arr2.a;
+                var minValY = min reduce arr2.a;
+                var maxValY = max reduce arr2.a;
 
-                var binWidth_1 = ((maxVal_1 - minVal_1):real / xBins): real;
-                var binWidth_2 = ((maxVal_2 - minVal_2):real / yBins): real;
+                var binWidth_1 = ((maxValX - minValX):real / xBins): real;
+                var binWidth_2 = ((maxValY - minValY):real / yBins): real;
 
                 for (entry_1, entry_2) in zip(arr1.a, arr2.a) {
 
-                    var binIdx = [floor((entry_1 - minVal_1) / binWidth_1):int, floor((entry_2 - minVal_2) / binWidth_2):int];
+                    var binIdx = [floor((entry_1 - minValX) / binWidth_1):int, floor((entry_2 - minValY) / binWidth_2):int];
 
-                    if (entry_1 == maxVal_1){
+                    if (entry_1 == maxValX){
                         binIdx[0] = xBins - 1;
                     }
 
-                    if (entry_2 == maxVal_2){
+                    if (entry_2 == maxValY){
                         binIdx[1] = yBins - 1;
                     }
 
@@ -149,24 +149,24 @@ module VizCalcMsg{
                 var rname = st.nextName();
                 var binCounts = st.addEntry(rname, xBins*yBins, int);
 
-                var minVal_1 = min reduce arr1.a;
-                var maxVal_1 = max reduce arr1.a;
+                var minValX = min reduce arr1.a;
+                var maxValX = max reduce arr1.a;
 
-                var minVal_2 = min reduce arr2.a;
-                var maxVal_2 = max reduce arr2.a;
+                var minValY = min reduce arr2.a;
+                var maxValY = max reduce arr2.a;
 
-                var binWidth_1 = ((maxVal_1 - minVal_1):real / xBins): real;
-                var binWidth_2 = ((maxVal_2 - minVal_2):real / yBins): real;
+                var binWidth_1 = ((maxValX - minValX):real / xBins): real;
+                var binWidth_2 = ((maxValY - minValY):real / yBins): real;
 
                 for (entry_1, entry_2) in zip(arr1.a, arr2.a) {
 
-                    var binIdx = [floor((entry_1 - minVal_1) / binWidth_1):int, floor((entry_2 - minVal_2) / binWidth_2):int];
+                    var binIdx = [floor((entry_1 - minValX) / binWidth_1):int, floor((entry_2 - minValY) / binWidth_2):int];
 
-                    if (entry_1 == maxVal_1){
+                    if (entry_1 == maxValX){
                         binIdx[0] = xBins - 1;
                     }
 
-                    if (entry_2 == maxVal_2){
+                    if (entry_2 == maxValY){
                         binIdx[1] = yBins - 1;
                     }
 
