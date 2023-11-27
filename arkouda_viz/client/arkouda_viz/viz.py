@@ -8,7 +8,6 @@ from arkouda.dataframe import DataFrame
 from typeguard import typechecked
 from holoviews.operation.datashader import datashade as ds
 from typing import cast
-import arkouda as ak
 
 pn.extension()
 
