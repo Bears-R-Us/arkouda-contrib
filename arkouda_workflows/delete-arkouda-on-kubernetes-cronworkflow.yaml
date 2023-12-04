@@ -3,7 +3,7 @@ kind: CronWorkflow
 metadata:
   name: delete-arkouda-on-kubernetes
 spec:
-  schedule: "* 17 * * *"
+  schedule: "0 18 * * *"
   timezone: "America/New_York"   # Default to local machine timezone
   startingDeadlineSeconds: 0
   concurrencyPolicy: "Replace"      # Default to "Allow"
