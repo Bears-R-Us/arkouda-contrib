@@ -3,7 +3,7 @@ kind: CronWorkflow
 metadata:
   name: deploy-arkouda-on-kubernetes
 spec:
-  schedule: "* 07 * * *"
+  schedule: "0 07 * * *"
   timezone: "America/New_York"   # Default to local machine timezone
   startingDeadlineSeconds: 0
   concurrencyPolicy: "Replace"      # Default to "Allow"
