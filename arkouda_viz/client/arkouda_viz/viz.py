@@ -1,12 +1,26 @@
 """Module providing our plotting capabilities."""
 import holoviews as hv
+from arkouda.pdarrayclass import create_pdarray
 import panel as pn
 import panel.widgets as pnw
+from arkouda.client import generic_msg
 from arkouda.dataframe import DataFrame
 from typeguard import typechecked
 from holoviews.operation.datashader import datashade as ds
+from typing import cast
 
 pn.extension()
+
+def datashade_server(data: DataFrame, xBins: int = 100, yBins: int = 100):
+    repMsg = generic_msg(cmd="datashade_server",
+                              args={"column_1": data[data.columns[0]],
+                                    "column_2": data[data.columns[1]],
+                                    'xBins': xBins,
+                                    'yBins': yBins})
+    
+    
+    binned = create_pdarray(cast(str, repMsg)).reshape(xBins, yBins)
+    return binned
 
 
 def datashade(
