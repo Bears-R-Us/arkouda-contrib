@@ -41,26 +41,26 @@ def explore(
     initial_xrange = (ak.min(full_data[cols[0]]), ak.max(full_data[cols[0]]))
     initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
 
-    def make_data(x_range, y_range, cmap):
+    def make_data(x_range, y_range, cmap, x_var, y_var):
         if x_range is None or y_range is None or not x_range or not y_range:
             binned_data = ak.histogram2d(
-                full_data[cols[0]], full_data[cols[1]], bins=(xBin, yBin)
+                full_data[x_var], full_data[y_var], bins=(xBin, yBin)
             )
             return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
                 cmap=cmap, width=xWin, height=yWin
             )
         else:
             subset_data = full_data[
-                (full_data[cols[0]] >= x_range[0])
-                & (full_data[cols[0]] <= x_range[1])
-                & (full_data[cols[1]] >= y_range[0])
-                & (full_data[cols[1]] <= y_range[1])
+                (full_data[x_var] >= x_range[0])
+                & (full_data[x_var] <= x_range[1])
+                & (full_data[y_var] >= y_range[0])
+                & (full_data[y_var] <= y_range[1])
             ]
 
         x_span = x_range[1] - x_range[0]
         y_span = y_range[1] - y_range[0]
         binned_data = ak.histogram2d(
-            subset_data[cols[0]], subset_data[cols[1]], bins=(1000, 1000)
+            subset_data[x_var], subset_data[y_var], bins=(1000, 1000)
         )
         return hv.Image(
             binned_data[0].to_ndarray(),
@@ -69,14 +69,16 @@ def explore(
 
     class Explore(param.Parameterized):
         cmap = param.ObjectSelector(default="viridis", objects=hv.plotting.list_cmaps())
+        x_var = param.ObjectSelector(default=full_data.columns[0], objects=full_data.columns)
+        y_var = param.ObjectSelector(default=full_data.columns[1], objects=full_data.columns)
 
     params = Explore()
 
-    @pn.depends(cmap=params.param.cmap)
-    def update_plot(cmap):
+    @pn.depends(cmap=params.param.cmap, x_var=params.param.x_var, y_var=params.param.y_var)
+    def update_plot(cmap, x_var, y_var):
         stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
         dmap = hv.DynamicMap(
-            lambda x_range, y_range: make_data(x_range, y_range, cmap), streams=[stream]
+            lambda x_range, y_range: make_data(x_range, y_range, cmap, x_var, y_var), streams=[stream]
         )
 
         return dmap
