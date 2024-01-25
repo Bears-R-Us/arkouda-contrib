@@ -49,23 +49,27 @@ To mount a directory containing files to be analyzed, execute the following comm
 export ARKOUDA_IMAGE_REPO=bearsrus
 export ARKOUDA_VERSION=v2023.11.15
 export HOST_DIR=/opt/datafiles
-export CONTAINER_DIR=/app/data
+export CONTAINER_DIR=/home/jovyan
 
 docker run -it --rm -p 8888:8888 --mount type=bind,source=$HOST_DIR,target=$CONTAINER_DIR \
                     $ARKOUDA_IMAGE_REPO/arkouda-full-stack:$ARKOUDA_VERSION
 ```
 
+Important note: setting the CONTAINER\_DIR to /home/jovyan ensures the directory containing files of interest is accessible from the jupyterlab file explorer panel. 
+
 #### Launch with ipython Interface
 
-If preferred, arkouda-full-stack also enables an ipython interface to Arkouda. The corresponding docker launch
-command is as follows:
+If preferred, arkouda-full-stack also enables an ipython interface to Arkouda. The corresponding docker launch command is as follows:
 
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
 export ARKOUDA_VERSION=v2023.11.15
+export HOST_DIR=/opt/datafiles
+export CONTAINER_DIR=/home/jovyan
 
-docker run -it --rm -p 8888:8888 --entrypoint=/opt/arkouda/start-smp-arkouda-full-stack.sh \
+docker run -it --rm -p 8888:8888 --mount type=bind,source=$HOST_DIR,target=$CONTAINER_DIR \
+                    --entrypoint=/opt/arkouda/start-smp-arkouda-full-stack.sh \
                     $ARKOUDA_IMAGE_REPO/arkouda-full-stack:$ARKOUDA_VERSION
 ```
 
@@ -94,12 +98,17 @@ docker build --build-arg CHAPEL_SMP_IMAGE=$CHAPEL_SMP_IMAGE \
 
 ## Running arkouda-smp-server
 
+The arkouda-smp-server is launched as follows, optionally with a mounted directory containing files to be analyzed:
+
 ```
 # set env variables
 export ARKOUDA_IMAGE_REPO=bearsrus
 export ARKOUDA_VERSION=v2023.11.15
+export HOST_DIR=/opt/datafiles
+export CONTAINER_DIR=/opt/files
 
-docker run -it --rm -p 5555:5555 $ARKOUDA_IMAGE_REPO/arkouda-smp-server:$ARKOUDA_VERSION
+docker run -it --rm -p 5555:5555 --mount type=bind,source=$HOST_DIR,target=$CONTAINER_DIR \
+                    $ARKOUDA_IMAGE_REPO/arkouda-smp-server:$ARKOUDA_VERSION
 ```
 
 # chapel-gasnet-udp
@@ -153,7 +162,7 @@ docker build --build-arg CHAPEL_UDP_IMAGE=$CHAPEL_UDP_IMAGE \
 
 ## Launching arkouda-udp-server
 
-The arkouda-udp-server docker image is designed to be launched on Kubernetes via the bears-r-us [Helm charts](../arkouda-helm-charts).
+The arkouda-udp-server docker image is designed to be launched on Kubernetes via the bears-r-us [Helm charts](../arkouda-helm-charts) ONLY. Consequently, attempting to run the arkouda-udp-server container via ```docker run``` _will not work_.
 
 # prometheus-arkouda-exporter
 
