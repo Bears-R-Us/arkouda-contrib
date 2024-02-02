@@ -13,7 +13,7 @@ and ipython interface to Arkouda. The arkouda-full-stack image extends bearsrus/
 
 ```
 # set env variables
-export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.32.0
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.33.0
 export ARKOUDA_BRANCH_NAME=2023.11.15
 export ARKOUDA_DISTRO_NAME=v2023.11.15
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.11.15.zip
@@ -83,7 +83,7 @@ The arkouda-smp-server extends bearsrus/chapel-gasnet-smp to deliver a GASNET sm
 ## Building arkouda-smp-server
 
 ```
-export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.32.0
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.33.0
 export ARKOUDA_DISTRO_NAME=v2023.11.15
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.11.15.zip
 export ARKOUDA_BRANCH_NAME=2023.11.15
@@ -126,7 +126,7 @@ across 1..n locales. Accordingly, the chapel-gasnet-udp image provides a base im
 
 ```
 export CHPL_BASE_IMAGE=ubuntu:22.04
-export CHPL_VERSION=1.32.0
+export CHPL_VERSION=1.33.0
 export CHAPEL_UDP_IMAGE_REPO=bearsrus
 
 docker build --build-arg CHPL_BASE_IMAGE=$CHPL_BASE_IMAGE \
@@ -143,7 +143,7 @@ The arkouda-udp-server image extends bearsrus/chapel-gasnet-udp to deliver a GAS
 ## Building arkouda-udp-server
 
 ```
-export CHAPEL_UDP_IMAGE=bearsrus/chapel-gasnet-udp:1.32.0
+export CHAPEL_UDP_IMAGE=bearsrus/chapel-gasnet-udp:1.33.0
 export ARKOUDA_DISTRO_NAME=v2023.11.15
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.11.15.zip
 export ARKOUDA_BRANCH_NAME=2023.11.15
@@ -218,7 +218,7 @@ The arkouda-smp-developer image enables Arkouda developers to mount whichever di
 The arkouda-smp-developer Docker build sequence is very similar to the arkouda-smp-server build sequence, an example of which is shown below:
 
 ```
-export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.32.0
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.33.0
 export ARKOUDA_BRANCH_NAME=2023.11.15
 export ARKOUDA_DISTRO_NAME=v2023.11.15
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2023.11.15.zip
@@ -255,7 +255,7 @@ Occasionally there are 1..n breaking changes introduced into Arkouda post-releas
 An example arkouda-smp-developer master branch build is as follows:
 
 ```
-export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.32.0
+export CHAPEL_SMP_IMAGE=bearsrus/chapel-gasnet-smp:1.33.0
 export ARKOUDA_BRANCH_NAME=master
 export ARKOUDA_DISTRO_NAME=master
 export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/heads/master.zip
@@ -308,31 +308,31 @@ Shown below are example build commands. To ensure the optimal, respective perfor
 ### arkouda-full-stack
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.32.0 --image_type=arkouda-full-stack
+python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.33.0 --image_type=arkouda-full-stack
 ```
 
 ### chapel-gasnet-smp
 
 ```
-python build_docker_image.py --chapel_version=1.32.0 --image_type=chapel-gasnet-smp
+python build_docker_image.py --chapel_version=1.33.0 --image_type=chapel-gasnet-smp
 ```
 
 ### arkouda-smp-server
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.32.0 --image_type=arkouda-smp-server
+python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.33.0 --image_type=arkouda-smp-server
 ```
 
 ### chapel-gasnet-udp
 
 ```
-python build_docker_image.py --chapel_version=1.32.0 --image_type=chapel-gasnet-udp
+python build_docker_image.py --chapel_version=1.33.0 --image_type=chapel-gasnet-udp
 ```
 
 ### arkouda-udp-server
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.32.0 --image_type=arkouda-udp-server
+python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.33.0 --image_type=arkouda-udp-server
 ```
 
 ### prometheus-arkouda-exporter
@@ -344,5 +344,5 @@ python build_docker_image.py --arkouda_tag=v2023.11.15 --image_type=prometheus-a
 ### arkouda-smp-developer
 
 ```
-python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.32.0 --image_type=arkouda-smp-developer
+python build_docker_image.py --arkouda_tag=v2023.11.15 --chapel_version=1.33.0 --image_type=arkouda-smp-developer
 ```
