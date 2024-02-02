@@ -41,6 +41,8 @@ RUN mkdir object-files && \
 # Add startup script and set entrypoint
 ADD scripts/start-smp-arkouda-server.sh /opt/arkouda/start-smp-arkouda-server.sh
 ADD scripts/start-developer-container.sh /opt/arkouda/start-developer-container.sh
+RUN sudo chmod 755 /opt/arkouda/start-smp-arkouda-server.sh && \
+    sudo chmod 755 /opt/arkouda/start-developer-container.sh
 
 EXPOSE 5555
 
