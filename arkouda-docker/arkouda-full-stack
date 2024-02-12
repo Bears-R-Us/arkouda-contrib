@@ -28,8 +28,7 @@ WORKDIR /opt/arkouda
 RUN make install-deps && make
 
 # Install Arkouda python client, ipython, and jupyter
-RUN sudo python3 setup.py bdist_wheel --universal && \
-    sudo pip3 install dist/*.whl && \
+RUN sudo pip3 install -e . && \
     sudo pip3 install jupyter ipython
 
 # Remove unneeded files
