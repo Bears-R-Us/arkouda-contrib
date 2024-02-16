@@ -22,9 +22,6 @@ Dictionary
 
 
 def render_env(engine: str, width: int, height: int):
-    from bokeh.io import output_notebook
-
-    output_notebook()
     if engine in ("bokeh", "b"):
         hv.extension("bokeh")
         return dict(width=width, height=height)
@@ -78,25 +75,63 @@ def area(
                 )
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
+
+            all = pn.widgets.Checkbox(name="all")
             var = pn.widgets.Select(
                 name="variable", value=data.columns[0], options=data.columns
             )
-            all = pn.widgets.Checkbox(name="all")
+            opacity = pn.widgets.FloatSlider(
+                name="opacity", start=0.5, end=1, step=0.1, value=0.5
+            )
+            stack = pn.widgets.Checkbox(name="stack")
 
-            @pn.depends(var.param.value, all.param.value)
-            def create_figure(var, all):
+            @pn.depends(
+                var.param.value, all.param.value, opacity.param.value, stack.param.value
+            )
+            def create_figure(var, all, opacity_value, stack):
                 if all:
-                    var.disabled = True
                     overlay = hv.Overlay()
                     for column in data.columns:
                         h, b = ak.histogram(data[column], bins=bins)
-                        overlay *= hv.Area((h.to_ndarray())).opts(**opts)
-                    return overlay
+                        overlay *= hv.Area(
+                            (b[:-1].to_ndarray(), h.to_ndarray()), label=column
+                        ).opts(
+                            alpha=opacity_value,
+                            xlabel="all variables",
+                            ylabel="count",
+                            **opts,
+                        )
+                    return overlay.opts(legend_position="top_right", **opts)
+
+                elif stack:
+                    areas = []
+                    for column in data.columns:
+                        h, b = ak.histogram(data[column], bins=bins)
+                        areas.append(
+                            hv.Area((h.to_ndarray()), label=column).opts(
+                                alpha=opacity_value,
+                                xlabel="all variables",
+                                ylabel="count",
+                                **opts,
+                            )
+                        )
+                    return hv.Area.stack(hv.Overlay(areas)).opts(
+                        legend_position="top_right", **opts
+                    )
+
                 else:
                     h, b = ak.histogram(data[var], bins=bins)
-                    return hv.Area((h.to_ndarray())).opts(**opts)
+                    return hv.Area((b[:-1].to_ndarray(), h.to_ndarray())).opts(
+                        xlabel=var, ylabel="count", **opts
+                    )
 
-            widgets = pn.WidgetBox(var, all, width=200)
+            def toggle_var(event):
+                var.disabled = event.new
+                opacity.disabled = not event.new
+
+            all.param.watch(toggle_var, "value")
+
+            widgets = pn.WidgetBox(var, all, stack, opacity, width=200)
             return pn.Row(widgets, create_figure).servable("Area")
         if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
             h, b = ak.histogram(data, bins=bins)
@@ -152,7 +187,10 @@ def hist(
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
             var = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=data.columns
+                name="variable",
+                value=data.columns[0],
+                options=data.columns,
+                disabled=True,
             )
 
             @pn.depends(var.param.value)
