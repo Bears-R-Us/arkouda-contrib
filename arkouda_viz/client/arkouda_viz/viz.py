@@ -1,97 +1,94 @@
-"""Module providing our plotting capabilities."""
 import holoviews as hv
 import panel as pn
 import panel.widgets as pnw
-from arkouda.dataframe import DataFrame
+import param
 from typeguard import typechecked
-from holoviews.operation.datashader import datashade as ds
+from typing import Union
+from bokeh.io import output_notebook
+import arkouda as ak
 
+hv.extension("bokeh", logo=False)
 pn.extension()
+output_notebook()
 
 
-def datashade(
-    data: DataFrame,
-    width: int = 500,
-    height: int = 500,
-    engine: str = "bokeh",
-    point_size: int = 1,
+def explore(
+    data: Union[ak.DataFrame, tuple[ak.pdarray, ak.pdarray]] = None,
+    xBin: int = 10,
+    yBin: int = 10,
+    xWin: int = 500,
+    yWin: int = 500,
 ):
-    """Creates an interactive plot that can handle large datasets."""
-    hv.extension(engine)
+    if data is not None:
+        if isinstance(data, ak.DataFrame):
+            full_data = data
 
-    data = data.to_pandas().select_dtypes(exclude=["object"])
+        elif (
+            isinstance(data, tuple)
+            and len(data) == 2
+            and all(isinstance(item, ak.pdarray) for item in data)
+        ):
+            full_data = ak.DataFrame(data[0], data[1])
 
-    def make_data(x_col, y_col):
-        return hv.Points((data[x_col], data[y_col]), label=f"{x_col} vs {y_col}").opts(
-            size=point_size
+        else:
+            raise ValueError(
+                "Invalid data. Please provide an ak.Dataframe or [ak.pdarray, ak.pdarray]."
+            )
+    else:
+        raise ValueError("Please provide data.")
+
+    cols = full_data.columns
+    initial_xrange = (ak.min(full_data[cols[0]]), ak.max(full_data[cols[0]]))
+    initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
+
+    def make_data(x_range, y_range, cmap, x_var, y_var):
+        if x_range is None or y_range is None or not x_range or not y_range:
+            binned_data = ak.histogram2d(
+                full_data[x_var], full_data[y_var], bins=(xBin, yBin)
+            )
+            return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
+                cmap=cmap, width=xWin, height=yWin
+            )
+        else:
+            subset_data = full_data[
+                (full_data[x_var] >= x_range[0])
+                & (full_data[x_var] <= x_range[1])
+                & (full_data[y_var] >= y_range[0])
+                & (full_data[y_var] <= y_range[1])
+            ]
+
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+        binned_data = ak.histogram2d(
+            subset_data[x_var], subset_data[y_var], bins=(1000, 1000)
+        )
+        return hv.Image(
+            binned_data[0].to_ndarray(),
+            bounds=(x_range[0], y_range[0], x_range[0] + x_span, y_range[0] + y_span),
+        ).opts(cmap=cmap, width=xWin, height=yWin)
+
+    class Explore(param.Parameterized):
+        cmap = param.ObjectSelector(default="viridis", objects=hv.plotting.list_cmaps())
+        x_var = param.ObjectSelector(default=full_data.columns[0], objects=full_data.columns)
+        y_var = param.ObjectSelector(default=full_data.columns[1], objects=full_data.columns)
+
+    params = Explore()
+
+    @pn.depends(cmap=params.param.cmap, x_var=params.param.x_var, y_var=params.param.y_var)
+    def update_plot(cmap, x_var, y_var):
+        stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
+        dmap = hv.DynamicMap(
+            lambda x_range, y_range: make_data(x_range, y_range, cmap, x_var, y_var), streams=[stream]
         )
 
-    column_names = list(data.columns)
+        return dmap
 
-    color_schemes = ["fire", "bgy", "gray", "kbc", "kb", "kgy"]
-
-    x_widget = pn.widgets.Select(
-        name="x data", options=column_names, value=column_names[0]
-    )
-    y_widget = pn.widgets.Select(
-        name="y data", options=column_names, value=column_names[1]
-    )
-    color_widget = pn.widgets.Select(
-        name="color scheme", options=color_schemes, value=color_schemes[0]
-    )
-    enable_slider_checkbox = pn.widgets.Checkbox(name="remove outliers", value=False)
-    z_score_threshold_slider = pn.widgets.FloatSlider(
-        name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
-    )
-
-    @pn.depends(
-        x_widget.param.value,
-        y_widget.param.value,
-        color_widget.param.value,
-        enable_slider_checkbox.param.value,
-        z_score_threshold_slider.param.value,
-    )
-    def update_data(x_col, y_col, color_scheme, enable_slider, z_score_threshold):
-        data_points = make_data(x_col, y_col)
-
-        if enable_slider:
-            z_scores = (
-                data_points.data["y"] - data_points.data["y"].mean()
-            ) / data_points.data["y"].std()
-            data_points = data_points[abs(z_scores) < z_score_threshold]
-
-        shaded_data = ds(data_points, cmap=color_scheme).opts(
-            hv.opts.RGB(width=width, height=height)
-        )
-
-        shaded_data = shaded_data.opts(xlabel=f"{x_col}", ylabel=f"{y_col}")
-
-        z_score_threshold_slider.disabled = not enable_slider
-
-        return shaded_data
-
-    logo = "../pictures/logo.png"
-    logo_image = pn.panel(logo, width=x_widget.width, height=x_widget.height)
-    layout = pn.Row(
-        pn.Column(
-            logo,
-            x_widget,
-            y_widget,
-            color_widget,
-            enable_slider_checkbox,
-            z_score_threshold_slider,
-        ),
-        update_data,
-    )
-
-    tabs = pn.Tabs(("plot", layout))
-
-    return tabs.servable()
+    return pn.Row(params, update_plot)
 
 
 @typechecked
 def crossfilter(
-    data: DataFrame,
+    data: ak.DataFrame,
     width: int = 500,
     height: int = 500,
     engine: str = "bokeh",
