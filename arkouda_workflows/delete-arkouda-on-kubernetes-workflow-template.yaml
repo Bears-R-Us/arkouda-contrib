@@ -1,0 +1,175 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: delete-arkouda-on-kubernetes
+spec:
+  entrypoint: delete-arkouda-on-kubernetes
+  arguments:
+    parameters:
+    - name: arkouda-instance-name
+    - name: kubernetes-api-url
+    - name: arkouda-ssl-secret
+    - name: arkouda-user
+  templates:
+  - name: delete-arkouda-on-kubernetes
+    dag:
+      tasks:
+        - name: delete-arkouda-locale
+          template: delete-locale-deployment
+        - name: delete-locale-headless-service
+          template: delete-locale-headless-service
+        - name: delete-locale-ssh-service
+          template: delete-locale-ssh-service
+        - name: delete-arkouda-server
+          template: delete-server-deployment
+        - name: delete-server-headless-service
+          template: delete-server-headless-service
+        - name: delete-server-ssh-service
+          template: delete-server-ssh-service
+        - name: delete-arkouda-service
+          template: delete-arkouda-service
+        - name: delete-arkouda-metrics-service
+          template: delete-arkouda-metrics-service
+        - name: delete-arkouda-server-launch-script
+          template: delete-arkouda-server-launch-script
+        - name: delete-pod-role
+          template: delete-pod-role
+        - name: delete-pod-role-binding
+          template: delete-pod-role-binding
+        - name: delete-service-role
+          template: delete-service-role
+        - name: delete-service-role-binding
+          template: delete-service-role-binding
+        - name: delete-metrics-exporter-service
+          template: delete-metrics-exporter-service
+        
+  - name: delete-locale-deployment
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-locale
+          labels:
+            app: {{ workflow.parameters.arkouda-instance-name }}-locale
+
+  - name: delete-locale-headless-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-locale-headless
+
+  - name: delete-locale-ssh-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-locale-ssh
+
+  - name: delete-server-deployment
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-server
+          labels:
+            app: {{ workflow.parameters.arkouda-instance-name }}-server
+
+  - name: delete-server-headless-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-server-headless
+
+  - name: delete-server-ssh-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-server-ssh
+
+  - name: delete-arkouda-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}
+
+  - name: delete-arkouda-metrics-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-metrics
+
+  - name: delete-metrics-exporter-service
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter
+
+  - name: delete-arkouda-server-launch-script 
+    resource:
+      action: delete
+      manifest: |
+        kind: ConfigMap
+        apiVersion: v1
+        metadata:
+          name: arkouda-server-launch-script
+
+  - name: delete-pod-role
+    resource:
+      action: delete
+      manifest: |
+        kind: Role
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-pod
+
+  - name: delete-pod-role-binding
+    resource:
+      action: delete
+      manifest: |
+        kind: RoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-pod-binding
+
+  - name: delete-service-role
+    resource:
+      action: delete
+      manifest: |
+        kind: Role
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-service
+
+  - name: delete-service-role-binding
+    resource:
+      action: delete
+      manifest: |
+        kind: RoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-service-binding
+  
