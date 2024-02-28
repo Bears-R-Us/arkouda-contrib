@@ -23,13 +23,13 @@ Dictionary
 
 def render_env(engine: str, width: int, height: int):
     if engine in ("bokeh", "b"):
-        hv.extension("bokeh")
+        hv.extension("bokeh", inline = True)
         return dict(width=width, height=height)
     elif engine in ("plotly", "p"):
-        hv.extension("plotly")
+        hv.extension("plotly", inline = True)
         return dict(width=width, height=height)
     elif engine in ("matplotlib", "m"):
-        hv.extension("matplotlib")
+        hv.extension("matplotlib", inline = True)
         return dict(fig_inches=(5, 5))
     else:
         raise ValueError("Please provide a supported plotting engine.")
