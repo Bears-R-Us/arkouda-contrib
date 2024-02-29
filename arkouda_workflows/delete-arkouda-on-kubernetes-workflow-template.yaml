@@ -40,8 +40,14 @@ spec:
           template: delete-service-role
         - name: delete-service-role-binding
           template: delete-service-role-binding
+        - name: delete-servicemonitor-role
+          template: delete-servicemonitor-role
+        - name: delete-servicemonitor-role-binding
+          template: delete-servicemonitor-role-binding
         - name: delete-metrics-exporter-service
           template: delete-metrics-exporter-service
+        - name: delete-metrics-exporter-servicemonitor
+          template: delete-metrics-exporter-servicemonitor
         
   - name: delete-locale-deployment
     resource:
@@ -128,6 +134,15 @@ spec:
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter
 
+  - name: delete-metrics-exporter-servicemonitor
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: monitoring.coreos.com/v1
+        kind: ServiceMonitor
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
+
   - name: delete-arkouda-server-launch-script 
     resource:
       action: delete
@@ -172,4 +187,21 @@ spec:
         apiVersion: rbac.authorization.k8s.io/v1
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-service-binding
-  
+
+  - name: delete-servicemonitor-role
+    resource:
+      action: delete
+      manifest: |
+        kind: Role
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
+
+  - name: delete-servicemonitor-role-binding
+    resource:
+      action: delete
+      manifest: |
+        kind: RoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor-binding 

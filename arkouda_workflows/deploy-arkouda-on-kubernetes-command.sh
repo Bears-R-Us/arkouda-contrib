@@ -12,7 +12,9 @@ argo submit -n $ARKOUDA_NAMESPACE \
             -p arkouda-namespace=$ARKOUDA_NAMESPACE \
             -p arkouda-log-level=LogLevel.DEBUG \
             -p arkouda-user=$ARKOUDA_USER  \
-            -p metrics-polling-interval-seconds=15 \
+            -p metrics-polling-interval-seconds=$ARKOUDA_METRICS_POLLING_INTERVAL \
+	    -p prometheus-match-label="$ARKOUDA_PROMETHEUS_MATCH_LABEL" \
+	    -p launcher=$ARKOUDA_LAUNCHER \
             -p image-pull-policy=IfNotPresent \
             -p num-cpu-cores=$ARKOUDA_CPU_CORES \
             -p memory=$ARKOUDA_MEMORY \
