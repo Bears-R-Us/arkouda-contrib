@@ -3,6 +3,7 @@ import holoviews as hv
 import panel as pn
 import param
 from typing import Tuple, Union
+import numpy as np
 
 """
 Helper method for setting up the plot rendering environment.
@@ -23,13 +24,13 @@ Dictionary
 
 def render_env(engine: str, width: int, height: int):
     if engine in ("bokeh", "b"):
-        hv.extension("bokeh", inline = True)
+        hv.extension("bokeh", inline=True)
         return dict(width=width, height=height)
     elif engine in ("plotly", "p"):
-        hv.extension("plotly", inline = True)
+        hv.extension("plotly", inline=True)
         return dict(width=width, height=height)
     elif engine in ("matplotlib", "m"):
-        hv.extension("matplotlib", inline = True)
+        hv.extension("matplotlib", inline=True)
         return dict(fig_inches=(5, 5))
     else:
         raise ValueError("Please provide a supported plotting engine.")
@@ -76,19 +77,22 @@ def area(
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
 
-            all = pn.widgets.Checkbox(name="all")
-            var = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=data.columns
+            all_widget = pn.widgets.Checkbox(name="all")
+            stack_widget = pn.widgets.Checkbox(name="stack")
+            var_widget = pn.widgets.Select(
+                name="variable", value=data.columns[0], options=list(data.columns)
             )
-            opacity = pn.widgets.FloatSlider(
+            opacity_widget = pn.widgets.FloatSlider(
                 name="opacity", start=0.5, end=1, step=0.1, value=0.5
             )
-            stack = pn.widgets.Checkbox(name="stack")
 
             @pn.depends(
-                var.param.value, all.param.value, opacity.param.value, stack.param.value
+                all_widget.param.value,
+                stack_widget.param.value,
+                var_widget.param.value,
+                opacity_widget.param.value,
             )
-            def create_figure(var, all, opacity_value, stack):
+            def create_figure(all, stack, var, opacity_value):
                 if all:
                     overlay = hv.Overlay()
                     for column in data.columns:
@@ -115,8 +119,13 @@ def area(
                                 **opts,
                             )
                         )
+
+                    max_count = np.max([h.max() for h in areas])
+
                     return hv.Area.stack(hv.Overlay(areas)).opts(
-                        legend_position="top_right", **opts
+                        legend_position="top_right",
+                        ylim=(0, max_count),
+                        **opts,
                     )
 
                 else:
@@ -125,13 +134,21 @@ def area(
                         xlabel=var, ylabel="count", **opts
                     )
 
-            def toggle_var(event):
-                var.disabled = event.new
-                opacity.disabled = not event.new
+            def handle_checkbox_change(event):
+                if event.obj.name == "all":
+                    stack_widget.disabled = event.new
+                    var_widget.disabled = event.new
+                elif event.obj.name == "stack":
+                    all_widget.disabled = event.new
+                    var_widget.disabled = event.new
+                    opacity_widget.disabled = event.new
 
-            all.param.watch(toggle_var, "value")
+            all_widget.param.watch(handle_checkbox_change, "value")
+            stack_widget.param.watch(handle_checkbox_change, "value")
 
-            widgets = pn.WidgetBox(var, all, stack, opacity, width=200)
+            widgets = pn.WidgetBox(
+                var_widget, all_widget, stack_widget, opacity_widget, width=200
+            )
             return pn.Row(widgets, create_figure).servable("Area")
         if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
             h, b = ak.histogram(data, bins=bins)
@@ -187,14 +204,12 @@ def hist(
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
             var = pn.widgets.Select(
-                name="variable",
-                value=data.columns[0],
-                options=data.columns,
-                disabled=True,
+                name="variable", value=data.columns[0], options=list(data.columns)
             )
 
             @pn.depends(var.param.value)
             def create_figure(var):
+                h, b = ak.histogram(data[var], bins=bins)
                 return hv.Histogram((h.to_ndarray(), b.to_ndarray())).opts(**opts)
 
             widgets = pn.WidgetBox(var, width=200)
@@ -385,6 +400,10 @@ def explore(
         y_var = param.Selector(
             label="y-variable", default=data.columns[1], objects=data.columns
         )
+
+        x_bin = param.Integer(label="x-bin", default=xBin, bounds=(1, width))
+        y_bin = param.Integer(label="y-bin", default=yBin, bounds=(1, height))
+
         enable_slider_checkbox = pn.widgets.Checkbox(
             name="remove outliers", value=False
         )
@@ -397,16 +416,16 @@ def explore(
     initial_xrange = (ak.min(full_data[cols[0]]), ak.max(full_data[cols[0]]))
     initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
 
-    def make_data(x_range, y_range, cmap, x_var, y_var):
+    def make_data(x_range, y_range, cmap, x_var, y_var, x_bin, y_bin):
         if x_range is None or y_range is None or not x_range or not y_range:
             binned_data = ak.histogram2d(
-                full_data[x_var], full_data[y_var], bins=(xBin, yBin)
+                full_data[x_var], full_data[y_var], bins=(x_bin, y_bin)
             )
             return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
                 cmap=cmap, width=width, height=height, color_bar=True
             )
         else:
-            subset_data = data[
+            subset_data = full_data[
                 (full_data[x_var] >= x_range[0])
                 & (full_data[x_var] <= x_range[1])
                 & (full_data[y_var] >= y_range[0])
@@ -415,7 +434,7 @@ def explore(
         x_span = x_range[1] - x_range[0]
         y_span = y_range[1] - y_range[0]
         binned_data = ak.histogram2d(
-            subset_data[x_var], subset_data[y_var], bins=(1000, 1000)
+            subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
         )
         return hv.Image(
             binned_data[0].to_ndarray(),
@@ -423,12 +442,18 @@ def explore(
         ).opts(cmap=cmap, width=width, height=height, colorbar=True)
 
     @pn.depends(
-        cmap=params.param.cmap, x_var=params.param.x_var, y_var=params.param.y_var
+        cmap=params.param.cmap,
+        x_var=params.param.x_var,
+        y_var=params.param.y_var,
+        x_bin=params.param.x_bin,
+        y_bin=params.param.y_bin,
     )
-    def update(cmap, x_var, y_var):
+    def update(cmap, x_var, y_var, x_bin, y_bin):
         stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
         dmap = hv.DynamicMap(
-            lambda x_range, y_range: make_data(x_range, y_range, cmap, x_var, y_var),
+            lambda x_range, y_range: make_data(
+                x_range, y_range, cmap, x_var, y_var, x_bin, y_bin
+            ),
             streams=[stream],
         )
         return dmap
@@ -438,6 +463,8 @@ def explore(
         params.param.cmap,
         params.param.x_var,
         params.param.y_var,
+        params.param.x_bin,
+        params.param.y_bin,
         params.enable_slider_checkbox,
         params.z_score_threshold_slider,
         width=200,
