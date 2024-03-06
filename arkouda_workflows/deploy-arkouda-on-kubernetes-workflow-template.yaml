@@ -18,6 +18,8 @@ spec:
     - name: arkouda-log-level
     - name: image-pull-policy
     - name: metrics-polling-interval-seconds
+    - name: prometheus-match-label
+    - name: launcher
     - name: num-cpu-cores
     - name: memory    
     - name: chpl-mem-max
@@ -42,6 +44,11 @@ spec:
         - name: create-service-role-binding
           template: create-service-role-binding
           depends: 'create-service-role.Succeeded'
+        - name: create-servicemonitor-role
+          template: create-servicemonitor-role
+        - name: create-servicemonitor-role-binding
+          template: create-servicemonitor-role-binding
+          depends: 'create-servicemonitor-role.Succeeded'
         - name: create-server-launch-script-config-map
           template: create-server-launch-script-config-map
           depends: 'deploy-arkouda-locale.Succeeded'
@@ -56,6 +63,9 @@ spec:
           depends: 'deploy-arkouda-locale.Succeeded && create-locale-ssh-service.Succeeded && create-locale-headless-service.Succeeded'
         - name: create-metrics-exporter-service
           template: create-metrics-exporter-service
+        - name: create-servicemonitor
+          template: create-servicemonitor
+          depends: 'create-servicemonitor-role-binding.Succeeded && deploy-arkouda-server.Succeeded'
 
   - name: deploy-locale
     resource:
@@ -201,6 +211,37 @@ spec:
         roleRef:
           kind: Role
           name: {{ workflow.parameters.arkouda-instance-name }}-service
+          apiGroup: rbac.authorization.k8s.io
+
+  - name: create-servicemonitor-role
+    resource:
+      action: create
+      manifest: |
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
+        rules:
+          - apiGroups: [""]
+            resources: ["servicemonitors"]
+            verbs: ["get","watch","list","create","delete","update"]
+
+
+  - name: create-servicemonitor-role-binding
+    resource:
+      action: create
+      manifest: |
+        kind: RoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor-binding
+        subjects:
+        - kind: User
+          name: {{ workflow.parameters.arkouda-user }}
+          apiGroup: rbac.authorization.k8s.io
+        roleRef:
+          kind: Role
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
           apiGroup: rbac.authorization.k8s.io
 
   - name: create-server-launch-script-config-map
@@ -393,9 +434,37 @@ spec:
         kind: Service
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter
+          labels:
+            instance: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter 
         spec: 
           type: ClusterIP
           ports:
-            - port: 5080
+          - name: http
+            port: 5080
+            targetPort: 5080
           selector:
             app: {{ workflow.parameters.arkouda-instance-name }}-server
+
+  - name: create-servicemonitor
+    resource:
+      action: create
+      manifest: |
+        apiVersion: monitoring.coreos.com/v1
+        kind: ServiceMonitor
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
+          labels:
+            arkouda_instance: {{ workflow.parameters.arkouda-instance-name }}-server
+            launcher: {{ workflow.parameters.launcher }}
+            {{ workflow.parameters.prometheus-match-label }}
+        spec:
+          endpoints:
+            - port: http
+              interval: {{ workflow.parameters.metrics-polling-interval-seconds }}s
+              path: /metrics
+          selector:
+            matchLabels:
+              instance: {{ workflow.parameters.arkouda-instance-name }}-metrics-exporter
+          targetLabels:
+            - arkouda_instance
+            - launcher

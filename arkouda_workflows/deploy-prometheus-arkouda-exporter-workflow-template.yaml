@@ -13,10 +13,12 @@ spec:
     - name: exporter-app-name
     - name: exporter-service-name
     - name: exporter-polling-interval
+    - name: prometheus-match-label
+    - name: arkouda-launcher
     - name: arkouda-server-name
     - name: arkouda-metrics-service-host
     - name: arkouda-metrics-service-port
- 
+
   templates:
   - name: launch-prometheus-arkouda-exporter
     steps:
@@ -24,7 +26,9 @@ spec:
           template: deploy-prometheus-arkouda-exporter  
         - name: create-prometheus-arkouda-exporter-service
           template: create-exporter-service
-  
+        - name: create-prometheus-arkouda-servicemonitor
+          template: create-exporter-servicemonitor
+
   - name: deploy-prometheus-arkouda-exporter
     resource:
       action: create
@@ -86,15 +90,36 @@ spec:
         metadata:
           name: "{{ workflow.parameters.exporter-service-name }}"
           labels:
-            app: "{{ workflow.parameters.exporter-service-name }}"
-          annotations:
-            prometheus.io/path: /metrics
-            prometheus.io/port: "5080"
-            prometheus.io/scrape: "true"
+            instance: {{ workflow.parameters.exporter-service-name }}
         spec:
           type: ClusterIP
           ports:
-            - port: 5080
+            - name: http
+              port: 5080
               targetPort: 5080
           selector:
             app: "{{ workflow.parameters.exporter-app-name }}"
+
+  - name: create-exporter-servicemonitor
+    resource:
+      action: create
+      manifest: |
+        apiVersion: monitoring.coreos.com/v1
+        kind: ServiceMonitor
+        metadata:
+          name: {{ workflow.parameters.exporter-service-name }}-servicemonitor
+          labels:
+            arkouda_instance: {{ workflow.parameters.arkouda-server-name }}
+            launcher: {{ workflow.parameters.arkouda-launcher }}
+            {{ workflow.parameters.prometheus-match-label }}
+        spec:
+          endpoints:
+            - port: http
+              interval: {{ workflow.parameters.exporter-polling-interval }}s
+              path: /metrics
+          selector:
+            matchLabels:
+              instance: {{ workflow.parameters.exporter-service-name }}
+          targetLabels:
+            - arkouda_instance
+            - launcher
