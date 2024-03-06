@@ -40,7 +40,7 @@ Information regarding the Arkouda SSH and TLS secrets is [here](https://github.c
 
 #### Promethues Install
 
-For metrics-enabled AoK as well as arkouda-prometheus-exporter, a  and [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) are required. The prometheus-community has an excellent [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) Helm chart that's a convenient way to install 1..n elements of a Prometheus stack including Prometheues Server and Prometheus Operator.  
+For metrics-enabled AoK as well as arkouda-prometheus-exporter, a Prometheus Server and [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) are required. The prometheus-community has an excellent [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) Helm chart that's a convenient way to install 1..n elements of a Prometheus stack including Prometheus Server and Prometheus Operator.  
 
 #### Prometheus Scrap Target Configuration
 
