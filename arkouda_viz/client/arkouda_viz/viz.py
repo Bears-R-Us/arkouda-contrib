@@ -356,11 +356,12 @@ hv.Image().
 
 def explore(
     data: Union[ak.DataFrame, Tuple[ak.pdarray, ak.pdarray]] = None,
-    xBin: int = 10,
-    yBin: int = 10,
+    xbins: int = 100,
+    ybins: int = 100,
     engine: str = "bokeh",
     width: int = 500,
     height: int = 500,
+    background: str = "any",
 ):
     render_env(engine, width=width, height=height)
     pn.extension()
@@ -392,7 +393,10 @@ def explore(
 
     class Explore(param.Parameterized):
         cmap = param.Selector(
-            label="color map", default="turbo", objects=hv.plotting.list_cmaps()
+            label="color map",
+            objects=hv.plotting.list_cmaps(
+                reverse=False, bg=background, provider="bokeh"
+            ),
         )
         x_var = param.Selector(
             label="x-variable", default=data.columns[0], objects=data.columns
@@ -401,8 +405,8 @@ def explore(
             label="y-variable", default=data.columns[1], objects=data.columns
         )
 
-        x_bin = param.Integer(label="x-bin", default=xBin, bounds=(1, width))
-        y_bin = param.Integer(label="y-bin", default=yBin, bounds=(1, height))
+        x_bin = param.Integer(label="x-bin", default=xbins, bounds=(1, width))
+        y_bin = param.Integer(label="y-bin", default=ybins, bounds=(1, height))
 
         enable_slider_checkbox = pn.widgets.Checkbox(
             name="remove outliers", value=False
