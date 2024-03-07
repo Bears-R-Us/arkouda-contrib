@@ -150,7 +150,7 @@ spec:
         kind: ConfigMap
         apiVersion: v1
         metadata:
-          name: arkouda-server-launch-script
+          name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
 
   - name: delete-pod-role
     resource:

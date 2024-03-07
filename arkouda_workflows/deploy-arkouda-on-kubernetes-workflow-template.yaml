@@ -251,9 +251,9 @@ spec:
         kind: ConfigMap
         apiVersion: v1
         metadata:
-          name: arkouda-server-launch-script
+          name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
           labels:
-            name: arkouda-server-launch-script
+            name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
         data:
           script: |-
   
@@ -393,7 +393,7 @@ spec:
                     secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
                 - name: arkouda-server-launch-script
                   configMap:
-                    name: arkouda-server-launch-script
+                    name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
                     items:
                       - key: script
                         path: start-arkouda-server.sh
