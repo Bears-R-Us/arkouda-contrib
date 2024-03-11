@@ -347,11 +347,17 @@ width : int
     Width of the plot.
 height : int
     Height of the plot.
+background : string
+    The backround color expected for the map.
 Returns
 -------
 hv.Image().
     An image with or without a variable dropdown menu based in single or multiple columns.
 """
+
+# these are needed for explore() to work
+saved_binned_data = -1
+saved_cmap = -1
 
 
 def explore(
@@ -371,7 +377,7 @@ def explore(
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64"]
+                if dtype in ["float64", "int64", "uint64"]
             ]
             if len(numeric_columns) < 2:
                 raise ValueError(
@@ -421,29 +427,63 @@ def explore(
     initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
 
     def make_data(x_range, y_range, cmap, x_var, y_var, x_bin, y_bin):
-        if x_range is None or y_range is None or not x_range or not y_range:
+        global saved_binned_data
+        global saved_cmap
+        if saved_cmap == -1:
+            saved_cmap = cmap
+
+        if saved_binned_data == -1 or saved_cmap == cmap:
+            if x_range is None or y_range is None or not x_range or not y_range:
+                binned_data = ak.histogram2d(
+                    full_data[x_var], full_data[y_var], bins=(x_bin, y_bin)
+                )
+                saved_binned_data = binned_data
+                return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
+                    cmap=cmap, width=width, height=height, color_bar=True
+                )
+            else:
+                subset_data = full_data[
+                    (full_data[x_var] >= x_range[0])
+                    & (full_data[x_var] <= x_range[1])
+                    & (full_data[y_var] >= y_range[0])
+                    & (full_data[y_var] <= y_range[1])
+                ]
+            x_span = x_range[1] - x_range[0]
+            y_span = y_range[1] - y_range[0]
             binned_data = ak.histogram2d(
-                full_data[x_var], full_data[y_var], bins=(x_bin, y_bin)
+                subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
             )
-            return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
-                cmap=cmap, width=width, height=height, color_bar=True
-            )
+            saved_binned_data = binned_data
+
+            return hv.Image(
+                binned_data[0].to_ndarray(),
+                bounds=(
+                    x_range[0],
+                    y_range[0],
+                    x_range[0] + x_span,
+                    y_range[0] + y_span,
+                ),
+            ).opts(cmap=cmap, width=width, height=height, colorbar=True)
+
+        if saved_cmap != cmap:
+            saved_cmap = cmap
+
+        if x_range is None or y_range is None or not x_range or not y_range:
+            return hv.Image(
+                saved_binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)
+            ).opts(cmap=cmap, width=width, height=height, color_bar=True)
         else:
-            subset_data = full_data[
-                (full_data[x_var] >= x_range[0])
-                & (full_data[x_var] <= x_range[1])
-                & (full_data[y_var] >= y_range[0])
-                & (full_data[y_var] <= y_range[1])
-            ]
-        x_span = x_range[1] - x_range[0]
-        y_span = y_range[1] - y_range[0]
-        binned_data = ak.histogram2d(
-            subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
-        )
-        return hv.Image(
-            binned_data[0].to_ndarray(),
-            bounds=(x_range[0], y_range[0], x_range[0] + x_span, y_range[0] + y_span),
-        ).opts(cmap=cmap, width=width, height=height, colorbar=True)
+            x_span = x_range[1] - x_range[0]
+            y_span = y_range[1] - y_range[0]
+            return hv.Image(
+                saved_binned_data[0].to_ndarray(),
+                bounds=(
+                    x_range[0],
+                    y_range[0],
+                    x_range[0] + x_span,
+                    y_range[0] + y_span,
+                ),
+            ).opts(cmap=cmap, width=width, height=height, colorbar=True)
 
     @pn.depends(
         cmap=params.param.cmap,
