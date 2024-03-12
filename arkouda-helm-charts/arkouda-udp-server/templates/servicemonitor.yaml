@@ -1,0 +1,24 @@
+{{ if .Values.metricsExporter.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.metricsExporter.appName }}
+  labels:
+    arkouda_instance: {{ .Values.server.service.name }}
+    {{- if .Values.metricsExporter.serviceMonitor.additionalLabels }}
+      {{ toYaml .Values.metricsExporter.serviceMonitor.additionalLabels | nindent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+    - port: http
+      interval: {{ .Values.metricsExporter.serviceMonitor.pollingInterval | quote }}
+      path: /metrics
+  selector:
+    matchLabels:
+      instance: {{ .Values.metricsExporter.service.name }}
+  {{- if .Values.metricsExporter.serviceMonitor.targetLabels }}
+  targetLabels:
+    {{ toYaml .Values.metricsExporter.serviceMonitor.targetLabels | nindent 6 }}
+  {{- end }}
+{{- end }}
+

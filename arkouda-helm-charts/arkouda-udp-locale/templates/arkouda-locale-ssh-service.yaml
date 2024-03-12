@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: arkouda-locale-ssh
+  name: {{ .Values.locale.appName}}-locale-ssh
 spec:
   type: ClusterIP
   ports:
@@ -9,4 +9,4 @@ spec:
       targetPort: 22
       protocol: TCP
   selector:
-    app: arkouda-server
+    app: {{ .Values.locale.appName }}

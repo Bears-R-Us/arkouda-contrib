@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: arkouda-locale-headless
+  name: {{ .Values.locale.appName }}-locale-headless
   namespace: arkouda
 spec: 
   clusterIP: None
   selector:
-    app: arkouda-locale
+    app: {{ .Values.locale.appName }}
