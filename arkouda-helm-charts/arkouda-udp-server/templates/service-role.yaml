@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: arkouda-service-crud
+  name: {{ .Values.user.name }}-arkouda-service
 rules:
 - apiGroups: [""]
   resources: ["services","endpoints"]

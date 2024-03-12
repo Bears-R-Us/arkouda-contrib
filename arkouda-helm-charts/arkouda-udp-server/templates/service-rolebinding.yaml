@@ -1,12 +1,12 @@
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: arkouda-service-crud
+  name: {{ .Values.user.name }}-arkouda-service
 subjects:
 - kind: User
-  name: {{ .Values.user }}
+  name: {{ .Values.user.name }}
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
-  name: arkouda-service-crud
+  name: {{ .Values.user.name }}-arkouda-service
   apiGroup: rbac.authorization.k8s.io

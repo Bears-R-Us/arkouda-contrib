@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: arkouda-pod-reader
+  name: {{ .Values.user.name }}-arkouda-pod-reader
 rules:
 - apiGroups: [""]
   resources: ["pods"]

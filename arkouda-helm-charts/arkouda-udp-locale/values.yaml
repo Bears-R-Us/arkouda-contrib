@@ -3,16 +3,16 @@
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.09.06
+releaseVersion: v2024.02.02
 imagePullPolicy: IfNotPresent
 
 resources:
   limits:
     cpu: 2000m
-    memory: 4096Mi
+    memory: 3072Mi
   requests:
     cpu: 2000m
-    memory: 2048Mi
+    memory: 3072Mi
 
 ################ Arkouda Locale Configuration ################
 

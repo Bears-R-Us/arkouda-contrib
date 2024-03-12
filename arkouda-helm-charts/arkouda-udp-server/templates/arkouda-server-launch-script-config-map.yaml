@@ -8,20 +8,51 @@ metadata:
     name: arkouda-server-launch-script
 data:
   script: |-
-  
+
      #!/bin/bash
      sudo service ssh start
 
-     mkdir ~/.ssh/
-     sudo cp ~/ssh-keys/id_rsa* ~/.ssh/
-     sudo chown -R ubuntu:ubuntu ~/.ssh/*
-     chmod -R 600 ~/.ssh/*
+     # Set env variables need to get arkouda-locale pod IP addresses and start arkouda
+     sudo sh -c "echo 'K8S_HOST=$K8S_HOST' >> /etc/environment"
+     sudo sh -c "echo 'KEY_FILE=$KEY_FILE' >> /etc/environment"
+     sudo sh -c "echo 'CERT_FILE=$CERT_FILE' >> /etc/environment"
+     sudo sh -c "echo 'GASNET_MASTERIP=$MY_IP' >> /etc/environment"
+     sudo sh -c "echo 'NAMESPACE=$NAMESPACE' >> /etc/environment"
+     sudo sh -c "echo 'EXTERNAL_SERVICE_NAME=$EXTERNAL_SERVICE_NAME' >> /etc/environment"
+     sudo sh -c "echo 'METRICS_SERVICE_NAME=$METRICS_SERVICE_NAME' >> /etc/environment"
 
-     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+     # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
+     LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+     sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
-     export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')"
-     export SSH_SERVERS="$MY_IP $LOCALE_IPS"
+     # Add group corresponding to gid and user
+     sudo groupadd -g {{ .Values.group.gid }} {{ .Values.group.name }}
+     sudo groupadd {{ .Values.user.name }}
 
+     # Add user with home directory
+     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid }} -g {{ .Values.group.gid }}
+
+     # Add user to user group
+     sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
+
+     # Add SSH certificate 
+     sudo -u {{ .Values.user.name }} mkdir /home/{{ .Values.user.name }}/.ssh
+     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/{{ .Values.user.name }}/.ssh/
+     sudo chown -R {{ .Values.user.name }}:{{ .Values.user.name }} /home/{{ .Values.user.name }}/.ssh
+
+     # Start arkouda_server as the configured user
+     sudo -u {{ .Values.user.name }} bash <<EOF
+
+     # Change ssh cert file permissions to 600 as required by SSH client
+     chmod -R 600 /home/{{ .Values.user.name }}/.ssh/id_rsa \ 
+
+     # Add public cert to authorized keys to enable GASNET SSH spawner
+     cat /home/{{ .Values.user.name }}/.ssh/id_rsa.pub > /home/{{ .Values.user.name }}/.ssh/authorized_keys \
+
+     # Generate list of arkouda-server and arkouda-locale IP addresses 
+     export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
+
+     # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
      {{- if eq .Values.server.metrics.collectMetrics true }}
      /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
                                                       --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
@@ -33,3 +64,4 @@ data:
                                                       --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
                                                       --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
      {{- end }}
+     EOF

@@ -3,27 +3,33 @@
 resources:
   limits:
     cpu: 2000m
-    memory: 4096Mi
+    memory: 3072Mi
   requests:
     cpu: 2000m
-    memory: 2048Mi
+    memory: 3072Mi
 
 ######################## Pod Settings ########################
 
 imageRepository: bearsrus
-releaseVersion: v2023.09.06
+releaseVersion: v2024.02.02
 imagePullPolicy: IfNotPresent
 
 ################ Arkouda Driver Configuration ################
 
-user: # the Kubernetes user that accesses the Kubernetes API
+user:
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: "" # uid of user running arkouda
+
+group:
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
 
 server: 
-  totalNumLocales: # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
+  totalNumLocales: 3 # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
   authenticate: false # whether to require token authentication
   verbose: true # enable verbose logging
-  threadsPerLocale: # number of cpu cores to be used per locale
-  memMax: # maximum bytes of RAM to be used per locale
+  threadsPerLocale: 2 # number of cpu cores to be used per locale
+  memMax: 2000000000 # maximum bytes of RAM to be used per locale
   memTrack: true # needs to be true to enable memory metrics and memory use forecasting
   logLevel: LogLevel.DEBUG
   service:
@@ -31,7 +37,7 @@ server:
     nodeport: # if service type is Nodeport
     name: # k8s service name
   metrics:
-    collectMetrics: # whether to collect metrics and make them available via k8s service
+    collectMetrics: true # whether to collect metrics and make them available via k8s service
     service:
       name: # k8s service name for the Arkouda metrics service endpoint
 
@@ -45,17 +51,17 @@ external:
     path: /arkouda-files # pod directory path, must match arkouda-udp-locale
     hostPath: # host machine path, must match arkouda-udp-locale
   k8sHost: # result of kubectl cluster-info command
-  namespace: # namespace Arkouda will register service
+  namespace: arkouda # namespace Arkouda will register service
   service: 
     name: # k8s service name Arkouda will register, defaults to arkouda
 
 metricsExporter:
   imageRepository: bearsrus
-  releaseVersion: v2023.09.06 # prometheus-arkouda-exporter release version
+  releaseVersion: v2024.02.02 # prometheus-arkouda-exporter release version
   imagePullPolicy: IfNotPresent
   service:
     name: # prometheus-arkouda-exporter service name
-  pollingIntervalSeconds: 5
+  pollingIntervalSeconds: 30
 
 secrets:
   tls: # name of tls secret used to access Kubernetes API
