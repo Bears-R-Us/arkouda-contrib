@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ .Values.server.appName }}
+  name: {{ .Values.server.name }}-server
   labels: 
-    app: {{ .Values.server.appName }}
+    app: {{ .Values.server.name }}-server
 spec:
       restartPolicy: Never
       containers:
@@ -47,7 +47,6 @@ spec:
           ports:
           - containerPort: 5555
           - containerPort: 22
-            hostPort: 25
           volumeMounts:
           - name: tls
             mountPath: "/etc/ssl/arkouda"
@@ -94,15 +93,15 @@ spec:
             - name: NAMESPACE
               value: {{ .Values.external.namespace }}
             - name: APP_NAME
-              value: {{ .Values.locale.appName | quote }}
+              value: {{ .Values.locale.name | quote }}
             - name: ARKOUDA_CLIENT_MODE
               value: API
             - name: POD_METHOD
               value: {{ .Values.locale.podMethod | quote}}
             - name: EXTERNAL_SERVICE_NAME
-              value: {{ .Values.external.externalServiceName }}
+              value: {{ .Values.server.service.name }}
             - name: EXTERNAL_SERVICE_PORT
-              value: {{ .Values.external.externalServicePort | quote}}
+              value: {{ .Values.server.service.port | quote}}
             - name: EXTERNAL_SERVICE_TARGET_PORT
               value: '5555'
             - name: LOG_LEVEL  
@@ -129,7 +128,7 @@ spec:
         {{- end }}
         - name: arkouda-server-launch-script
           configMap:
-            name: {{ .Values.server.appName }}-server-launch-script
+            name: {{ .Values.server.name }}-server-launch-script
             items:
              - key: script
                path: start-arkouda-server.sh

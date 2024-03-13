@@ -2,7 +2,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ .Values.metricsExporter.appName }}
+  name: {{ .Values.metricsExporter.name }}
   labels:
     arkouda_instance: {{ .Values.server.service.name }}
     {{- if .Values.metricsExporter.serviceMonitor.additionalLabels }}
@@ -15,7 +15,7 @@ spec:
       path: /metrics
   selector:
     matchLabels:
-      instance: {{ .Values.metricsExporter.service.name }}
+      instance: {{ .Values.metricsExporter.name }}
   {{- if .Values.metricsExporter.serviceMonitor.targetLabels }}
   targetLabels:
     {{ toYaml .Values.metricsExporter.serviceMonitor.targetLabels | nindent 6 }}

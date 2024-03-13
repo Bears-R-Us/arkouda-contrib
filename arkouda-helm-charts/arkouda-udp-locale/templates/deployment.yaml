@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: arkouda-locale
+  name: {{ .Values.locale.name }}-locale
 spec:
   replicas: {{ .Values.locale.numLocales }}
   selector:
     matchLabels:
-      app: {{ .Values.locale.appName }}
+      app: {{ .Values.locale.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.locale.appName }}
-        name: {{ .Values.locale.appName }}
+        app: {{ .Values.locale.name }}
+        name: {{ .Values.locale.name }}
     spec:
       containers:
         - name: arkouda-locale
@@ -27,7 +27,6 @@ spec:
           command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
           ports:
           - containerPort: 22
-            hostPort: 25
           volumeMounts:
           - name: tls
             mountPath: "/etc/ssl/arkouda"
@@ -65,7 +64,7 @@ spec:
         {{- end }}
         - name: arkouda-locale-launch-script
           configMap:
-            name: {{ .Values.locale.appName }}-locale-launch-script
+            name: {{ .Values.locale.name }}-locale-launch-script
             items:
              - key: script
                path: start-arkouda-locale.sh
