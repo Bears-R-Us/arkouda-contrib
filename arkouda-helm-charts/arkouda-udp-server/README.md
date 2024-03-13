@@ -155,69 +155,130 @@ kubectl create secret generic arkouda-ssh --from-file=~/.ssh/id_rsa --from-file=
 
 ## Configuration
 
-The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml).
+The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml) file.
 
-### values.yaml
+The releaseVersion parameter (Arkouda tag) and imagePullPolicy are set at the top of the Pod Settings section.
 
-#### user
+### resources
 
-Ther user value is the Kubernetes user bound to the TLS secret as well as the Roles discussed
-above via the corresponding RoleBindings.
-
-#### server
+The resource request and limit parameters are specified in the resources element of the Pod Settings section:
 
 ```
-server:
-  totalNumLocales: # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
-  authenticate: # whether to require token authentication
-  verbose: # enable verbose logging
-  memTrack: true
-  threadsPerLocale: # number of cpu cores to be used per locale
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2024Mi
+  requests:
+    cpu: 1000m
+    memory: 2024Mi
+```
+
+### server
+
+```
+server: 
+  numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  authenticate: false # whether to require token authentication
+  verbose: false # enable verbose logging
+  memTrack: true # enable memory tracking (required for memMax and metrics export)
   memMax: # maximum bytes of RAM to be used per locale
-  logLevel: LogLevel.INFO
+  threadsPerLocale: # number of cpu cores to be used per locale
+  logLevel: LogLevel.DEBUG # logging level
+  name: # k8s app name
   service:
-    type: # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
-    port: # service port Arkouda is listening on, defaults to 5555
-    nodeport: # if service type is Nodeport
-    name: # service name
+    type: ClusterIP
+    port: 5555 # Arkouda k8s service port
+    name: # k8s service name for Arkouda server
   metrics:
-    collectMetrics: # whether to collect metrics and make them available via  k8s service
+    collectMetrics: true # indicates whether to collecte metrcis
     service:
-      name: # k8s service name for the Arkouda metrics service endpoint
-      port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
+      name: # service name for Arkouda metrics service endpoint
+      port: 5556
 ```
 
-#### external
+### locale
+
+```
+locale:
+  name: # arkouda-udp-locale app name used to find locale IP addresses
+  podMethod: GET_POD_IPS 
+```
+
+### external
+
+The external section encapsulates the parameters for Arkouda registering with Kubernetes.
 
 ```
 external:
-  persistence:
-    enabled: false
-    path: /opt/locale # pod directory path DO NOT CHANGE
-    hostPath: # host machine path
-  k8sHost:
+  k8sHost: # Kubernetes API url used to register service(s)
   namespace: # namespace Arkouda will register service
-  service:
-    name: # k8s service name Arkouda will register
-    port: # k8s service port Arkouda will register, defaults to 5555
 ```
 
-#### metricsExporter
+### persistence
+
+The persistence section configures the container and host paths that, if persistence is enabled, enables users to write out Arkouda arrays to files:
+
+```
+persistence:
+  enabled: false # indicates whether files can be written to/read from the host system
+  containerPath: /arkouda-files # container directory for reading/writing Arkouda files
+  hostPath: /mnt/data/arkouda-files # host directory for reading/writing Arkouda files
+```
+
+### metricsExporter
 
 The metricsExporter section configures the embedded prometheus-arkouda-exporter which is deployed if server.metrics.collectMetrics = true.
 
 ```
 metricsExporter:
-  imageRepository: bearsrus
-  releaseVersion: # prometheus-arkouda-exporter release version
+  name: # k8s prometheus-arkouda-exporter app name
+  releaseVersion: v2024.02.02 # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  service:
-    name: # prometheus-arkouda-exporter service name
-    port: # prometheus-arkouda-exporter service port, defaults to 5080
-  pollingIntervalSeconds: 5
+  #service:
+  #  name: project-a-arkouda-exporter # prometheus-arkouda-exporter service name
+  pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
+  serviceMonitor: 
+    enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
+    pollingInterval: 15s
+    additionalLabels:
+      launcher: kubernetes
+      release: kube-stack
+    targetLabels:
+      - arkouda_instance
+      - launcher
 ```
 
 The prometheus-arkouda-exporter registers as a Prometheus scrape target via the Prometheus [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md).
+
+### user
+
+The name and the uid for the user will starting Arkouda is configured in the user section. 
+
+```
+user:
+  name: # name of user running arkouda
+  uid: # uid of user running arkou
+```
+
+### group
+
+The name and gid corresponding the user Arkouda is running as. The gid is normally used to enable writing Arkouda files to common-use directories:
+
+```
+group:
+  name: # name of group user needs to be a member of to execute host commands
+  gid: # gid of group user needs to be a member of to execute host commands
+```
+
+### secrets
+
+The tls and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberetes API on startup are encapsulated in the secrets.tls and secrets.ssh parameters:
+
+```
+secrets:
+  tls: # name of tls secret used to access Kubernetes API
+  ssh: # name of ssh secret used to launch Arkouda locales
+```
 
 ## Helm Install Command
 
