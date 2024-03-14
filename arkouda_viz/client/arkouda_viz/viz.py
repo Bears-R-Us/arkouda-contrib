@@ -420,6 +420,13 @@ def explore(
         z_score_threshold_slider = pn.widgets.FloatSlider(
             name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
         )
+        status = pn.indicators.LoadingSpinner(size=50, value=False, name="Idle")
+
+        @param.depends("cmap", "x_var", "y_var", "x_bin", "y_bin", watch=True)
+        def _update_status(self):
+            self.status.name = "Calculating..."
+            self.status.value = True
+            self.status.color = "primary"
 
     params = Explore()
     cols = full_data.columns
@@ -438,7 +445,7 @@ def explore(
                     full_data[x_var], full_data[y_var], bins=(x_bin, y_bin)
                 )
                 saved_binned_data = binned_data
-                return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
+                img = hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
                     cmap=cmap, width=width, height=height, color_bar=True
                 )
             else:
@@ -454,8 +461,7 @@ def explore(
                 subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
             )
             saved_binned_data = binned_data
-
-            return hv.Image(
+            img = hv.Image(
                 binned_data[0].to_ndarray(),
                 bounds=(
                     x_range[0],
@@ -469,13 +475,13 @@ def explore(
             saved_cmap = cmap
 
         if x_range is None or y_range is None or not x_range or not y_range:
-            return hv.Image(
-                saved_binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)
-            ).opts(cmap=cmap, width=width, height=height, color_bar=True)
+            img = hv.Image(saved_binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
+                cmap=cmap, width=width, height=height, color_bar=True
+            )
         else:
             x_span = x_range[1] - x_range[0]
             y_span = y_range[1] - y_range[0]
-            return hv.Image(
+            img = hv.Image(
                 saved_binned_data[0].to_ndarray(),
                 bounds=(
                     x_range[0],
@@ -484,6 +490,10 @@ def explore(
                     y_range[0] + y_span,
                 ),
             ).opts(cmap=cmap, width=width, height=height, colorbar=True)
+        params.status.value = True
+        params.status.color = "success"
+        params.status.name = "Rendering..."
+        return img
 
     @pn.depends(
         cmap=params.param.cmap,
@@ -494,12 +504,23 @@ def explore(
     )
     def update(cmap, x_var, y_var, x_bin, y_bin):
         stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
+
+        def update_status(x_range, y_range):
+            params.status.name = "Calculating..."
+            params.status.value = True
+            params.status.color = "primary"
+
+        stream.add_subscriber(update_status)
+
         dmap = hv.DynamicMap(
             lambda x_range, y_range: make_data(
                 x_range, y_range, cmap, x_var, y_var, x_bin, y_bin
             ),
             streams=[stream],
         )
+        params.status.value = True
+        params.status.color = "success"
+        params.status.name = "Rendering..."
         return dmap
 
     widget_column = pn.Column(
@@ -511,6 +532,7 @@ def explore(
         params.param.y_bin,
         params.enable_slider_checkbox,
         params.z_score_threshold_slider,
+        params.status,
         width=200,
     )
     return pn.Row(widget_column, update)
