@@ -49,12 +49,13 @@ persistence:
 
 ### user
 
-The name and the uid for the user will starting Arkouda is configured in the user section. 
+The name and the uid for the user running Arkouda if user-specific Arkouda is enabled. This setting is important if users wish to write Arkouda arrays out to Parquet or HDF5 as directory permissions require.
 
 ```
 user:
-  name: # name of user running arkouda
-  uid: # uid of user running arkou
+  enabled: false # indicates whether to run Arkouda as a specified user
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
 ```
 
 ### group
@@ -63,8 +64,9 @@ The name and gid corresponding the user Arkouda is running as. The gid is normal
 
 ```
 group:
-  name: # name of group user needs to be a member of to execute host commands
-  gid: # gid of group user needs to be a member of to execute host commands
+  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
 ```
 
 ### secrets

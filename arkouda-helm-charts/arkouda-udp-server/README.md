@@ -231,18 +231,15 @@ The metricsExporter section configures the embedded prometheus-arkouda-exporter 
 
 ```
 metricsExporter:
-  name: # k8s prometheus-arkouda-exporter app name
+  name: # Kubernetes app and server name for prometheus-arkouda-exporter
   releaseVersion: v2024.02.02 # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  #service:
-  #  name: project-a-arkouda-exporter # prometheus-arkouda-exporter service name
   pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
-  serviceMonitor: 
+  serviceMonitor:
     enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
     pollingInterval: 15s
     additionalLabels:
       launcher: kubernetes
-      release: kube-stack
     targetLabels:
       - arkouda_instance
       - launcher
@@ -252,12 +249,13 @@ The prometheus-arkouda-exporter registers as a Prometheus scrape target via the 
 
 ### user
 
-The name and the uid for the user will starting Arkouda is configured in the user section. 
+The name and the uid for the user running Arkouda if user-specific Arkouda is enabled. This setting is important if users wish to write Arkouda arrays out to Parquet or HDF5 as directory permissions require. 
 
 ```
 user:
-  name: # name of user running arkouda
-  uid: # uid of user running arkou
+  enabled: false # indicates whether to run Arkouda as a specified user
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
 ```
 
 ### group
@@ -266,8 +264,9 @@ The name and gid corresponding the user Arkouda is running as. The gid is normal
 
 ```
 group:
-  name: # name of group user needs to be a member of to execute host commands
-  gid: # gid of group user needs to be a member of to execute host commands
+  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
 ```
 
 ### secrets
