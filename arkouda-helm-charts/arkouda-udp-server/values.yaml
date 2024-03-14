@@ -16,59 +16,58 @@ imagePullPolicy: Always
 ################ Arkouda Server Configuration ################
 
 server: 
-  numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  numLocales: 3  # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
   authenticate: false # whether to require token authentication
   verbose: false # enable verbose logging
   memTrack: true # enable memory tracking (required for memMax and metrics export)
-  memMax: # maximum bytes of RAM to be used per locale
-  threadsPerLocale: # number of cpu cores to be used per locale
+  memMax: 1000000000 # maximum bytes of RAM to be used per locale
+  threadsPerLocale: 2 # number of cpu cores to be used per locale
   logLevel: LogLevel.DEBUG # logging level
-  name: # k8s app name
+  name: project-a
   service:
     type: ClusterIP
     port: 5555 # Arkouda k8s service port
-    name: # k8s service name for Arkouda server
+    name: project-a # k8s service name for Arkouda server
   metrics:
     collectMetrics: true # indicates whether to collecte metrcis
     service:
-      name: # service name for Arkouda metrics service endpoint
+      name: project-a-metrics # service name for Arkouda metrics service endpoint
       port: 5556
 
 locale:
-  name: # arkouda-udp-locale app name used to find locale IP addresses
+  name: project-a # arkouda-udp-locale app name used to find locale IP addresses
   podMethod: GET_POD_IPS 
 
 external:
-  k8sHost: # Kubernetes API url used to register service(s)
-  namespace: # namespace Arkouda will register service
+  k8sHost: https://10.114.89.224:6443 # Kubernetes API url used to register service(s)
+  namespace: arkouda # namespace Arkouda will register service
 
 persistence:
-  enabled: false # indicates whether files can be written to/read from the host system
+  enabled: true # indicates whether files can be written to/read from the host system
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
   hostPath: /mnt/data/arkouda-files # host directory for reading/writing Arkouda files
 
 metricsExporter:
-  name: # k8s prometheus-arkouda-exporter app name
+  name: # Kubernetes app and server name for prometheus-arkouda-exporter
   releaseVersion: v2024.02.02 # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  #service:
-  #  name: project-a-arkouda-exporter # prometheus-arkouda-exporter service name
   pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
   serviceMonitor: 
     enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
     pollingInterval: 15s
     additionalLabels:
       launcher: kubernetes
-      release: kube-stack
     targetLabels:
       - arkouda_instance
       - launcher
 
 user:
+  enabled: false # indicates whether to run Arkouda as a specified user
   name: # name of user running arkouda and CN for corresponding secret for rolebindings
-  uid: # uid of user running arkouda
+  uid: # uid of user running Arkouda
 
 group:
+  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 

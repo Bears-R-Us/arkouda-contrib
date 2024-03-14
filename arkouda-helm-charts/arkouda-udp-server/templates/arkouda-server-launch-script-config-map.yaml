@@ -22,32 +22,41 @@ data:
      sudo sh -c "echo 'METRICS_SERVICE_NAME=$METRICS_SERVICE_NAME' >> /etc/environment"
 
      # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
-     LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+     LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py \ 
+                 '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
      sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
+     {{- if eq .Values.group.enabled true }}
      # Add group corresponding to gid and user
      sudo groupadd -g {{ .Values.group.gid }} {{ .Values.group.name }}
      sudo groupadd {{ .Values.user.name }}
+     {{- end }}
 
+     {{- if eq .Values.user.enabled true }} 
      # Add user with home directory
      sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid }} -g {{ .Values.group.gid }}
 
      # Add user to user group
      sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
 
+     export USER={{ .Values.user.name }}
+     {{- else }}
+     export USER=ubuntu
+     {{- end }}
+     echo $USER
      # Add SSH certificate 
-     sudo -u {{ .Values.user.name }} mkdir /home/{{ .Values.user.name }}/.ssh
-     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/{{ .Values.user.name }}/.ssh/
-     sudo chown -R {{ .Values.user.name }}:{{ .Values.user.name }} /home/{{ .Values.user.name }}/.ssh
-
+     sudo -u $USER mkdir /home/$USER/.ssh
+     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
+     sudo chown -R $USER:$USER /home/$USER/.ssh
+     sudo ls -ltr  /home/$USER/.ssh
      # Start arkouda_server as the configured user
-     sudo -u {{ .Values.user.name }} bash <<EOF
+     sudo -u $USER bash <<EOF
 
      # Change ssh cert file permissions to 600 as required by SSH client
-     chmod -R 600 /home/{{ .Values.user.name }}/.ssh/id_rsa \ 
+     chmod -R 600 /home/$USER/.ssh/id_rsa \ 
 
      # Add public cert to authorized keys to enable GASNET SSH spawner
-     cat /home/{{ .Values.user.name }}/.ssh/id_rsa.pub > /home/{{ .Values.user.name }}/.ssh/authorized_keys \
+     cat /home/$USER/.ssh/id_rsa.pub > /home/$USER/.ssh/authorized_keys \
 
      # Generate list of arkouda-server and arkouda-locale IP addresses 
      export SSH_SERVERS="$MY_IP $LOCALE_IPS" \

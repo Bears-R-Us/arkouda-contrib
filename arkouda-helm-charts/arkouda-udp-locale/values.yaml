@@ -16,23 +16,25 @@ resources:
 ################ Arkouda Locale Configuration ################
 
 locale: 
-  numLocales: # number of arkouda-udp-locale pods
+  numLocales: 2 # number of arkouda-udp-locale pods
   memTrack: true
   name: # Kubernetes app name used by arkouda-udp-server for pod discovery
-  threadsPerLocale: # number of cpu cores assigned to each Arkouda locale
+  threadsPerLocale: 2 # number of cpu cores assigned to each Arkouda locale
 
 persistence: 
   enabled: false
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
-  hostPath: /mnt/data/arkouda-files # host directory for reading/writing Arkouda files
+  hostPath: # host directory for reading/writing Arkouda files
 
 user:
-  name: # name of user running arkouda
-  uid: # uid of user running arkouda
+  enabled: false # indicates whether to run Arkouda as a specified user
+  name: # name of user running Arkouda
+  uid: # uid of user running Arkouda
 
 group:
+  enabled: false
   name: # name of group user needs to be a member of to execute host commands
-  gid: # gid of group user needs to be a member of to execute host commands
+  gid: # gid of group Arkouda user needs to be a member of to execute host commands
 
 secrets:
   tls: # name of tls secret used to access Kubernetes API

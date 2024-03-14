@@ -10,23 +10,31 @@ data:
      #!/bin/bash
      sudo service ssh start
 
-     # Add group corresponding to gid
+     {{- if eq .Values.group.enabled true }}
+     # Add group corresponding to gid and user
      sudo groupadd -g {{ .Values.group.gid }} {{ .Values.group.name }}
      sudo groupadd {{ .Values.user.name }}
+     {{- end }}
 
+     {{- if eq .Values.user.enabled true }}
      # Add user with home directory
      sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid }} -g {{ .Values.group.gid }}
 
      # Add user to user group
      sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
 
-     # Add SSH certificate
-     sudo -u {{ .Values.user.name }} mkdir /home/{{ .Values.user.name }}/.ssh
-     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/{{ .Values.user.name }}/.ssh/
-     sudo chown -R {{ .Values.user.name }}:{{ .Values.user.name }} /home/{{ .Values.user.name }}/.ssh
+     export USER={{ .Values.user.name }}
+     {{- else }}
+     export USER=ubuntu
+     {{- end }}
 
-     # Configure arkouda locale SSH for the configured user
-     sudo -u {{ .Values.user.name }} bash <<EOF
+     # Add SSH certificate 
+     sudo -u $USER mkdir /home/$USER/.ssh
+     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
+     sudo chown -R $USER:$USER /home/$USER/.ssh
+
+     # Start arkouda_server as the configured user
+     sudo -u $USER bash <<EOF
 
      chmod -R 600 ~/.ssh/* \
 
