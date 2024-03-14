@@ -56,7 +56,7 @@ metricsExporter:
     enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
     pollingInterval: 15s
     additionalLabels:
-      launcher: kubernetes
+      launcher: kubernetes # labels that enable Prometheus to discover Arkouda ServiceMonitor
     targetLabels:
       - arkouda_instance
       - launcher
