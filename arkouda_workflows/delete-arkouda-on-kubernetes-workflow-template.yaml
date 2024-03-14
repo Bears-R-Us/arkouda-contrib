@@ -143,7 +143,7 @@ spec:
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
 
-  - name: delete-arkouda-server-launch-script 
+  - name: delete-arkouda-server-launch-script
     resource:
       action: delete
       manifest: |
@@ -151,6 +151,8 @@ spec:
         apiVersion: v1
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
+          labels:
+            name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
 
   - name: delete-pod-role
     resource:
