@@ -6,7 +6,16 @@ spec:
   entrypoint: deploy-arkouda-on-kubernetes
   arguments:
     parameters:
+    - name: kubernetes-user
+      value: arkouda
     - name: arkouda-user
+      value: ubuntu
+    - name: arkouda-uid
+      value: 1000
+    - name: arkouda-group
+      value: ubuntu
+    - name: arkouda-gid
+      value: 1000
     - name: arkouda-release-version
     - name: arkouda-instance-name
     - name: arkouda-ssl-secret
@@ -17,19 +26,28 @@ spec:
     - name: arkouda-namespace
     - name: arkouda-log-level
     - name: image-pull-policy
+    - name: mem-track
+      value: true
+    - name: collect-metrics
+      value: true
     - name: metrics-polling-interval-seconds
+      value: 30
     - name: prometheus-match-label
     - name: launcher
     - name: num-cpu-cores
     - name: memory    
     - name: chpl-mem-max
     - name: chpl-num-threads-per-locale
+      value: 2
   templates:
   - name: deploy-arkouda-on-kubernetes
     dag:
       tasks:
+        - name: create-locale-launch-script-config-map
+          template: create-locale-launch-script-config-map
         - name: deploy-arkouda-locale
           template: deploy-locale
+          depends: 'create-locale-launch-script-config-map.Succeeded'
         - name: create-locale-headless-service
           template: create-locale-headless-service
         - name: create-locale-ssh-service
@@ -67,6 +85,58 @@ spec:
           template: create-servicemonitor
           depends: 'create-servicemonitor-role-binding.Succeeded && deploy-arkouda-server.Succeeded'
 
+  - name: create-locale-launch-script-config-map
+    resource:
+      action: create
+      manifest: |
+        kind: ConfigMap
+        apiVersion: v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-locale-launch-script
+          labels:
+            name: {{ workflow.parameters.arkouda-instance-name }}-locale-launch-script
+        data:
+           script: |-
+
+             #!/bin/bash
+             sudo service ssh start
+
+             export USER={{ workflow.parameters.arkouda-user }}
+             export GROUP={{ workflow.parameters.arkouda-group }}
+
+             if [[ "$GROUP" != 'ubuntu' ]]; then
+             # Add group corresponding to gid
+             sudo groupadd -g {{ workflow.parameters.arkouda-gid }} {{ workflow.parameters.arkouda-group }}
+             fi
+
+             if [[ "$USER" != 'ubuntu' ]]; then
+             # Add user with home directory
+             sudo useradd {{ workflow.parameters.arkouda-user }} -m -u {{ workflow.parameters.arkouda-uid }} -g {{ workflow.parameters.arkouda-gid }}
+
+             # Add user group
+             sudo groupadd {{ workflow.parameters.arkouda-user }}
+
+             # Add user to user group
+             sudo adduser {{ workflow.parameters.arkouda-user }} {{ workflow.parameters.arkouda-user }}
+             fi
+
+             # Add SSH certificate 
+             sudo -u $USER mkdir /home/$USER/.ssh
+             sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
+             sudo chown -R $USER:$USER /home/$USER/.ssh
+
+             # Start arkouda_locale as the configured user
+             sudo -u $USER bash <<EOF
+
+             # Change ssh cert file permissions to 600 as required by SSH client
+             chmod -R 600 /home/$USER/.ssh/id_rsa \
+
+             # Add public cert to authorized keys to enable GASNET SSH spawner
+             cat /home/$USER/.ssh/id_rsa.pub > /home/$USER/.ssh/authorized_keys
+
+             /bin/bash -c -- "while true; do sleep 600; done;"
+             EOF
+
   - name: deploy-locale
     resource:
       action: create
@@ -91,7 +161,7 @@ spec:
                 - name: arkouda-udp-locale
                   image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
                   imagePullPolicy: IfNotPresent
-                  command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
+                  command: [ "bash", "/opt/arkouda/start-arkouda-locale.sh" ]
                   ports:
                   - containerPort: 22
                   resources:
@@ -105,7 +175,10 @@ spec:
                     - name: ssl
                       mountPath: "/etc/ssl/arkouda"
                     - name: ssh
-                      mountPath: "/home/ubuntu/ssh-keys"      
+                      mountPath: "/home/ubuntu/ssh-keys"
+                    - name: arkouda-locale-launch-script
+                      mountPath: /opt/arkouda/start-arkouda-locale.sh
+                      subPath: start-arkouda-locale.sh
                   env:
                     - name: MY_IP
                       valueFrom:
@@ -114,7 +187,7 @@ spec:
                     - name: NUM_LOCALES
                       value: '{{ workflow.parameters.arkouda-number-of-locales }}'
                     - name: MEMTRACK
-                      value: 'true'
+                      value: '{{ workflow.parameters. }}'
                     - name: CHPL_RT_NUM_THREADS_PER_LOCALE
                       value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
               volumes:
@@ -124,6 +197,12 @@ spec:
                 - name: ssh
                   secret:
                     secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
+                - name: arkouda-locale-launch-script
+                  configMap:
+                    name: {{ workflow.parameters.arkouda-instance-name }}-locale-launch-script
+                    items:
+                      - key: script
+                        path: start-arkouda-locale.sh
 
   - name: create-locale-headless-service
     resource:
@@ -160,7 +239,7 @@ spec:
          apiVersion: rbac.authorization.k8s.io/v1
          kind: Role
          metadata:
-           name: "{{ workflow.parameters.arkouda-instance-name }}-pod"
+           name: {{ workflow.parameters.arkouda-instance-name }}-pod
          rules:
            - apiGroups: [""]
              resources: ["pods","deployments"]
@@ -173,14 +252,14 @@ spec:
         apiVersion: rbac.authorization.k8s.io/v1
         kind: RoleBinding
         metadata:
-          name: "{{ workflow.parameters.arkouda-instance-name }}-pod-binding"
+          name: {{ workflow.parameters.arkouda-instance-name }}-pod-binding
         subjects:
         - kind: User
-          name: "{{ workflow.parameters.arkouda-user }}"
+          name: {{ workflow.parameters.kubernetes-user }}
           apiGroup: rbac.authorization.k8s.io
         roleRef:
           kind: Role
-          name: "{{ workflow.parameters.arkouda-instance-name }}-pod"
+          name: {{ workflow.parameters.arkouda-instance-name }}-pod
           apiGroup: rbac.authorization.k8s.io
 
   - name: create-service-role
@@ -206,7 +285,7 @@ spec:
           name: {{ workflow.parameters.arkouda-instance-name }}-service-binding
         subjects:
         - kind: User
-          name: {{ workflow.parameters.arkouda-user }}
+          name: {{ workflow.parameters.kubernetes-user }}
           apiGroup: rbac.authorization.k8s.io
         roleRef:
           kind: Role
@@ -226,7 +305,6 @@ spec:
             resources: ["servicemonitors"]
             verbs: ["get","watch","list","create","delete","update"]
 
-
   - name: create-servicemonitor-role-binding
     resource:
       action: create
@@ -237,7 +315,7 @@ spec:
           name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor-binding
         subjects:
         - kind: User
-          name: {{ workflow.parameters.arkouda-user }}
+          name: {{ workflow.parameters.kubernetes-user }}
           apiGroup: rbac.authorization.k8s.io
         roleRef:
           kind: Role
@@ -255,25 +333,78 @@ spec:
           labels:
             name: {{ workflow.parameters.arkouda-instance-name }}-server-launch-script
         data:
-          script: |-
-  
-              #!/bin/bash
-              sudo service ssh start
+           script: |-
 
-              mkdir ~/.ssh/
-              sudo cp ~/ssh-keys/id_rsa* ~/.ssh/
-              sudo chown -R ubuntu:ubuntu ~/.ssh/*
-              chmod -R 600 ~/.ssh/*
+             #!/bin/bash
+             sudo service ssh start
 
-              cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+             # Set env variables need to get arkouda-locale pod IP addresses and start arkouda
+             sudo sh -c "echo 'K8S_HOST=$K8S_HOST' >> /etc/environment"
+             sudo sh -c "echo 'KEY_FILE=$KEY_FILE' >> /etc/environment"
+             sudo sh -c "echo 'CERT_FILE=$CERT_FILE' >> /etc/environment"
+             sudo sh -c "echo 'GASNET_MASTERIP=$MY_IP' >> /etc/environment"
+             sudo sh -c "echo 'NAMESPACE=$NAMESPACE' >> /etc/environment"
+             sudo sh -c "echo 'EXTERNAL_SERVICE_NAME=$EXTERNAL_SERVICE_NAME' >> /etc/environment"
+             sudo sh -c "echo 'METRICS_SERVICE_NAME=$METRICS_SERVICE_NAME' >> /etc/environment"
 
-              export LOCALE_IPS="$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=arkouda' '-a={{ workflow.parameters.arkouda-instance-name }}-locale')"
-              export SSH_SERVERS="$MY_IP $LOCALE_IPS"
+             # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
+             LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' \
+                          '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+             sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
-              /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-                                          --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
-                                          --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-                                          --logLevel=${LOG_LEVEL:-LogLevel.INFO}
+             export USER={{ workflow.parameters.arkouda-user }}
+             export GROUP={{ workflow.parameters.arkouda-group }}
+
+             if [[ "$GROUP" != 'ubuntu' ]]; then
+             # Add group corresponding to gid
+             sudo groupadd -g {{ workflow.parameters.arkouda-gid }} {{ workflow.parameters.arkouda-group }}
+             fi
+
+             if [[ "$USER" != 'ubuntu' ]]; then
+             # Add user with home directory
+             sudo useradd {{ workflow.parameters.arkouda-user }} -m -u {{ workflow.parameters.arkouda-uid }} \
+                          -g {{ workflow.parameters.arkouda-gid }}
+
+             # Add user group
+             sudo groupadd {{ workflow.parameters.arkouda-user }}
+
+             # Add user to user group
+             sudo adduser {{ workflow.parameters.arkouda-user }} {{ workflow.parameters.arkouda-user }}
+             fi
+
+             # Add SSH certificate 
+             sudo -u $USER mkdir /home/$USER/.ssh
+             sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
+             sudo chown -R $USER:$USER /home/$USER/.ssh
+             sudo ls -ltr  /home/$USER/.ssh
+
+             # Start arkouda_server as the configured user
+             sudo -u $USER bash <<EOF
+
+             # Change ssh cert file permissions to 600 as required by SSH client
+             chmod -R 600 /home/$USER/.ssh/id_rsa \ 
+
+             # Add public cert to authorized keys to enable GASNET SSH spawner
+             cat /home/$USER/.ssh/id_rsa.pub > /home/$USER/.ssh/authorized_keys \
+
+             # Generate list of arkouda-server and arkouda-locale IP addresses 
+             export SSH_SERVERS="$MY_IP $LOCALE_IPS" 
+
+             # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE 
+             # and SSH_SERVER list of pod ip addresses
+             if [[ {{ workflow.parameters.collect-metrics }} == true ]]; then
+             /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} \
+                                         --ExternalIntegration.systemType=SystemType.KUBERNETES \
+                                         --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
+                                         --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+                                         --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ workflow.parameters.chpl-mem-max }}
+             else
+             /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} \
+                                         --ExternalIntegration.systemType=SystemType.KUBERNETES \
+                                         --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
+                                         --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+                                         --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ workflow.parameters.chpl-mem-max }}
+             fi
 
   - name: deploy-server
     resource:
@@ -307,7 +438,7 @@ spec:
                 - name: arkouda-udp-server
                   image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
                   imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
-                  command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
+                  command: [ "bash", "/opt/arkouda/start-arkouda-server.sh" ]
                   ports:
                   - containerPort: 5555
                   - containerPort: 5556
@@ -347,7 +478,7 @@ spec:
                     - name: VERBOSE
                       value: 'true'
                     - name: MEMTRACK
-                      value: 'true'
+                      value: '{{ workflow.parameters.mem-track }}'
                     - name: CHPL_RT_NUM_THREADS_PER_LOCALE
                       value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
                     - name: GASNET_SUPERNODE_MAXSIZE

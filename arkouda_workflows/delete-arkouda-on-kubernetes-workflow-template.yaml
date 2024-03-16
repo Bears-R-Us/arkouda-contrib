@@ -8,12 +8,12 @@ spec:
     parameters:
     - name: arkouda-instance-name
     - name: kubernetes-api-url
-    - name: arkouda-ssl-secret
-    - name: arkouda-user
   templates:
   - name: delete-arkouda-on-kubernetes
     dag:
       tasks:
+        - name: delete-arkouda-locale-launch-script
+          template: delete-arkouda-locale-launch-script
         - name: delete-arkouda-locale
           template: delete-locale-deployment
         - name: delete-locale-headless-service
@@ -48,7 +48,18 @@ spec:
           template: delete-metrics-exporter-service
         - name: delete-metrics-exporter-servicemonitor
           template: delete-metrics-exporter-servicemonitor
-        
+
+  - name: delete-arkouda-locale-launch-script
+    resource:
+      action: delete
+      manifest: |
+        kind: ConfigMap
+        apiVersion: v1
+        metadata:
+          name: {{ workflow.parameters.arkouda-instance-name }}-locale-launch-script
+          labels:
+            name: {{ workflow.parameters.arkouda-instance-name }}-locale-launch-script
+
   - name: delete-locale-deployment
     resource:
       action: delete
