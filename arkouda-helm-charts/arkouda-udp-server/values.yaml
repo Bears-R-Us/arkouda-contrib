@@ -27,19 +27,19 @@ server:
   service:
     type: ClusterIP
     port: 5555 # Arkouda k8s service port
-    name: project-a # k8s service name for Arkouda server
+    name: # k8s service name for Arkouda server
   metrics:
     collectMetrics: true # indicates whether to collecte metrcis
     service:
-      name: project-a-metrics # service name for Arkouda metrics service endpoint
+      name: # service name for Arkouda metrics service endpoint
       port: 5556
 
 locale:
-  name: project-a # arkouda-udp-locale app name used to find locale IP addresses
+  name: # arkouda-udp-locale app name used to find locale IP addresses
   podMethod: GET_POD_IPS 
 
 external:
-  k8sHost: https://10.114.89.224:6443 # Kubernetes API url used to register service(s)
+  k8sHost: # Kubernetes API url used to register service(s)
   namespace: arkouda # namespace Arkouda will register service
 
 persistence:
