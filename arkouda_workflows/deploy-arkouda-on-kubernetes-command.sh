@@ -11,7 +11,6 @@ argo submit -n $ARKOUDA_NAMESPACE \
             -p kubernetes-api-url=$KUBERNETES_URL \
             -p arkouda-namespace=$ARKOUDA_NAMESPACE \
             -p arkouda-log-level=LogLevel.DEBUG \
-            -p arkouda-user=$ARKOUDA_USER  \
             -p metrics-polling-interval-seconds=$ARKOUDA_METRICS_POLLING_INTERVAL \
 	    -p prometheus-match-label="$ARKOUDA_PROMETHEUS_MATCH_LABEL" \
 	    -p launcher=$ARKOUDA_LAUNCHER \
@@ -19,4 +18,9 @@ argo submit -n $ARKOUDA_NAMESPACE \
             -p num-cpu-cores=$ARKOUDA_CPU_CORES \
             -p memory=$ARKOUDA_MEMORY \
             -p chpl-num-threads-per-locale=$CHPL_NUM_THREADS_PER_LOCALE \
-            -p chpl-mem-max=$CHPL_MEM_MAX
+            -p chpl-mem-max=$CHPL_MEM_MAX \
+	    -p kubernetes-user=$KUBERNETES_USER \
+	    -p arkouda-user=$ARKOUDA_USER \
+	    -p arkouda-uid="$ARKOUDA_UID" \
+	    -p arkouda-group=$ARKOUDA_GROUP \
+	    -p arkouda-gid="$ARKOUDA_GID"
