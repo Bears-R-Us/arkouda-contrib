@@ -35,6 +35,7 @@ class MetricCategory(Enum):
     SERVER_INFO = "SERVER_INFO"
     SYSTEM = "SYSTEM"
     PER_USER_NUM_REQUESTS = "PER_USER_NUM_REQUESTS"
+    NUM_ERRORS = 'NUM_ERRORS'
 
     def __str__(self) -> str:
         """
@@ -265,6 +266,9 @@ class ArkoudaMetrics:
         "arkoudaServerInfo",
         "perUserTotalNumberOfRequests",
         "perUserNumberOfRequestsPerCommand",
+        "totalNumberOfErrors",
+        "numberOfErrorsPerErrorType",
+        "numberOfErrorsPerCommand"
     )
 
     arkoudaMetricsHost: str
@@ -287,6 +291,9 @@ class ArkoudaMetrics:
     arkoudaServerInfo: Info
     perUserTotalNumberOfRequests: Gauge
     perUserNumberOfRequestsPerCommand: Gauge
+    totalNumberOfErrors: Gauge
+    numberOfErrorsPerErrorType: Gauge
+    numberOfErrorsPerCommand: Gauge
 
     def __init__(
         self,
@@ -393,6 +400,24 @@ class ArkoudaMetrics:
             labelnames=["command", "arkouda_server_name", "user"],
         )
 
+        self.totalNumberOfErrors = Gauge(
+            "arkouda_total_number_of_errors",
+            "Total number of Arkouda errors",
+            labelnames=["arkouda_server_name"],
+        )
+
+        self.numberOfErrorsPerErrorType = Gauge(
+            "arkouda_number_of_errors_per_error_type",
+            "Number of Arkouda errors per error type",
+            labelnames=["arkouda_server_name","error_type"],
+        )
+
+        self.numberOfErrorsPerCommand = Gauge(
+            "arkouda_number_of_errors_per_command",
+            "Number of Arkouda errors per command",
+            labelnames=["arkouda_server_name","command"],
+        )
+
         # Dispatch table for metrics update methods
         self._updateMetric = {
             MetricCategory.NUM_REQUESTS: lambda x: self._updateNumberOfRequests(x),
@@ -402,6 +427,7 @@ class ArkoudaMetrics:
             MetricCategory.TOTAL_MEMORY_USED: lambda x: self._updateTotalMemoryUsed(x),
             MetricCategory.SERVER: lambda x: self._updateServerMetrics(x),
             MetricCategory.SYSTEM: lambda x: self._updateSystemMetrics(x),
+            MetricCategory.NUM_ERRORS: lambda x: self._updateNumberOfErrors(x)
         }
 
         self.connect()
@@ -469,6 +495,13 @@ class ArkoudaMetrics:
             self._updatePerUserNumberOfRequests(cast(UserMetric, metric))
         else:
             self._updateGlobalNumberOfRequests(metric)
+
+    def _updateNumberOfErrors(self, metric: Metric) -> None:
+        metricName = metric.name
+        if metricName == 'total':
+            self.totalNumberOfErrors.labels(arkouda_server_name=self.arkoudaMetricsServerName).set(
+                 metric.value
+            )
 
     def _updatePerUserNumberOfRequests(self, metric: UserMetric) -> None:
         metricName = metric.name
