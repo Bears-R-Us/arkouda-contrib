@@ -235,15 +235,13 @@ class ServerInfo:
             reduce(add, [loc.physical_memory for loc in locales]),
         )
 
-'''
-The ArkoudaMetrics class encapsulates logic and state to 
-1. collect and maintain user, request, system, and server-scoped metrics in Prometheus format
-2. fetch() method for fetching metrics from Arkouda
-3. integration with prometheus_client http server for Prometheus scrape requests
-
-'''
 class ArkoudaMetrics:
-
+    '''
+    The ArkoudaMetrics class encapsulates logic and state to
+    1. collect and maintain user, request, system, and server-scoped metrics in Prometheus format
+    2. fetch() method for fetching metrics from Arkouda
+    3. integration with prometheus_client http server for Prometheus scrape requests
+    '''
     __slots__ = (
         "arkoudaMetricsHost",
         "arkoudaMetricsPort",
@@ -309,6 +307,7 @@ class ArkoudaMetrics:
         self.scrapePort = scrapePort
         self.pollingInterval = pollingInterval
 
+        # Instantiate Prometheus metrics objects
         self.numberOfConnections = Gauge(
             "arkouda_number_of_connections",
             "Number of Arkouda connections",
