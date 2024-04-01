@@ -4,6 +4,7 @@ import panel as pn
 import param
 from typing import Tuple, Union
 import numpy as np
+import math
 
 """
 Helper method for setting up the plot rendering environment.
@@ -354,8 +355,6 @@ Returns
 hv.Image().
     An image with or without a variable dropdown menu based in single or multiple columns.
 """
-
-# these are needed for explore() to work
 saved_binned_data = -1
 saved_cmap = -1
 
@@ -377,7 +376,7 @@ def explore(
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64", "uint64"]
+                if dtype in ["float64", "int64"]
             ]
             if len(numeric_columns) < 2:
                 raise ValueError(
@@ -400,6 +399,7 @@ def explore(
     class Explore(param.Parameterized):
         cmap = param.Selector(
             label="color map",
+            default="Bokeh",
             objects=hv.plotting.list_cmaps(
                 reverse=False, bg=background, provider="bokeh"
             ),
@@ -420,33 +420,44 @@ def explore(
         z_score_threshold_slider = pn.widgets.FloatSlider(
             name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
         )
-        status = pn.indicators.LoadingSpinner(size=50, value=False, name="Idle")
-
-        @param.depends("cmap", "x_var", "y_var", "x_bin", "y_bin", watch=True)
-        def _update_status(self):
-            self.status.name = "Calculating..."
-            self.status.value = True
-            self.status.color = "primary"
 
     params = Explore()
     cols = full_data.columns
-    initial_xrange = (ak.min(full_data[cols[0]]), ak.max(full_data[cols[0]]))
-    initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
+    initial_xrange = (
+        float(math.floor(ak.min(full_data[cols[0]]))),
+        float(math.ceil(ak.max(full_data[cols[0]]))),
+    )
+
+    initial_yrange = (
+        float(math.floor(ak.min(full_data[cols[1]]))),
+        float(math.ceil(ak.max(full_data[cols[1]]))),
+    )
 
     def make_data(x_range, y_range, cmap, x_var, y_var, x_bin, y_bin):
+
         global saved_binned_data
         global saved_cmap
+
         if saved_cmap == -1:
             saved_cmap = cmap
 
         if saved_binned_data == -1 or saved_cmap == cmap:
+
             if x_range is None or y_range is None or not x_range or not y_range:
                 binned_data = ak.histogram2d(
                     full_data[x_var], full_data[y_var], bins=(x_bin, y_bin)
                 )
                 saved_binned_data = binned_data
-                img = hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
-                    cmap=cmap, width=width, height=height, color_bar=True
+
+                return hv.Image(
+                    binned_data[0].to_ndarray().transpose(), bounds=(0, 0, 1, 1)
+                ).opts(
+                    cmap=cmap,
+                    width=width,
+                    height=height,
+                    xlabel=x_var,
+                    ylabel=y_var,
+                    color_bar=True,
                 )
             else:
                 subset_data = full_data[
@@ -455,45 +466,64 @@ def explore(
                     & (full_data[y_var] >= y_range[0])
                     & (full_data[y_var] <= y_range[1])
                 ]
-            x_span = x_range[1] - x_range[0]
-            y_span = y_range[1] - y_range[0]
-            binned_data = ak.histogram2d(
-                subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
-            )
-            saved_binned_data = binned_data
-            img = hv.Image(
-                binned_data[0].to_ndarray(),
+                x_span = x_range[1] - x_range[0]
+                y_span = y_range[1] - y_range[0]
+                binned_data = ak.histogram2d(
+                    subset_data[x_var], -subset_data[y_var], bins=(x_bin, y_bin)
+                )
+                saved_binned_data = binned_data
+
+            return hv.Image(
+                binned_data[0].to_ndarray().transpose(),
                 bounds=(
                     x_range[0],
                     y_range[0],
                     x_range[0] + x_span,
                     y_range[0] + y_span,
                 ),
-            ).opts(cmap=cmap, width=width, height=height, colorbar=True)
+            ).opts(
+                cmap=cmap,
+                width=width,
+                height=height,
+                xlabel=x_var,
+                ylabel=y_var,
+                colorbar=True,
+            )
 
         if saved_cmap != cmap:
+
             saved_cmap = cmap
 
         if x_range is None or y_range is None or not x_range or not y_range:
-            img = hv.Image(saved_binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
-                cmap=cmap, width=width, height=height, color_bar=True
+            return hv.Image(
+                saved_binned_data[0].to_ndarray().transpose(), bounds=(0, 0, 1, 1)
+            ).opts(
+                cmap=cmap,
+                width=width,
+                height=height,
+                xlabel=x_var,
+                ylabel=y_var,
+                colorbar=True,
             )
         else:
             x_span = x_range[1] - x_range[0]
             y_span = y_range[1] - y_range[0]
-            img = hv.Image(
-                saved_binned_data[0].to_ndarray(),
+            return hv.Image(
+                saved_binned_data[0].to_ndarray().transpose(),
                 bounds=(
                     x_range[0],
                     y_range[0],
                     x_range[0] + x_span,
                     y_range[0] + y_span,
                 ),
-            ).opts(cmap=cmap, width=width, height=height, colorbar=True)
-        params.status.value = True
-        params.status.color = "success"
-        params.status.name = "Rendering..."
-        return img
+            ).opts(
+                cmap=cmap,
+                width=width,
+                height=height,
+                xlabel=x_var,
+                ylabel=y_var,
+                colorbar=True,
+            )
 
     @pn.depends(
         cmap=params.param.cmap,
@@ -503,24 +533,20 @@ def explore(
         y_bin=params.param.y_bin,
     )
     def update(cmap, x_var, y_var, x_bin, y_bin):
+
         stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
-
-        def update_status(x_range, y_range):
-            params.status.name = "Calculating..."
-            params.status.value = True
-            params.status.color = "primary"
-
-        stream.add_subscriber(update_status)
-
         dmap = hv.DynamicMap(
             lambda x_range, y_range: make_data(
-                x_range, y_range, cmap, x_var, y_var, x_bin, y_bin
+                x_range,
+                y_range,
+                cmap,
+                x_var,
+                y_var,
+                x_bin,
+                y_bin,
             ),
             streams=[stream],
         )
-        params.status.value = True
-        params.status.color = "success"
-        params.status.name = "Rendering..."
         return dmap
 
     widget_column = pn.Column(
@@ -532,7 +558,6 @@ def explore(
         params.param.y_bin,
         params.enable_slider_checkbox,
         params.z_score_threshold_slider,
-        params.status,
-        width=200,
+        width=310,
     )
     return pn.Row(widget_column, update)
