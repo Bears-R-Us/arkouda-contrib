@@ -376,7 +376,7 @@ def explore(
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64"]
+                if dtype in ["float64", "int64", "uint64"]
             ]
             if len(numeric_columns) < 2:
                 raise ValueError(
