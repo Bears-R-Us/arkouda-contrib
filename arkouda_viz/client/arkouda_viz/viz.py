@@ -423,15 +423,6 @@ def explore(
 
     params = Explore()
     cols = full_data.columns
-    initial_xrange = (
-        float(math.floor(ak.min(full_data[cols[0]]))),
-        float(math.ceil(ak.max(full_data[cols[0]]))),
-    )
-
-    initial_yrange = (
-        float(math.floor(ak.min(full_data[cols[1]]))),
-        float(math.ceil(ak.max(full_data[cols[1]]))),
-    )
 
     def make_data(x_range, y_range, cmap, x_var, y_var, x_bin, y_bin):
 
@@ -533,6 +524,16 @@ def explore(
         y_bin=params.param.y_bin,
     )
     def update(cmap, x_var, y_var, x_bin, y_bin):
+
+        initial_xrange = (
+            float(math.floor(ak.min(full_data[x_var]))),
+            float(math.ceil(ak.max(full_data[x_var]))),
+        )
+
+        initial_yrange = (
+            float(math.floor(ak.min(full_data[y_var]))),
+            float(math.ceil(ak.max(full_data[y_var]))),
+        )
 
         stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
         dmap = hv.DynamicMap(
