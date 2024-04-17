@@ -61,6 +61,10 @@ data:
      # Generate list of arkouda-server and arkouda-locale IP addresses 
      export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
 
+     # Set SSL parameters
+     export SSL_TOKEN=$(cat sa/token)
+     export CACERT_FILE=/opt/sa/ca.crt
+
      # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
      {{- if eq .Values.server.metrics.collectMetrics true }}
      /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \

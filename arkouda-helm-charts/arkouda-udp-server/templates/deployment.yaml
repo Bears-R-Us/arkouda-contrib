@@ -48,6 +48,8 @@ spec:
           - containerPort: 5555
           - containerPort: 22
           volumeMounts:
+          - name: sa
+            mountPath: /opt/sa
           - name: tls
             mountPath: "/etc/ssl/arkouda"
           - name: ssh
@@ -121,6 +123,9 @@ spec:
         - name: ssh
           secret:
             secretName: {{ .Values.secrets.ssh }}
+        - name: sa
+          secret:
+            secretName: {{ .Values.secrets.sa }}
         {{- if eq .Values.persistence.enabled true }}
         - name: locale
           hostPath:
