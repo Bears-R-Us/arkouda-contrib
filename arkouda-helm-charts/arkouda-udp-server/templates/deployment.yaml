@@ -28,7 +28,9 @@ spec:
         - name: arkouda-server
           image: bearsrus/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
-          command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
+          #command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "while true; do sleep 30; done;" ]
           lifecycle:
             preStop:
               exec:
@@ -48,12 +50,10 @@ spec:
           - containerPort: 5555
           - containerPort: 22
           volumeMounts:
-          - name: sa
-            mountPath: /opt/sa
-          - name: tls
-            mountPath: "/etc/ssl/arkouda"
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
+          - name: sa
+            mountPath: /opt/sa
           {{- if eq .Values.persistence.enabled true }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}
@@ -86,10 +86,6 @@ spec:
               value: {{ .Values.server.threadsPerLocale | quote }}
             - name: GASNET_SUPERNODE_MAXSIZE
               value: '1' 
-            - name: CERT_FILE
-              value: '/etc/ssl/arkouda/tls.crt'
-            - name: KEY_FILE
-              value: '/etc/ssl/arkouda/tls.key'
             - name: K8S_HOST
               value: {{ .Values.external.k8sHost | quote }} 
             - name: NAMESPACE
@@ -117,9 +113,6 @@ spec:
             - name: METRICS_SERVICE_TARGET_PORT
               value: '5556'
       volumes:              
-        - name: tls
-          secret:
-            secretName: {{ .Values.secrets.tls }} 
         - name: ssh
           secret:
             secretName: {{ .Values.secrets.ssh }}

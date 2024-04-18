@@ -28,8 +28,6 @@ spec:
           ports:
           - containerPort: 22
           volumeMounts:
-          - name: tls
-            mountPath: "/etc/ssl/arkouda"
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
           {{- if eq .Values.persistence.enabled true }}
@@ -51,9 +49,6 @@ spec:
             - name: CHPL_RT_NUM_THREADS_PER_LOCALE
               value: {{ .Values.locale.threadsPerLocale | quote }} 
       volumes:
-        - name: tls
-          secret:
-            secretName: {{ .Values.secrets.tls }}
         - name: ssh
           secret:
             secretName: {{ .Values.secrets.ssh }}
