@@ -72,5 +72,5 @@ group:
   gid: # gid of group user needs to configured for to execute host commands
 
 secrets:
-  tls: # name of tls secret used to access Kubernetes API
+  sa: # name of bearer token secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
