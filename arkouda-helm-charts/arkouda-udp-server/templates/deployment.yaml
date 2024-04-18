@@ -28,16 +28,14 @@ spec:
         - name: arkouda-server
           image: bearsrus/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
-          #command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
-          command: [ "/bin/bash", "-c", "--" ]
-          args: [ "while true; do sleep 30; done;" ]
+          command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
           lifecycle:
             preStop:
               exec:
               {{- if eq .Values.server.metrics.collectMetrics true }}
-                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; metricsService=os.environ["METRICS_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace); dao.delete_service(service_name=metricsService,namespace=namespace)']
+                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; metricsService=os.environ["METRICS_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cacert_file=os.environ["CACERT_FILE"],token=os.environ["SSL_TOKEN"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace); dao.delete_service(service_name=metricsService,namespace=namespace)']
               {{ else }}
-                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
+                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cacert_file=os.environ["CACERT_FILE"],token=os.environ["SSL_TOKEN"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
               {{- end }}
           resources:
             requests:
