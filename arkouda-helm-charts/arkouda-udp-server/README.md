@@ -275,8 +275,8 @@ The tls and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberete
 
 ```
 secrets:
-  tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
+  sa: # name of ServiceAccount bearer token secret used to access Kubernetes API
 ```
 
 ## Helm Install Command
