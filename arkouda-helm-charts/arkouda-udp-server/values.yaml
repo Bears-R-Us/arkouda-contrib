@@ -71,6 +71,8 @@ group:
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 
+serviceaccount: # name of Arkouda ServiceAccount used for binding Arkouda k8s roles
+
 secrets:
-  sa: # name of bearer token secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
+  sa: # name of service-account-token assigned to the Arkouda ServiceAccount
