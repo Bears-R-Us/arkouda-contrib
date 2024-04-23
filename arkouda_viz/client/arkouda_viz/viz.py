@@ -420,14 +420,40 @@ def explore(
         z_score_threshold_slider = pn.widgets.FloatSlider(
             name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
         )
+        status_spinner = pn.widgets.LoadingSpinner(value=False, size=50, name="idle")
 
     params = Explore()
-    cols = full_data.columns
 
-    def make_data(x_range, y_range, cmap, x_var, y_var, x_bin, y_bin):
+    def make_data(
+        x_range, y_range, cmap, x_var, y_var, x_bin, y_bin, remove_outliers, z_score
+    ):
+
+        params.status_spinner.value = True
+        params.status_spinner.name = "calculating bins ..."
+        params.status_spinner.color = "primary"
 
         global saved_binned_data
         global saved_cmap
+
+        data = full_data
+
+        if remove_outliers:
+            z_scores_1 = (data[x_var] - ak.mean(data[x_var])) / ak.std(data[x_var])
+            z_scores_2 = (data[y_var] - ak.mean(data[y_var])) / ak.std(data[y_var])
+
+            var1 = data[x_var][ak.abs(z_scores_1) <= z_score]
+            var2 = data[y_var][ak.abs(z_scores_2) <= z_score]
+
+            data = data[ak.in1d(data[x_var], var1) & ak.in1d(data[y_var], var2)]
+
+            x_range = (
+                float(math.floor(ak.min(data[x_var]))),
+                float(math.ceil(ak.max(data[x_var]))),
+            )
+            y_range = (
+                float(math.floor(ak.min(data[y_var]))),
+                float(math.ceil(ak.max(data[y_var]))),
+            )
 
         if saved_cmap == -1:
             saved_cmap = cmap
@@ -436,12 +462,14 @@ def explore(
 
             if x_range is None or y_range is None or not x_range or not y_range:
                 binned_data = ak.histogram2d(
-                    full_data[x_var], full_data[y_var], bins=(x_bin, y_bin)
+                    data[x_var], data[y_var], bins=(x_bin, y_bin)
                 )
                 saved_binned_data = binned_data
+                params.status_spinner.name = "rendering ..."
+                params.status_spinner.color = "success"
 
                 return hv.Image(
-                    binned_data[0].to_ndarray().transpose(), bounds=(0, 0, 1, 1)
+                    np.rot90(binned_data[0].to_ndarray()), bounds=(0, 0, 1, 1)
                 ).opts(
                     cmap=cmap,
                     width=width,
@@ -451,21 +479,24 @@ def explore(
                     color_bar=True,
                 )
             else:
-                subset_data = full_data[
-                    (full_data[x_var] >= x_range[0])
-                    & (full_data[x_var] <= x_range[1])
-                    & (full_data[y_var] >= y_range[0])
-                    & (full_data[y_var] <= y_range[1])
+                subset_data = data[
+                    (data[x_var] >= x_range[0])
+                    & (data[x_var] <= x_range[1])
+                    & (data[y_var] >= y_range[0])
+                    & (data[y_var] <= y_range[1])
                 ]
                 x_span = x_range[1] - x_range[0]
                 y_span = y_range[1] - y_range[0]
                 binned_data = ak.histogram2d(
-                    subset_data[x_var], -subset_data[y_var], bins=(x_bin, y_bin)
+                    subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
                 )
                 saved_binned_data = binned_data
 
+            params.status_spinner.name = "rendering ..."
+            params.status_spinner.color = "success"
+
             return hv.Image(
-                binned_data[0].to_ndarray().transpose(),
+                np.rot90(binned_data[0].to_ndarray()),
                 bounds=(
                     x_range[0],
                     y_range[0],
@@ -486,8 +517,11 @@ def explore(
             saved_cmap = cmap
 
         if x_range is None or y_range is None or not x_range or not y_range:
+            params.status_spinner.name = "rendering ..."
+            params.status_spinner.color = "success"
+
             return hv.Image(
-                saved_binned_data[0].to_ndarray().transpose(), bounds=(0, 0, 1, 1)
+                np.rot90(saved_binned_data[0].to_ndarray()), bounds=(0, 0, 1, 1)
             ).opts(
                 cmap=cmap,
                 width=width,
@@ -499,8 +533,12 @@ def explore(
         else:
             x_span = x_range[1] - x_range[0]
             y_span = y_range[1] - y_range[0]
+
+            params.status_spinner.name = "rendering ..."
+            params.status_spinner.color = "success"
+
             return hv.Image(
-                saved_binned_data[0].to_ndarray().transpose(),
+                np.rot90(saved_binned_data[0].to_ndarray()),
                 bounds=(
                     x_range[0],
                     y_range[0],
@@ -522,9 +560,10 @@ def explore(
         y_var=params.param.y_var,
         x_bin=params.param.x_bin,
         y_bin=params.param.y_bin,
+        remove_outliers=params.enable_slider_checkbox.param.value,
+        z_score=params.z_score_threshold_slider,
     )
-    def update(cmap, x_var, y_var, x_bin, y_bin):
-
+    def update(cmap, x_var, y_var, x_bin, y_bin, remove_outliers, z_score):
         initial_xrange = (
             float(math.floor(ak.min(full_data[x_var]))),
             float(math.ceil(ak.max(full_data[x_var]))),
@@ -545,9 +584,12 @@ def explore(
                 y_var,
                 x_bin,
                 y_bin,
+                remove_outliers,
+                z_score,
             ),
             streams=[stream],
         )
+
         return dmap
 
     widget_column = pn.Column(
@@ -559,6 +601,7 @@ def explore(
         params.param.y_bin,
         params.enable_slider_checkbox,
         params.z_score_threshold_slider,
+        params.status_spinner,
         width=310,
     )
     return pn.Row(widget_column, update)
