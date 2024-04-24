@@ -107,16 +107,20 @@ The label matching one of the Prometheus matchLabels elements is specified in th
 The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK utilizing several environment variables. In the base configuration Arkouda runs as the default AOK user,  an example of which is shown below:
 
 ```
-export KUBERNETES_USER=arkouda
 export KUBERNETES_URL=https://localhost:6443
 export ARKOUDA_MEMORY=2048Mi
 export ARKOUDA_CPU_CORES=2000m
-export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
+export CHPL_NUM_THREADS_PER_LOCALE=2
+export CHPL_MEM_MAX=1000000000
+export ARKOUDA_SERVICEACCOUNT_NAME=arkouda-on-k8s 
+export ARKOUDA_SERVICEACCOUNT_TOKEN_NAME=arkouda-on-k8s 
 export ARKOUDA_SSH_SECRET=arkouda-ssh
-export ARKOUDA_SSL_SECRET=arkouda-tls
 export ARKOUDA_NAMESPACE=arkouda
+export ARKOUDA_NUMBER_OF_LOCALES=2
+export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
 export ARKOUDA_METRICS_SERVICE_PORT=5556
-export ARKOUDA_VERSION=v2024.02.02
+export ARKOUDA_VERSION=v2024.03.18
+export ARKOUDA_IMAGE_POLICY=IfNotPresent
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
 export ARKOUDA_SERVER_NAME=arkouda-on-k8s
 export ARKOUDA_LAUNCHER=kubernetes
@@ -124,45 +128,24 @@ export ARKOUDA_METRICS_POLLING_INTERVAL=15
 export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
 export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
 export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
-export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
+export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
 
 sh deploy-arkouda-on-kubernetes-command.sh 
 ```
 
 Configuration parameters of note:
 
-1. KUBERNETES_USER: Kubernetes user that has permissions to access pods and services to deploy AoK
-2. KUBERNETES_API: URL for Kubernetes API, which is used to create/read pods and create services
-3. ARKOUDA_SSH_SECRET: Kubernetes secret encapsulating SSH permissions required for deploying Arkouda via UDP
-4. ARKOUDA_SSL_SECRET: Kubernetes secret encapsulating SSL cert to access Kubernetes API
+1. KUBERNETES\_API: URL for Kubernetes API, which is used to create/read pods, create services as well as servicemonitor
+2. ARKOUDA\_SERVICEACCOUNT\_NAME: name of Kubernetes ServiceAccount used by Arkouda to register with Kubernetes and Prometheus
+3. ARKOUDA\_SSH\_SECRET secret encapsulating SSH permissions required for deploying Arkouda via UDP
 
-To run Arkouda a user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions:
+To run Arkouda as a specific  user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions, the following env variables and Argo workflow parameters are added:
 
 ```
 export ARKOUDA_USER=bearsrus
 export ARKOUDA_UID=1009
 export ARKOUDA_GROUP=bearsrus-arkouda-users
 export ARKOUDA_GID=1019
-export KUBERNETES_USER=arkouda
-export KUBERNETES_URL=https://localhost:6443
-export ARKOUDA_MEMORY=2048Mi
-export ARKOUDA_CPU_CORES=2000m
-export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
-export ARKOUDA_SSH_SECRET=arkouda-ssh
-export ARKOUDA_SSL_SECRET=arkouda-tls
-export ARKOUDA_NAMESPACE=arkouda
-export ARKOUDA_METRICS_SERVICE_PORT=5556
-export ARKOUDA_VERSION=v2024.02.02
-export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-export ARKOUDA_SERVER_NAME=arkouda-on-k8s
-export ARKOUDA_LAUNCHER=kubernetes
-export ARKOUDA_METRICS_POLLING_INTERVAL=15
-export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
-export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
-export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
-export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
-
-sh deploy-arkouda-on-kubernetes-command.sh
 ```
 
 ### delete arkouda workflow
