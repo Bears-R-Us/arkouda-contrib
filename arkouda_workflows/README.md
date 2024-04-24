@@ -61,7 +61,7 @@ The following secrets are required to deploy AoK:
 2. arkouda-token: encapsulates the bearer token used by the Arkouda ServiceAccount to authenticate to the Kubernetes API, which is required for
 registering/deregistering Arkouda with Kubernetes. 
 
-Information regarding the Arkouda SSH and bearer token secrets is [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#ssh-secret) and [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#tls-secret), respectively.
+Information regarding the Arkouda SSH and bearer token secrets is [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#ssh-secret) and [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#serviceaccount), respectively.
 
 ### Prometheus
 
@@ -146,7 +146,7 @@ export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_NUMBER_OF_LOCALES=2
 export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
 export ARKOUDA_METRICS_SERVICE_PORT=5556
-export ARKOUDA_VERSION=v2024.03.18
+export ARKOUDA_VERSION=v2024.04.19
 export ARKOUDA_IMAGE_POLICY=IfNotPresent
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
 export ARKOUDA_SERVER_NAME=arkouda-on-k8s
@@ -192,7 +192,7 @@ sh delete-arkouda-on-kubernetes-command.sh
 The [deploy-prometheus-arkouda-exporter-command.sh](deploy-prometheus-arkouda-exporter-command.sh) script is used to deploy prometheus-arkouda-exporter, an example of which is shown below:
 
 ```
-export ARKOUDA_VERSION=v2024.02.02
+export ARKOUDA_VERSION=v2024.04.19
 export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-slurm-exporter
 export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-slurm-exporter
@@ -223,20 +223,28 @@ sh delete-prometheus-arkouda-exporter-command.sh
 The [deploy-arkouda-on-kubernetes-cronworkflow.sh](deploy-arkouda-on-kubernetes-cronworkflow.sh) script is used to deploy the deploy-arkouda-on-kubernetes CronWorkflow, which utilizes several environment variables to deploy AoK on a specific day and time. An example is shown below:
 
 ```
-export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-export ARKOUDA_NAMESPACE=arkouda
-export ARKOUDA_VERSION=v2024.02.02
-export ARKOUDA_SSH_SECRET=arkouda-ssh
-export ARKOUDA_SSL_SECRET=arkouda-tls
-export NUMBER_OF_LOCALES=2 # number of arkouda-locale instances
-export TOTAL_NUMBER_OF_LOCALES=3 # number of arkouda-locale instances + arkouda-server instance
-export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
-export ARKOUDA_VERSION=v2024.02.02
-export ARKOUDA_CPU_CORES=2000m
+export KUBERNETES_URL=https://localhost:6443
 export ARKOUDA_MEMORY=2048Mi
-export CHPL_MEM_MAX=1000000000
+export ARKOUDA_CPU_CORES=2000m
 export CHPL_NUM_THREADS_PER_LOCALE=2
-export ARKOUDA_USER=arkouda
+export CHPL_MEM_MAX=1000000000
+export ARKOUDA_SERVICEACCOUNT_NAME=arkouda-on-k8s
+export ARKOUDA_SERVICEACCOUNT_TOKEN_NAME=arkouda-on-k8s
+export ARKOUDA_SSH_SECRET=arkouda-ssh
+export ARKOUDA_NAMESPACE=arkouda
+export ARKOUDA_NUMBER_OF_LOCALES=2
+export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
+export ARKOUDA_METRICS_SERVICE_PORT=5556
+export ARKOUDA_VERSION=v2024.04.19
+export ARKOUDA_IMAGE_POLICY=IfNotPresent
+export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
+export ARKOUDA_SERVER_NAME=arkouda-on-k8s
+export ARKOUDA_LAUNCHER=kubernetes
+export ARKOUDA_METRICS_POLLING_INTERVAL=15
+export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
+export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
+export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
+export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
 
 sh deploy-arkouda-on-kubernetes-cronworkflow.sh
 ```
@@ -257,10 +265,8 @@ spec:
 The [delete-arkouda-on-kubernetes-cronworkflow.sh](delete-arkouda-on-kubernetes-cronworkflow.sh) script is used deploy the delete-arkouda-on-kubernetes CronWorkflow, which utilizes several environment variables to delete AoK on a specific day and time. An example is shown below:
 
 ```
-export ARKOUDA_USER=arkouda
 export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-export ARKOUDA_SSL_SECRET=arkouda-tls
 export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
 
 sh delete-arkouda-on-kubernetes-cronworkflow.sh

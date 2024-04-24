@@ -54,20 +54,13 @@ spec:
           template: create-locale-headless-service
         - name: create-locale-ssh-service
           template: create-locale-ssh-service
-        #- name: create-arkouda-serviceaccount
-        #  template: create-arkouda-serviceaccount
-        #- name: create-arkouda-serviceaccount-token
-        #  template: create-arkouda-serviceaccount-token
-        #  depends: 'create-arkouda-serviceaccount'
         - name: create-pod-role
           template: create-pod-role
-          #depends: 'create-arkouda-serviceaccount'
         - name: create-pod-role-binding
           template: create-pod-role-binding
           depends: 'create-pod-role.Succeeded'
         - name: create-service-role
           template: create-service-role
-          #depends: 'create-arkouda-serviceaccount'
         - name: create-service-role-binding
           template: create-service-role-binding
           depends: 'create-service-role.Succeeded'
@@ -235,28 +228,6 @@ spec:
             - port: 22
           selector:
             app: {{ workflow.parameters.arkouda-instance-name }}-locale
-
-  - name: create-arkouda-serviceaccount
-    resource:
-      action: create
-      manifest: |
-        apiVersion: v1
-        kind: ServiceAccount
-        metadata:
-          name: {{ workflow.parameters.arkouda-serviceaccount-name }}
-        automountServiceAccountToken: false
-
-  - name: create-arkouda-serviceaccount-token
-    resource:
-      action: create
-      manifest: |
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: {{ workflow.parameters.arkouda-serviceaccount-token-name }}
-          annotations:
-            kubernetes.io/service-account.name: {{ workflow.parameters.arkouda-serviceaccount-name }}
-        type: kubernetes.io/service-account-token
 
   - name: create-pod-role
     resource: 
@@ -446,7 +417,7 @@ spec:
         spec:
               containers:
                 - name: arkouda-metrics-exporter
-                  image: bearsrus/prometheus-arkouda-exporter:v2024.03.18
+                  image: bearsrus/prometheus-arkouda-exporter:{{ workflow.parameters.arkouda-release-version }}
                   imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
                   ports:
                   - containerPort: 5080
