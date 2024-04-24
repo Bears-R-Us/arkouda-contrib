@@ -17,9 +17,13 @@ The first two workflows are for deploying/deleting AoK while the latter two are 
 
 In addition to Argo Workflows, there are two Arkouda [Argo Cron Workflows](https://argoproj.github.io/argo-workflows/cron-workflows/) that deploy and delete Arkouda at specific days and times via integration of Argo Workflows with [Unix/Linux crontab](https://www.techtarget.com/searchdatacenter/definition/crontab#:~:text=In%20Unix%20and%20Linux%2C%20cron,d%20scripts)
 
+Both the Arkouda Workflows and CronWorkflows are based upon the Arkouda Workflow-Templates.
+
 ## Prerequisites
 
 ### Service Account and Role/Rolebinding
+
+#### Arkouda Argo Workflows ServiceAccount
 
 The [arkouda-workflows-service-account.yaml](arkouda-workflows-service-account.yaml) file encapsulates the following elements to enable the deploy-arkouda-on-kubernetes-workflow and deploy-arkouda-on-kubernetes-workflow to add/delete Kubernetes objects as needed to deploy and delete AoK:
 
@@ -27,14 +31,37 @@ The [arkouda-workflows-service-account.yaml](arkouda-workflows-service-account.y
 2. arkouda-workflows-role: Role encapsulating requisite permissions
 3. arkouda-workflows-rolebinding: RoleBinding binding the arkouda-workflows-service-account to the arkouda-workflows-role
 
+#### arkouda\_server ServiceAccount
+
+A separate ServiceAccount used by arkouda\_server to register Arkouda with Kubernetes along with a corresponding bearer token Secret are also required. An example ServiceAccount create sequence is shown below:
+
+An example ServiceAccount definition is as follows:
+
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arkouda
+automountServiceAccountToken: false
+``` 
+
+Create the ServiceAccount as follows:
+
+```
+export NAMESPACE=arkouda
+
+kubectl apply -n arkouda -f arkouda-sa.yaml
+```
+
 ### Secrets
 
 The following secrets are required to deploy AoK:
 
-1. arkouda-ssh: encapsulates the SSH permissions required to launch AoK via the Chapel UDP substrate
-2. arkouda-tls: encapsulates the arkouda user that is bound to the Arkouda Role that provides the arkouda-udp-server pod to create Kubernetes services as needed. 
+1. arkouda-ssh: encapsulates the SSH permissions required to launch Arkouda locales deployed in Kubernetes pods via the Chapel UDP substrate
+2. arkouda-token: encapsulates the bearer token used by the Arkouda ServiceAccount to authenticate to the Kubernetes API, which is required for
+registering/deregistering Arkouda with Kubernetes. 
 
-Information regarding the Arkouda SSH and TLS secrets is [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#ssh-secret) and [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#tls-secret), respectively.
+Information regarding the Arkouda SSH and bearer token secrets is [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#ssh-secret) and [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#tls-secret), respectively.
 
 ### Prometheus
 
