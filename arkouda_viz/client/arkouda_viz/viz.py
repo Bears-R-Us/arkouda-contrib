@@ -215,7 +215,6 @@ def boxWhisker(
             var = pn.widgets.Select(
                 name="variable", value=data.columns[0], options=data.columns
             )
-
             @pn.depends(var.param.value)
             def create_figure(var):
                 sorted_data = ak.sort(data[var])
@@ -302,7 +301,7 @@ hv.Image().
 
 
 def explore(
-    data: Union[ak.DataFrame, tuple[ak.pdarray, ak.pdarray]] = None,
+    data: Union[ak.DataFrame, Tuple[ak.pdarray, ak.pdarray]] = None,
     xBin: int = 10,
     yBin: int = 10,
     engine: str = "bokeh",
@@ -404,4 +403,5 @@ def explore(
         params.z_score_threshold_slider,
         width=200,
     )
+
     return pn.Row(widget_column, update)

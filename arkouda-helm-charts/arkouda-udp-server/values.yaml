@@ -1,61 +1,75 @@
-# Default values for arkouda-udp-server chart
+# Default values for arkouda-udp-server chart.
 
 resources:
   limits:
-    cpu: 2000m
-    memory: 4096Mi
+    cpu: 1000m
+    memory: 2048Mi
   requests:
-    cpu: 2000m
+    cpu: 1000m
     memory: 2048Mi
 
 ######################## Pod Settings ########################
 
-imageRepository: bearsrus
-releaseVersion: v2023.09.06
-imagePullPolicy: IfNotPresent
+releaseVersion: v2024.02.02 # bearsrus arkouda-udp-server image version
+imagePullPolicy: Always
 
-################ Arkouda Driver Configuration ################
-
-user: # the Kubernetes user that accesses the Kubernetes API
+################ Arkouda Server Configuration ################
 
 server: 
-  totalNumLocales: # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
+  numLocales: 3  # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
   authenticate: false # whether to require token authentication
-  verbose: true # enable verbose logging
-  threadsPerLocale: # number of cpu cores to be used per locale
-  memMax: # maximum bytes of RAM to be used per locale
-  memTrack: true # needs to be true to enable memory metrics and memory use forecasting
-  logLevel: LogLevel.DEBUG
+  verbose: false # enable verbose logging
+  memTrack: true # enable memory tracking (required for memMax and metrics export)
+  memMax: 1000000000 # maximum bytes of RAM to be used per locale
+  threadsPerLocale: 2 # number of cpu cores to be used per locale
+  logLevel: LogLevel.DEBUG # logging level
+  name: project-a
   service:
-    type: ClusterIP # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
-    nodeport: # if service type is Nodeport
-    name: # k8s service name
+    type: ClusterIP
+    port: 5555 # Arkouda k8s service port
+    name: # k8s service name for Arkouda server
   metrics:
-    collectMetrics: # whether to collect metrics and make them available via k8s service
+    collectMetrics: true # indicates whether to collecte metrcis
     service:
-      name: # k8s service name for the Arkouda metrics service endpoint
+      name: # service name for Arkouda metrics service endpoint
+      port: 5556
 
 locale:
-  appName: arkouda-locale
-  podMethod: GET_POD_IPS
+  name: # arkouda-udp-locale app name used to find locale IP addresses
+  podMethod: GET_POD_IPS 
 
 external:
-  persistence:
-    enabled: false
-    path: /arkouda-files # pod directory path, must match arkouda-udp-locale
-    hostPath: # host machine path, must match arkouda-udp-locale
-  k8sHost: # result of kubectl cluster-info command
-  namespace: # namespace Arkouda will register service
-  service: 
-    name: # k8s service name Arkouda will register, defaults to arkouda
+  k8sHost: # Kubernetes API url used to register service(s)
+  namespace: arkouda # namespace Arkouda will register service
+
+persistence:
+  enabled: true # indicates whether files can be written to/read from the host system
+  containerPath: /arkouda-files # container directory for reading/writing Arkouda files
+  hostPath: /mnt/data/arkouda-files # host directory for reading/writing Arkouda files
 
 metricsExporter:
-  imageRepository: bearsrus
-  releaseVersion: v2023.09.06 # prometheus-arkouda-exporter release version
+  name: # Kubernetes app and server name for prometheus-arkouda-exporter
+  releaseVersion: v2024.02.02 # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  service:
-    name: # prometheus-arkouda-exporter service name
-  pollingIntervalSeconds: 5
+  pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
+  serviceMonitor: 
+    enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
+    pollingInterval: 15s
+    additionalLabels:
+      launcher: kubernetes # labels that enable Prometheus to discover Arkouda ServiceMonitor
+    targetLabels:
+      - arkouda_instance
+      - launcher
+
+user:
+  enabled: false # indicates whether to run Arkouda as a specified user
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
+
+group:
+  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
 
 secrets:
   tls: # name of tls secret used to access Kubernetes API

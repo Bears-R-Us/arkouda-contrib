@@ -4,7 +4,8 @@ description: The arkouda-udp-locale Helm chart
 
 type: application
 
-version: 1.1.0
+# Chart version
+version: 1.2.0
 
-appVersion: v2023.11.15
-
+# Arkouda tag
+appVersion: v2024.02.02

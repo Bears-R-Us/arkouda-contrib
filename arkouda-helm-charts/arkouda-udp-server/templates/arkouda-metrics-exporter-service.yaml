@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: arkouda-metrics-exporter
-  annotations:
-    prometheus.io/path: /metrics
-    prometheus.io/port: "5080"
-    prometheus.io/scrape: "true"
-
+  name: {{ .Values.metricsExporter.name }}
+  labels:
+    launcher: kubernetes
+    instance: {{ .Values.metricsExporter.name }}
+    arkouda_instance: {{ .Values.server.service.name }}
 spec:
   type: ClusterIP
   ports:
-    - port: 5080
+    - name: http
+      port: 5080
       protocol: TCP
   selector:
-    app: arkouda-server
+    app: {{ .Values.server.name }}-server

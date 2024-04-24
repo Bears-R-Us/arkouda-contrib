@@ -1,0 +1,44 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ .Values.locale.name }}-locale-launch-script
+  labels:
+    name: {{ .Values.locale.name }}-locale-launch-script
+data:
+  script: |-
+
+     #!/bin/bash
+     sudo service ssh start
+
+     {{- if eq .Values.group.enabled true }}
+     # Add group corresponding to gid and user
+     sudo groupadd -g {{ .Values.group.gid }} {{ .Values.group.name }}
+     sudo groupadd {{ .Values.user.name }}
+     {{- end }}
+
+     {{- if eq .Values.user.enabled true }}
+     # Add user with home directory
+     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid }} -g {{ .Values.group.gid }}
+
+     # Add user to user group
+     sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
+
+     export USER={{ .Values.user.name }}
+     {{- else }}
+     export USER=ubuntu
+     {{- end }}
+
+     # Add SSH certificate 
+     sudo -u $USER mkdir /home/$USER/.ssh
+     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
+     sudo chown -R $USER:$USER /home/$USER/.ssh
+
+     # Start arkouda_server as the configured user
+     sudo -u $USER bash <<EOF
+
+     chmod -R 600 ~/.ssh/* \
+
+     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys \
+
+     /bin/bash -c -- "while true; do sleep 600; done;"
+

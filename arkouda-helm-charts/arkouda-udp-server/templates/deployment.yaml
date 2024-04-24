@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: arkouda-server
+  name: {{ .Values.server.name }}-server
   labels: 
-    app: arkouda-server
+    app: {{ .Values.server.name }}-server
 spec:
       restartPolicy: Never
       containers:
         {{- if eq .Values.server.metrics.collectMetrics true }}
         - name: arkouda-metrics-server
-          image: {{ .Values.metricsExporter.imageRepository }}/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
+          image: bearsrus/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
           imagePullPolicy: {{ .Values.metricsExporter.imagePullPolicy }}
           ports:
           - containerPort: 5080
@@ -19,14 +19,14 @@ spec:
             - name: POLLING_INTERVAL_SECONDS
               value: {{ .Values.metricsExporter.pollingIntervalSeconds | quote}}
             - name: ARKOUDA_SERVER_NAME
-              value: {{ .Values.metricsExporter.service.name | quote}}
+              value: {{ .Values.metricsExporter.arkoudaServerName | quote}}
             - name: ARKOUDA_METRICS_SERVICE_HOST
-              value: {{ .Values.server.metrics.service.name | default "arkouda-metrics" | quote}}
+              value: {{ .Values.server.metrics.service.name | quote}}
             - name: ARKOUDA_METRICS_SERVICE_PORT
-              value: "5556"
+              value: {{ .Values.server.metrics.service.port | quote}}
         {{- end }}
         - name: arkouda-server
-          image: {{ .Values.imageRepository }}/arkouda-udp-server:{{ .Values.releaseVersion }}
+          image: bearsrus/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
           lifecycle:
@@ -38,19 +38,23 @@ spec:
                 command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
               {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
           ports:
           - containerPort: 5555
-          - containerPort: 5556
           - containerPort: 22
           volumeMounts:
-          - name: ssl
+          - name: tls
             mountPath: "/etc/ssl/arkouda"
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
-          {{- if eq .Values.external.persistence.enabled true }}
+          {{- if eq .Values.persistence.enabled true }}
           - name: locale
-            mountPath: {{ .Values.external.persistence.path }}
+            mountPath: {{ .Values.persistence.containerPath }}
           {{- end }}
           - name: arkouda-server-launch-script
             mountPath: /opt/arkouda/start-arkouda-server.sh
@@ -89,42 +93,42 @@ spec:
             - name: NAMESPACE
               value: {{ .Values.external.namespace }}
             - name: APP_NAME
-              value: {{ .Values.locale.appName | quote }}
+              value: {{ .Values.locale.name | quote }}
             - name: ARKOUDA_CLIENT_MODE
               value: API
             - name: POD_METHOD
-              value: {{ .Values.locale.podMethod | quote }}
+              value: {{ .Values.locale.podMethod | quote}}
             - name: EXTERNAL_SERVICE_NAME
-              value: {{ .Values.external.service.name | default "arkouda" | quote }}
+              value: {{ .Values.server.service.name }}
             - name: EXTERNAL_SERVICE_PORT
-              value: "5555"
+              value: {{ .Values.server.service.port | quote}}
             - name: EXTERNAL_SERVICE_TARGET_PORT
-              value: "5555"
+              value: '5555'
             - name: LOG_LEVEL  
               value: {{ .Values.server.logLevel }}    
             - name: COLLECT_METRICS
-              value: {{ .Values.server.metrics.collectMetrics | quote }}
+              value: {{ .Values.server.metrics.collectMetrics | quote}}
             - name: METRICS_SERVICE_NAME
-              value: {{ .Values.server.metrics.service.name | default "arkouda metrics" }}
+              value: {{ .Values.server.metrics.service.name }}
             - name: METRICS_SERVICE_PORT
-              value: "5556"
+              value: {{ .Values.server.metrics.service.port | quote}}
             - name: METRICS_SERVICE_TARGET_PORT
-              value: "5556"
+              value: '5556'
       volumes:              
-        - name: ssl
+        - name: tls
           secret:
-            secretName: {{ .Values.secrets.tls }}
+            secretName: {{ .Values.secrets.tls }} 
         - name: ssh
           secret:
             secretName: {{ .Values.secrets.ssh }}
-        {{- if eq .Values.external.persistence.enabled true }}
+        {{- if eq .Values.persistence.enabled true }}
         - name: locale
           hostPath:
-            path: {{ .Values.external.persistence.hostPath }}
+            path: {{ .Values.persistence.hostPath }}
         {{- end }}
         - name: arkouda-server-launch-script
           configMap:
-            name: arkouda-server-launch-script
+            name: {{ .Values.server.name }}-server-launch-script
             items:
              - key: script
                path: start-arkouda-server.sh

@@ -36,29 +36,133 @@ The following secrets are required to deploy AoK:
 
 Information regarding the Arkouda SSH and TLS secrets is [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#ssh-secret) and [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#tls-secret), respectively.
 
+### Prometheus
+
+#### Promethues Install
+
+For metrics-enabled AoK as well as arkouda-prometheus-exporter, a Prometheus Server and [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) are required. The prometheus-community has an excellent [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) Helm chart that's a convenient way to install 1..n elements of a Prometheus stack including Prometheus Server and Prometheus Operator.  
+
+#### Prometheus Scrap Target Configuration
+
+The prometheus-arkouda-exporter, which is deployed standalone or part of AoK, is rendered discoverable as a scrape target by the Prometheus ServiceMonitor, which is a custom resource definition (CRD) deployed by the Prometheus Operator. The target Prometheus instance has 1..n labels it uses to discover ServiceMonitors and their corresponding scrape targets in the namespace(s) Prometheus is configured to monitor.
+
+##### Configuring serviceMonitorNamespaceSelector
+
+The default Prometheus configuration is to monitor all namespaces as shown below:
+
+```
+spec:
+  serviceMonitorNamespaceSelector: {}
+``` 
+
+The default can be overridden by specifying an array of 1..n namespaces:
+
+```
+spec: 
+  serviceMonitorNamespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values: [ prometheus, default, arkouda ]
+```
+
+##### Configuring serviceMonitorSelector
+
+The serviceMonitorSelector element of the Prometheus configuratio specifies the label(s) Prometheus uses to discover ServiceMonitors. In the example below, Prometheus discovers and registers any ServiceMonitor with the ```release: kube-stack``` label: 
+
+```
+spec:
+  serviceMonitorSelector:
+    matchLabels:
+      release: kube-stack
+```
+
+### prometheus-arkouda-exporter ServiceMonitor
+
+The prometheus-arkouda-exporter is rendered discoverable via a label matching one of the labels specified in the target Prometheus spec.serviceMonitorSelector.matchLabels elements. In the above example the ```release: kubestack```  label is defined. Accordingly, prometheus-arkouda-exporter would be discoverable via the following ServiceMonitor configuration:
+
+```
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    release: kube-stack
+  name: arkouda-on-k8s-servicemonitor
+spec:
+  endpoints:
+  - interval: 15s
+    path: /metrics
+    port: http
+  selector:
+    matchLabels:
+      instance: arkouda-on-k8s-metrics-exporter
+``` 
+
+The label matching one of the Prometheus matchLabels elements is specified in the prometheus-match-label Argo workflow parameters as shown below. 
+
 ## Commands
 
 ### deploy arkouda workflow
 
-The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK utilizing several environment variables. An example is shown below:
+The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK utilizing several environment variables. In the base configuration Arkouda runs as the default AOK user,  an example of which is shown below:
 
 ```
-export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-export ARKOUDA_NAMESPACE=arkouda
-export ARKOUDA_VERSION=v2023.11.15
+export KUBERNETES_USER=arkouda
+export KUBERNETES_URL=https://localhost:6443
+export ARKOUDA_MEMORY=2048Mi
+export ARKOUDA_CPU_CORES=2000m
+export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
 export ARKOUDA_SSH_SECRET=arkouda-ssh
 export ARKOUDA_SSL_SECRET=arkouda-tls
-export NUMBER_OF_LOCALES=2 # number of arkouda-locale instances 
-export TOTAL_NUMBER_OF_LOCALES=3 # number of arkouda-locale instances + arkouda-server instance
-export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
-export ARKOUDA_VERSION=v2023.11.15
-export ARKOUDA_CPU_CORES=2000m
-export ARKOUDA_MEMORY=2048Mi
-export CHPL_MEM_MAX=1000000000
-export CHPL_NUM_THREADS_PER_LOCALE=2
-export ARKOUDA_USER=arkouda
+export ARKOUDA_NAMESPACE=arkouda
+export ARKOUDA_METRICS_SERVICE_PORT=5556
+export ARKOUDA_VERSION=v2024.02.02
+export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
+export ARKOUDA_SERVER_NAME=arkouda-on-k8s
+export ARKOUDA_LAUNCHER=kubernetes
+export ARKOUDA_METRICS_POLLING_INTERVAL=15
+export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
+export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
+export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
+export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
 
 sh deploy-arkouda-on-kubernetes-command.sh 
+```
+
+Configuration parameters of note:
+
+1. KUBERNETES_USER: Kubernetes user that has permissions to access pods and services to deploy AoK
+2. KUBERNETES_API: URL for Kubernetes API, which is used to create/read pods and create services
+3. ARKOUDA_SSH_SECRET: Kubernetes secret encapsulating SSH permissions required for deploying Arkouda via UDP
+4. ARKOUDA_SSL_SECRET: Kubernetes secret encapsulating SSL cert to access Kubernetes API
+
+To run Arkouda a user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions:
+
+```
+export ARKOUDA_USER=bearsrus
+export ARKOUDA_UID=1009
+export ARKOUDA_GROUP=bearsrus-arkouda-users
+export ARKOUDA_GID=1019
+export KUBERNETES_USER=arkouda
+export KUBERNETES_URL=https://localhost:6443
+export ARKOUDA_MEMORY=2048Mi
+export ARKOUDA_CPU_CORES=2000m
+export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
+export ARKOUDA_SSH_SECRET=arkouda-ssh
+export ARKOUDA_SSL_SECRET=arkouda-tls
+export ARKOUDA_NAMESPACE=arkouda
+export ARKOUDA_METRICS_SERVICE_PORT=5556
+export ARKOUDA_VERSION=v2024.02.02
+export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
+export ARKOUDA_SERVER_NAME=arkouda-on-k8s
+export ARKOUDA_LAUNCHER=kubernetes
+export ARKOUDA_METRICS_POLLING_INTERVAL=15
+export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
+export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
+export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
+export ARKOUDA_PROMETHEUS_MATCH_LABEL=release: kube-stack
+
+sh deploy-arkouda-on-kubernetes-command.sh
 ```
 
 ### delete arkouda workflow
@@ -66,10 +170,8 @@ sh deploy-arkouda-on-kubernetes-command.sh
 The [delete-arkouda-on-kubernetes-command.sh](delete-arkouda-on-kubernetes-command.sh) script is used to delete AoK utilizing several environment variables. An example is shown below:
 
 ```
-export ARKOUDA_USER=arkouda
 export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
-export ARKOUDA_SSL_SECRET=arkouda-tls
 export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
 
 sh delete-arkouda-on-kubernetes-command.sh 
@@ -80,14 +182,16 @@ sh delete-arkouda-on-kubernetes-command.sh
 The [deploy-prometheus-arkouda-exporter-command.sh](deploy-prometheus-arkouda-exporter-command.sh) script is used to deploy prometheus-arkouda-exporter, an example of which is shown below:
 
 ```
-export ARKOUDA_EXPORTER_VERSION=v2023.11.15
+export ARKOUDA_VERSION=v2024.02.02
+export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-slurm-exporter
 export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-slurm-exporter
 export ARKOUDA_EXPORTER_POLLING_INTERVAL=15
-export ARKOUDA_EXPORTER_NAMESPACE=arkouda
 export ARKOUDA_METRICS_SERVICE_HOST=arkouda-metrics.arkouda
 export ARKOUDA_METRICS_SERVICE_PORT=5556
 export ARKOUDA_SERVER_NAME=arkouda-on-slurm
+export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
+export ARKOUDA_LAUNCHER=slurm
 
 sh deploy-prometheus-arkouda-exporter-command.sh
 ```
@@ -111,13 +215,13 @@ The [deploy-arkouda-on-kubernetes-cronworkflow.sh](deploy-arkouda-on-kubernetes-
 ```
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
 export ARKOUDA_NAMESPACE=arkouda
-export ARKOUDA_VERSION=v2023.11.15
+export ARKOUDA_VERSION=v2024.02.02
 export ARKOUDA_SSH_SECRET=arkouda-ssh
 export ARKOUDA_SSL_SECRET=arkouda-tls
 export NUMBER_OF_LOCALES=2 # number of arkouda-locale instances
 export TOTAL_NUMBER_OF_LOCALES=3 # number of arkouda-locale instances + arkouda-server instance
 export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
-export ARKOUDA_VERSION=v2023.11.15
+export ARKOUDA_VERSION=v2024.02.02
 export ARKOUDA_CPU_CORES=2000m
 export ARKOUDA_MEMORY=2048Mi
 export CHPL_MEM_MAX=1000000000

@@ -1,31 +1,41 @@
-# Default values for arkouda-udp-locale chart
+# Default values for arkouda-udp-locale Helm chart
 
 ######################## Pod Settings ########################
 
-imageRepository: bearsrus
-releaseVersion: v2023.09.06
-imagePullPolicy: IfNotPresent
+releaseVersion: v2024.02.02 # bearsrus arkouda-udp-server image version
+imagePullPolicy: Always
 
 resources:
   limits:
-    cpu: 2000m
-    memory: 4096Mi
+    cpu: 1000m
+    memory: 2024Mi
   requests:
-    cpu: 2000m
-    memory: 2048Mi
+    cpu: 1000m
+    memory: 2024Mi
 
 ################ Arkouda Locale Configuration ################
 
-server: 
-  port: # Arkouda port, defaults to 5555
-  memTrack: true # needs to be true to enable memory metrics and memory use forecasting 
-  numLocales: # number of arkouda-udp-locale pods
-  threadsPerLocale: # number of CPU cores for each locale
-external:
-  persistence: 
-    enabled: false
-    path: /arkouda-files # pod directory path, must match arkouda-udp-server 
-    hostPath: # host directory path, must match arkouda-udp-server
+locale: 
+  numLocales: 2 # number of arkouda-udp-locale pods
+  memTrack: true
+  name: # Kubernetes app name used by arkouda-udp-server for pod discovery
+  threadsPerLocale: 2 # number of cpu cores assigned to each Arkouda locale
+
+persistence: 
+  enabled: false
+  containerPath: /arkouda-files # container directory for reading/writing Arkouda files
+  hostPath: # host directory for reading/writing Arkouda files
+
+user:
+  enabled: false # indicates whether to run Arkouda as a specified user
+  name: # name of user running Arkouda
+  uid: # uid of user running Arkouda
+
+group:
+  enabled: false
+  name: # name of group user needs to be a member of to execute host commands
+  gid: # gid of group Arkouda user needs to be a member of to execute host commands
+
 secrets:
   tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales

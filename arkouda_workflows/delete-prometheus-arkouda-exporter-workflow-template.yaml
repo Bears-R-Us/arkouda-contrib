@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: delete-prometheus-arkouda-exporter
+spec:
+  entrypoint: delete-prometheus-arkouda-exporter
+  arguments:
+    parameters:
+    - name: exporter-app-name
+    - name: exporter-service-name
+
+  templates:
+  - name: delete-prometheus-arkouda-exporter
+    steps:
+      - - name: delete-prometheus-arkouda-exporter
+          template: delete-deployment  
+        - name: delete-prometheus-arkouda-exporter-service
+          template: delete-exporter-service
+        - name: delete-prometheus-arkouda-exporter-servicemonitor
+          template: delete-exporter-servicemonitor
+ 
+  - name: delete-deployment
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {{ workflow.parameters.exporter-app-name }}
+          labels:
+            app: {{ workflow.parameters.exporter-app-name }}
+
+  - name: delete-exporter-service
+    resource:
+      action: delete
+      flags: ["--ignore-not-found"]
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ workflow.parameters.exporter-service-name }}
+
+  - name: delete-exporter-servicemonitor
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: monitoring.coreos.com/v1
+        kind: ServiceMonitor
+        metadata:
+          name: {{ workflow.parameters.exporter-service-name }}-servicemonitor
