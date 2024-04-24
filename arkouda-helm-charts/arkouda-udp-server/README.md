@@ -8,41 +8,50 @@ The arkouda-udp-server Helm chart deploys the containerized Arkouda server (loca
 
 arkouda-udp-server generates GASNET udp connections with all previously-deployed arkouda-udp-locale pods, registers itself as a service, and creates a Prometheus scrape target via Kubernetes API CRUD operations. Accordingly, the following Kubernetes artifacts are required:
 
-1. Kubernetes user that is to be bound to the requisite Roles
-2. TLS secret composed of the .key and .crt files used to create the Kubernetes user and enable Kubernetes API requests
+1. ServiceAccount that is bound to the Roles required to register Arkouda with Kubernetes
+2. service-account-token secret used to authenticate ServiceAccount to Kubernetes API request
 3. Roles with permissions to enable Kubernetes API requests
-4. RoleBindings that bind the k8s Roles to the Kubernetes user
+4. RoleBindings that bind the k8s Roles to the Arkouda ServiceAccount
 5. SSH secret to enable GASNET udp startup of all Arkouda locale pods
 
-### Kubernetes User
+### ServiceAccount
 
-The workflow for creating an a Kubernetes user that can be bound to Roles possessing the required Kubernetes API permissions is as follows:
-
-```
-# Generate base key file
-openssl genrsa -out arkouda.key 2048
- 
-# User and password generated in this step
-openssl req -new -key arkouda.key -out arkouda.csr
- 
-# sign with the configured k8s CA
-sudo openssl x509 -req -in arkouda.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out arkouda.crt -days 730
-
-# Create the arkouda user with the generated credentials
-kubectl config set-credentials arkouda --client-certificate=arkouda.crt --client-key=arkouda.key
+The Arkouda ServiceAccount is the entity that is bound to Roles required to register/deregister Arkouda with Kubernetes. An example ServiceAccount is as follows:
 
 ```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arkouda-sa
+automountServiceAccountToken: false
+```
 
-Note: the cert CN is the Kubernetes user name
-
-### TLS Secret
-
-The .key and .crt files created above are used to create a Kubernetes secret, which is used to connect to the Kubernetes API and load permissions from the Roles bound to the user. Important note: the secret must be deployed to the same namespace arkouda-udp-server and arkouda-udp-locale are deployed.
-
-An example Kubernetes secret create command is as follows:
+The ServiceAccount is created in the namespace Arkouda is deployed to. An example kubectl command is as follows:
 
 ```
-kubectl create secret tls arkouda-tls --cert=arkouda.crt --key=arkouda.key -n arkouda
+export NAMESPACE=arkouda 
+kubectl apply -f serviceacount.yaml -n $NAMESPACE
+```
+
+### service-account-token
+
+The service-account-token is bound to the Arkouda ServiceAccount and is used to access the Kubernetes API. An example service-account-token is as follows:
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arkouda-sa
+  annotations:
+    kubernetes.io/service-account.name: arkouda-sa # matches the ServiceAccount name defined in previous step
+type: kubernetes.io/service-account-token
+```
+
+The service-acccount-token is created in the namespace Arkouda is deployed to. An example kubectl command is as follows:
+
+```
+export NAMESPACE=arkouda
+kubectl apply -f serviceacount-token.yaml -n $NAMESPACE
 ```
 
 ### Roles
@@ -64,7 +73,7 @@ rules:
   verbs: ["get", "watch", "list"]
 ```
 
-This Role is bound to the arkouda Kubernetes user as follows:
+This Role is bound to the Arkouda ServiceAccount as follows:
 
 ```
 kind: RoleBinding
@@ -72,9 +81,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: arkouda-pod-reader
 subjects:
-- kind: User
-  name: {{ .Values.user }}
-  apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: {{ .Values.serviceaccount }}
 roleRef:
   kind: Role
   name: pod-reader
@@ -96,7 +104,7 @@ rules:
   verbs: ["get","watch","list","create","delete","update"]
 ```
 
-This Role is bound to the arkouda Kubernetes user as follows:
+This Role is bound to the Arkouda Kubernetes ServiceAccount as follows:
 
 ```
 kind: RoleBinding
@@ -104,6 +112,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: arkouda-service-endpoints-crud
 subjects:
+- kind: ServiceAccount
+  name: {{ .Values.serviceaccount }}
 - kind: User
   name: {{ .Values.user }}
   apiGroup: rbac.authorization.k8s.io
@@ -275,8 +285,8 @@ The tls and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberete
 
 ```
 secrets:
-  tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
+  sa: # name of ServiceAccount bearer token secret used to access Kubernetes API
 ```
 
 ## Helm Install Command

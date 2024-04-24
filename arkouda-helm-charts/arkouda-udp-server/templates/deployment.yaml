@@ -33,9 +33,9 @@ spec:
             preStop:
               exec:
               {{- if eq .Values.server.metrics.collectMetrics true }}
-                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; metricsService=os.environ["METRICS_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace); dao.delete_service(service_name=metricsService,namespace=namespace)']
+                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; metricsService=os.environ["METRICS_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cacert_file=os.environ["CACERT_FILE"],token=os.environ["SSL_TOKEN"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace); dao.delete_service(service_name=metricsService,namespace=namespace)']
               {{ else }}
-                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cert_file=os.environ["CERT_FILE"],key_file=os.environ["KEY_FILE"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
+                command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cacert_file=os.environ["CACERT_FILE"],token=os.environ["SSL_TOKEN"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
               {{- end }}
           resources:
             requests:
@@ -48,10 +48,10 @@ spec:
           - containerPort: 5555
           - containerPort: 22
           volumeMounts:
-          - name: tls
-            mountPath: "/etc/ssl/arkouda"
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
+          - name: sa
+            mountPath: /opt/sa
           {{- if eq .Values.persistence.enabled true }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}
@@ -84,10 +84,6 @@ spec:
               value: {{ .Values.server.threadsPerLocale | quote }}
             - name: GASNET_SUPERNODE_MAXSIZE
               value: '1' 
-            - name: CERT_FILE
-              value: '/etc/ssl/arkouda/tls.crt'
-            - name: KEY_FILE
-              value: '/etc/ssl/arkouda/tls.key'
             - name: K8S_HOST
               value: {{ .Values.external.k8sHost | quote }} 
             - name: NAMESPACE
@@ -115,12 +111,12 @@ spec:
             - name: METRICS_SERVICE_TARGET_PORT
               value: '5556'
       volumes:              
-        - name: tls
-          secret:
-            secretName: {{ .Values.secrets.tls }} 
         - name: ssh
           secret:
             secretName: {{ .Values.secrets.ssh }}
+        - name: sa
+          secret:
+            secretName: {{ .Values.secrets.sa }}
         {{- if eq .Values.persistence.enabled true }}
         - name: locale
           hostPath:

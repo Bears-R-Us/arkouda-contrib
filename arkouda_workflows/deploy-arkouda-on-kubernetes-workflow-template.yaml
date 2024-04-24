@@ -6,8 +6,10 @@ spec:
   entrypoint: deploy-arkouda-on-kubernetes
   arguments:
     parameters:
-    - name: kubernetes-user
-      value: arkouda
+    - name: arkouda-serviceaccount-name
+      value: arkouda-serviceacccount
+    - name: arkouda-serviceaccount-token-name
+      value: arkouda-serviceaccount-token
     - name: arkouda-user
       value: ubuntu
     - name: arkouda-uid
@@ -18,7 +20,6 @@ spec:
       value: 1000
     - name: arkouda-release-version
     - name: arkouda-instance-name
-    - name: arkouda-ssl-secret
     - name: arkouda-ssh-secret
     - name: arkouda-number-of-locales
     - name: arkouda-total-number-of-locales
@@ -26,6 +27,7 @@ spec:
     - name: arkouda-namespace
     - name: arkouda-log-level
     - name: image-pull-policy
+      value: IfNotPresent
     - name: mem-track
       value: true
     - name: collect-metrics
@@ -160,7 +162,7 @@ spec:
               containers:
                 - name: arkouda-udp-locale
                   image: bearsrus/arkouda-udp-server:{{ workflow.parameters.arkouda-release-version }}
-                  imagePullPolicy: IfNotPresent
+                  imagePullPolicy: {{ workflow.parameters.image-pull-policy }}
                   command: [ "bash", "/opt/arkouda/start-arkouda-locale.sh" ]
                   ports:
                   - containerPort: 22
@@ -172,8 +174,6 @@ spec:
                       cpu: {{ workflow.parameters.num-cpu-cores }}
                       memory: {{ workflow.parameters.memory }}
                   volumeMounts:
-                    - name: ssl
-                      mountPath: "/etc/ssl/arkouda"
                     - name: ssh
                       mountPath: "/home/ubuntu/ssh-keys"
                     - name: arkouda-locale-launch-script
@@ -191,9 +191,6 @@ spec:
                     - name: CHPL_RT_NUM_THREADS_PER_LOCALE
                       value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
               volumes:
-                - name: ssl
-                  secret:
-                    secretName: "{{ workflow.parameters.arkouda-ssl-secret }}"
                 - name: ssh
                   secret:
                     secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
@@ -254,9 +251,8 @@ spec:
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-pod-binding
         subjects:
-        - kind: User
-          name: {{ workflow.parameters.kubernetes-user }}
-          apiGroup: rbac.authorization.k8s.io
+        - kind: ServiceAccount
+          name: {{ workflow.parameters.arkouda-serviceaccount-name }}
         roleRef:
           kind: Role
           name: {{ workflow.parameters.arkouda-instance-name }}-pod
@@ -284,9 +280,8 @@ spec:
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-service-binding
         subjects:
-        - kind: User
-          name: {{ workflow.parameters.kubernetes-user }}
-          apiGroup: rbac.authorization.k8s.io
+        - kind: ServiceAccount
+          name: {{ workflow.parameters.arkouda-serviceaccount-name }}
         roleRef:
           kind: Role
           name: {{ workflow.parameters.arkouda-instance-name }}-service
@@ -314,9 +309,8 @@ spec:
         metadata:
           name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor-binding
         subjects:
-        - kind: User
-          name: {{ workflow.parameters.kubernetes-user }}
-          apiGroup: rbac.authorization.k8s.io
+        - kind: ServiceAccount
+          name: {{ workflow.parameters.arkouda-serviceaccount-name }}
         roleRef:
           kind: Role
           name: {{ workflow.parameters.arkouda-instance-name }}-servicemonitor
@@ -338,18 +332,22 @@ spec:
              #!/bin/bash
              sudo service ssh start
 
+             # Set SSL parameters
+             export SSL_TOKEN=$(cat sa/token)
+             export CACERT_FILE=/opt/sa/ca.crt
+
              # Set env variables need to get arkouda-locale pod IP addresses and start arkouda
              sudo sh -c "echo 'K8S_HOST=$K8S_HOST' >> /etc/environment"
-             sudo sh -c "echo 'KEY_FILE=$KEY_FILE' >> /etc/environment"
-             sudo sh -c "echo 'CERT_FILE=$CERT_FILE' >> /etc/environment"
+             sudo sh -c "echo 'SSL_TOKEN=$SSL_TOKEN' >> /etc/environment"
+             sudo sh -c "echo 'CACERT_FILE=$CACERT_FILE' >> /etc/environment"
              sudo sh -c "echo 'GASNET_MASTERIP=$MY_IP' >> /etc/environment"
              sudo sh -c "echo 'NAMESPACE=$NAMESPACE' >> /etc/environment"
              sudo sh -c "echo 'EXTERNAL_SERVICE_NAME=$EXTERNAL_SERVICE_NAME' >> /etc/environment"
              sudo sh -c "echo 'METRICS_SERVICE_NAME=$METRICS_SERVICE_NAME' >> /etc/environment"
 
              # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
-             LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py '-c=$CERT_FILE' \
-                          '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+             LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py \
+                          '-c=$CACERT_FILE' '-k=$TOKEN' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
              sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
              export USER={{ workflow.parameters.arkouda-user }}
@@ -451,8 +449,8 @@ spec:
                       cpu: {{ workflow.parameters.num-cpu-cores }}
                       memory: {{ workflow.parameters.memory }}
                   volumeMounts:
-                    - name: ssl
-                      mountPath: "/etc/ssl/arkouda"
+                    - name: sa
+                      mountPath: /opt/sa
                     - name: ssh
                       mountPath: "/home/ubuntu/ssh-keys"
                     - name: arkouda-server-launch-script
@@ -483,10 +481,6 @@ spec:
                       value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
                     - name: GASNET_SUPERNODE_MAXSIZE
                       value: '1'
-                    - name: CERT_FILE
-                      value: '/etc/ssl/arkouda/tls.crt'
-                    - name: KEY_FILE
-                      value: '/etc/ssl/arkouda/tls.key'
                     - name: K8S_HOST
                       value: "{{ workflow.parameters.kubernetes-api-url }}"
                     - name: NAMESPACE
@@ -516,9 +510,9 @@ spec:
                     - name: METRICS_SERVICE_TARGET_PORT
                       value: '5556'
               volumes:              
-                - name: ssl
+                - name: sa
                   secret:
-                    secretName: "{{ workflow.parameters.arkouda-ssl-secret }}"
+                    secretName: "{{ workflow.parameters.arkouda-serviceaccount-name }}"
                 - name: ssh
                   secret:
                     secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
