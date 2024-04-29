@@ -10,7 +10,7 @@ resources:
 
 ######################## Pod Settings ########################
 
-releaseVersion: v2024.02.02 # bearsrus arkouda-udp-server image version
+releaseVersion: 3092_add_support_for_TLS_token_authentication_v2 # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 ################ Arkouda Server Configuration ################
@@ -49,7 +49,7 @@ persistence:
 
 metricsExporter:
   name: # Kubernetes app and server name for prometheus-arkouda-exporter
-  releaseVersion: v2024.02.02 # bearsrus prometheus-arkouda-exporter image version
+  releaseVersion: v2024.03.18 # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
   pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
   serviceMonitor: 
@@ -71,6 +71,8 @@ group:
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 
+serviceaccount: # name of Arkouda ServiceAccount used for binding Arkouda k8s roles
+
 secrets:
-  tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
+  sa: # name of service-account-token assigned to the Arkouda ServiceAccount

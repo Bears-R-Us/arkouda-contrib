@@ -12,10 +12,14 @@ data:
      #!/bin/bash
      sudo service ssh start
 
+     # Set SSL parameters
+     export SSL_TOKEN=$(cat sa/token)
+     export CACERT_FILE=/opt/sa/ca.crt
+
      # Set env variables need to get arkouda-locale pod IP addresses and start arkouda
      sudo sh -c "echo 'K8S_HOST=$K8S_HOST' >> /etc/environment"
-     sudo sh -c "echo 'KEY_FILE=$KEY_FILE' >> /etc/environment"
-     sudo sh -c "echo 'CERT_FILE=$CERT_FILE' >> /etc/environment"
+     sudo sh -c "echo 'SSL_TOKEN=$SSL_TOKEN' >> /etc/environment"
+     sudo sh -c "echo 'CACERT_FILE=$CACERT_FILE' >> /etc/environment"
      sudo sh -c "echo 'GASNET_MASTERIP=$MY_IP' >> /etc/environment"
      sudo sh -c "echo 'NAMESPACE=$NAMESPACE' >> /etc/environment"
      sudo sh -c "echo 'EXTERNAL_SERVICE_NAME=$EXTERNAL_SERVICE_NAME' >> /etc/environment"
@@ -23,7 +27,7 @@ data:
 
      # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
      LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py \ 
-                 '-c=$CERT_FILE' '-k=$KEY_FILE' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+                 '-c=$CACERT_FILE' '-k=$TOKEN' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
      sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
      {{- if eq .Values.group.enabled true }}

@@ -71,12 +71,12 @@ group:
 
 ### secrets
 
-The tls and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberetes API on startup are encapsulated in the secrets.tls and secrets.ssh parameters:
+The ServiceAccount bearer token and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberetes API on startup are encapsulated in the secrets.tls and secrets.ssh parameters:
 
 ```
 secrets:
-  tls: # name of tls secret used to access Kubernetes API
   ssh: # name of ssh secret used to launch Arkouda locales
+  sa: # name of ServiceAccount bearer token secret used to access Kubernetes API
 ```
 
 ## Helm Install Command
