@@ -2,7 +2,7 @@ import arkouda as ak
 import holoviews as hv
 import panel as pn
 import param
-from typing import Tuple, Union
+from typing import Union
 
 """
 Helper method for setting up the plot rendering environment.
@@ -215,7 +215,6 @@ def boxWhisker(
             var = pn.widgets.Select(
                 name="variable", value=data.columns[0], options=data.columns
             )
-
             @pn.depends(var.param.value)
             def create_figure(var):
                 sorted_data = ak.sort(data[var])
@@ -404,4 +403,5 @@ def explore(
         params.z_score_threshold_slider,
         width=200,
     )
+
     return pn.Row(widget_column, update)

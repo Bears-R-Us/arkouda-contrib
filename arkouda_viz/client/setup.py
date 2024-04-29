@@ -2,7 +2,7 @@ from os import path
 
 from setuptools import setup
 
-here = path.abspath(path.dirname(__file__))
+here = path.abspath(path.dirname(__file__))[:-7]
 # Long description will be contents of README
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
@@ -15,5 +15,13 @@ setup(
     long_description_content_type="text/markdown",
     packages=["arkouda_viz"],
     python_requires=">=3.8",
-    install_requires=["arkouda", "holoviews", "datashader"],
+    install_requires=[
+        "arkouda",
+        "holoviews",
+        "datashader",
+        "panel",
+        "param",
+        "typing",
+        "jupyter-bokeh",
+    ],
 )
