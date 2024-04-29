@@ -417,6 +417,9 @@ def explore(
         enable_slider_checkbox = pn.widgets.Checkbox(
             name="remove outliers", value=False
         )
+
+        log_checkbox = pn.widgets.Checkbox(name="log", value=False)
+
         z_score_threshold_slider = pn.widgets.FloatSlider(
             name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
         )
@@ -425,7 +428,16 @@ def explore(
     params = Explore()
 
     def make_data(
-        x_range, y_range, cmap, x_var, y_var, x_bin, y_bin, remove_outliers, z_score
+        x_range,
+        y_range,
+        cmap,
+        x_var,
+        y_var,
+        x_bin,
+        y_bin,
+        remove_outliers,
+        log_checkbox,
+        z_score,
     ):
 
         params.status_spinner.value = True
@@ -463,13 +475,19 @@ def explore(
             if x_range is None or y_range is None or not x_range or not y_range:
                 binned_data = ak.histogram2d(
                     data[x_var], data[y_var], bins=(x_bin, y_bin)
-                )
+                )[0]
+
+                if log_checkbox:
+                    binned_data = ak.ArrayView(
+                        ak.log(binned_data.base), binned_data.shape
+                    )
+
                 saved_binned_data = binned_data
                 params.status_spinner.name = "rendering ..."
                 params.status_spinner.color = "success"
 
                 return hv.Image(
-                    np.rot90(binned_data[0].to_ndarray()), bounds=(0, 0, 1, 1)
+                    np.rot90(binned_data.to_ndarray()), bounds=(0, 0, 1, 1)
                 ).opts(
                     cmap=cmap,
                     width=width,
@@ -489,14 +507,20 @@ def explore(
                 y_span = y_range[1] - y_range[0]
                 binned_data = ak.histogram2d(
                     subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
-                )
+                )[0]
+
+                if log_checkbox:
+                    binned_data = ak.ArrayView(
+                        ak.log(binned_data.base), binned_data.shape
+                    )
+
                 saved_binned_data = binned_data
 
             params.status_spinner.name = "rendering ..."
             params.status_spinner.color = "success"
 
             return hv.Image(
-                np.rot90(binned_data[0].to_ndarray()),
+                np.rot90(binned_data.to_ndarray()),
                 bounds=(
                     x_range[0],
                     y_range[0],
@@ -521,7 +545,7 @@ def explore(
             params.status_spinner.color = "success"
 
             return hv.Image(
-                np.rot90(saved_binned_data[0].to_ndarray()), bounds=(0, 0, 1, 1)
+                np.rot90(saved_binned_data.to_ndarray()), bounds=(0, 0, 1, 1)
             ).opts(
                 cmap=cmap,
                 width=width,
@@ -538,7 +562,7 @@ def explore(
             params.status_spinner.color = "success"
 
             return hv.Image(
-                np.rot90(saved_binned_data[0].to_ndarray()),
+                np.rot90(saved_binned_data.to_ndarray()),
                 bounds=(
                     x_range[0],
                     y_range[0],
@@ -561,9 +585,12 @@ def explore(
         x_bin=params.param.x_bin,
         y_bin=params.param.y_bin,
         remove_outliers=params.enable_slider_checkbox.param.value,
+        log_checkbox=params.log_checkbox.param.value,
         z_score=params.z_score_threshold_slider,
     )
-    def update(cmap, x_var, y_var, x_bin, y_bin, remove_outliers, z_score):
+    def update(
+        cmap, x_var, y_var, x_bin, y_bin, remove_outliers, log_checkbox, z_score
+    ):
         initial_xrange = (
             float(math.floor(ak.min(full_data[x_var]))),
             float(math.ceil(ak.max(full_data[x_var]))),
@@ -585,6 +612,7 @@ def explore(
                 x_bin,
                 y_bin,
                 remove_outliers,
+                log_checkbox,
                 z_score,
             ),
             streams=[stream],
@@ -599,7 +627,7 @@ def explore(
         params.param.y_var,
         params.param.x_bin,
         params.param.y_bin,
-        params.enable_slider_checkbox,
+        pn.Row(params.enable_slider_checkbox, params.log_checkbox),
         params.z_score_threshold_slider,
         params.status_spinner,
         width=310,
