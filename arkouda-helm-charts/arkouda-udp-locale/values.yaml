@@ -2,7 +2,7 @@
 
 ######################## Pod Settings ########################
 
-releaseVersion: 3092_add_support_for_TLS_token_authentication_v2 # bearsrus arkouda-udp-server image version
+releaseVersion: v2024.04.19 # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 resources:
