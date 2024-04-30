@@ -2,7 +2,7 @@
 
 ## Overview
 
-The arkouda-udp-locale Helm chart deploys 1..n arkouda-udp-locale docker containers that, together with the arkouda-udp-server bootstrap server, compose the Arkouda-on-Kubernetes deployment. The arkouda-udp-locale Helm chart is deployed first and, once all of the arkouda-udp-locale pods are running, the arkouda-udp-server Helm chart is deployed. The arkouda-udp-server container uses ssh to establish a gasnet/udp-managed Arkouda multi-locale instance.
+The arkouda-udp-locale Helm chart deploys 1..n arkouda-udp-locale docker containers that, together with the arkouda-udp-server bootstrap container, compose the Arkouda-on-Kubernetes deployment. The arkouda-udp-locale Helm chart is deployed first and, once all of the arkouda-udp-locale pods are running, the arkouda-udp-server Helm chart is deployed. The arkouda-udp-server container uses ssh to establish a gasnet/udp-managed Arkouda multi-locale instance.
 
 ## Configuration
 
@@ -12,7 +12,7 @@ The releaseVersion parameter (Arkouda tag) and imagePullPolicy are set at the to
 
 ### resources
 
-The resource request and limit parameters are specified in the resources element of the Pod Settings section:
+The resource request and limit parameters are specified in the resources element of the Pod Settings section. Note: the resource requests and limits parameters are the same because the compute resources allocated to Chapel processes is static.
 
 ```
 resources:
@@ -71,12 +71,11 @@ group:
 
 ### secrets
 
-The ServiceAccount bearer token and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberetes API on startup are encapsulated in the secrets.tls and secrets.ssh parameters:
+The name of the SSH cert pair used to launch Arkouda-on-Kubernetes via the Chapel UDP launcher is specified in the secrets.ssh parameter:
 
 ```
 secrets:
   ssh: # name of ssh secret used to launch Arkouda locales
-  sa: # name of ServiceAccount bearer token secret used to access Kubernetes API
 ```
 
 ## Helm Install Command

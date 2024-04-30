@@ -12,7 +12,7 @@ arkouda-udp-server generates GASNET udp connections with all previously-deployed
 2. service-account-token secret used to authenticate ServiceAccount to Kubernetes API request
 3. Roles with permissions to enable Kubernetes API requests
 4. RoleBindings that bind the k8s Roles to the Arkouda ServiceAccount
-5. SSH secret to enable GASNET udp startup of all Arkouda locale pods
+5. SSH secret to enable GASNET UDP startup of all Arkouda locale pods
 
 ### ServiceAccount
 
@@ -58,9 +58,9 @@ kubectl apply -f serviceacount-token.yaml -n $NAMESPACE
 
 The Kubernetes API permissions are in the form of a Role (scoped to the arkouda-udp-locale/arkouda-udp-server deployment namespace). For the purposes of this demonstration, the Roles are as follows:
 
-#### GASNET udp Integration
+#### GASNET SSH Launcher
 
-The arkouda-udp-server deployment discovers all arkouda-udp-locale pods on startup to create the GASNET udp connections between all Arkouda locales. Accordingly, Arkouda requires Kubernetes pod list and get permissions. The corresponding Role is as follows:
+The arkouda-udp-server pod launches all Arkouda locales on startup via SSH to create the GASNET UDP connections between all Arkouda locales. The first step in the SSH locale launcher process is to discover the IP addresses of all arkouda-udp-locale pods. Accordingly, Arkouda requires Kubernetes pod list and get permissions. The corresponding Role is as follows:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -129,13 +129,10 @@ While the Role and RoleBinding file contents are detailed above, all required Ro
 
 ### SSH Secret
 
-An SSH key pair deployed within Kubernetes as a secret is required for all Arkouda locales to startup via the GASNET udp with the S (SSH) spawner. _Since the arkouda pods launch as the ubuntu user, the SSH key pair must be generated as the ubuntu user._ The key pair can be generated as the ubuntu user either on a host system that is running ubuntu or within one of the bearsrus Arkouda docker images 
-
-An example SSH key on a host system is as follows:
+An SSH key pair deployed within Kubernetes as a secret is required for all Arkouda locales to startup via the Chapel GASNET UDP comm substrate with the S (SSH) spawner. The key pair is generated as follows:
 
 ```
 # Generate the SSH key pair
-sudo su ubuntu
 ssh-keygen
 
 Generating public/private rsa key pair.
@@ -171,7 +168,7 @@ The releaseVersion parameter (Arkouda tag) and imagePullPolicy are set at the to
 
 ### resources
 
-The resource request and limit parameters are specified in the resources element of the Pod Settings section:
+The resource request and limit parameters are specified in the resources element of the Pod Settings section. Note: the resource requests and limits parameters are the same because the compute resources allocated to Chapel processes is static.
 
 ```
 resources:
@@ -281,7 +278,7 @@ group:
 
 ### secrets
 
-The tls and ssh secrets that enable Arkouda-on-Kubernetes to access the Kuberetes API on startup are encapsulated in the secrets.tls and secrets.ssh parameters:
+The name of the ServiceAccount bearer token secret used to access the Kubernetes API on startup is specified in the secrets.sa parameter while the name of the SSH cert used to launch Arkouda locales via the Chapel UDP launcher is specified in the secrets.ssh parameter:
 
 ```
 secrets:
