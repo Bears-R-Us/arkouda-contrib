@@ -16,7 +16,7 @@ arkouda-udp-server generates GASNET udp connections with all previously-deployed
 
 ### ServiceAccount
 
-The Arkouda ServiceAccount is the entity that is bound to Roles required to register/deregister Arkouda with Kubernetes. An example ServiceAccount is as follows:
+The Arkouda ServiceAccount is bound to Roles required to register/deregister Arkouda with Kubernetes. An example ServiceAccount is as follows:
 
 ```
 apiVersion: v1
@@ -29,13 +29,14 @@ automountServiceAccountToken: false
 The ServiceAccount is created in the namespace Arkouda is deployed to. An example kubectl command is as follows:
 
 ```
-export NAMESPACE=arkouda 
+export NAMESPACE=arkouda
+
 kubectl apply -f serviceacount.yaml -n $NAMESPACE
 ```
 
 ### service-account-token
 
-The service-account-token is bound to the Arkouda ServiceAccount and is used to access the Kubernetes API. An example service-account-token is as follows:
+The service-account-token is bound to the Arkouda ServiceAccount and is used to authenticate to the Kubernetes API. An example service-account-token is as follows:
 
 ```
 apiVersion: v1
@@ -51,6 +52,7 @@ The service-acccount-token is created in the namespace Arkouda is deployed to. A
 
 ```
 export NAMESPACE=arkouda
+
 kubectl apply -f serviceacount-token.yaml -n $NAMESPACE
 ```
 
@@ -229,7 +231,7 @@ The persistence section configures the container and host paths that, if persist
 persistence:
   enabled: false # indicates whether files can be written to/read from the host system
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
-  hostPath: /mnt/data/arkouda-files # host directory for reading/writing Arkouda files
+  hostPath: /mnt/data/arkouda-files/ # host directory for reading/writing Arkouda files
 ```
 
 ### metricsExporter
