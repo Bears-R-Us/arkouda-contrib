@@ -370,6 +370,7 @@ def explore(
 ):
     render_env(engine, width=width, height=height)
     pn.extension()
+    pn.config.throttled = True
     full_data = None
     if data is not None:
         if isinstance(data, ak.DataFrame):
