@@ -422,7 +422,11 @@ def explore(
         log_checkbox = pn.widgets.Checkbox(name="log", value=False)
 
         z_score_threshold_slider = pn.widgets.FloatSlider(
-            name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
+            name="z-score threshold",
+            start=0.0,
+            end=5,
+            step=0.1,
+            value=3.0,
         )
         status_spinner = pn.widgets.LoadingSpinner(value=False, size=50, name="idle")
 
@@ -592,6 +596,8 @@ def explore(
     def update(
         cmap, x_var, y_var, x_bin, y_bin, remove_outliers, log_checkbox, z_score
     ):
+        params.z_score_threshold_slider.disabled = not remove_outliers
+
         initial_xrange = (
             float(math.floor(ak.min(full_data[x_var]))),
             float(math.ceil(ak.max(full_data[x_var]))),
