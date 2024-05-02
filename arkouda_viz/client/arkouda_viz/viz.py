@@ -355,8 +355,6 @@ Returns
 hv.Image().
     An image with or without a variable dropdown menu based in single or multiple columns.
 """
-saved_binned_data = -1
-saved_cmap = -1
 
 
 def explore(
@@ -449,12 +447,10 @@ def explore(
         params.status_spinner.name = "calculating bins ..."
         params.status_spinner.color = "primary"
 
-        global saved_binned_data
-        global saved_cmap
-
         data = full_data
 
         if remove_outliers:
+            params.status_spinner.name = "removing outliers ..."
             z_scores_1 = (data[x_var] - ak.mean(data[x_var])) / ak.std(data[x_var])
             z_scores_2 = (data[y_var] - ak.mean(data[y_var])) / ak.std(data[y_var])
 
@@ -463,111 +459,47 @@ def explore(
 
             data = data[ak.in1d(data[x_var], var1) & ak.in1d(data[y_var], var2)]
 
-            x_range = (
-                float(math.floor(ak.min(data[x_var]))),
-                float(math.ceil(ak.max(data[x_var]))),
-            )
-            y_range = (
-                float(math.floor(ak.min(data[y_var]))),
-                float(math.ceil(ak.max(data[y_var]))),
-            )
+        if x_range is None or y_range is None or not x_range or not y_range:
+            binned_data = ak.histogram2d(data[x_var], data[y_var], bins=(x_bin, y_bin))[
+                0
+            ]
 
-        if saved_cmap == -1:
-            saved_cmap = cmap
-
-        if saved_binned_data == -1 or saved_cmap == cmap:
-
-            if x_range is None or y_range is None or not x_range or not y_range:
-                binned_data = ak.histogram2d(
-                    data[x_var], data[y_var], bins=(x_bin, y_bin)
-                )[0]
-
-                if log_checkbox:
-                    binned_data = ak.ArrayView(
-                        ak.log(binned_data.base), binned_data.shape
-                    )
-
-                saved_binned_data = binned_data
+            if log_checkbox:
+                binned_data = ak.ArrayView(ak.log(binned_data.base), binned_data.shape)
                 params.status_spinner.name = "rendering ..."
                 params.status_spinner.color = "success"
 
-                return hv.Image(
-                    np.rot90(binned_data.to_ndarray()), bounds=(0, 0, 1, 1)
-                ).opts(
-                    cmap=cmap,
-                    width=width,
-                    height=height,
-                    xlabel=x_var,
-                    ylabel=y_var,
-                    color_bar=True,
-                )
-            else:
-                subset_data = data[
-                    (data[x_var] >= x_range[0])
-                    & (data[x_var] <= x_range[1])
-                    & (data[y_var] >= y_range[0])
-                    & (data[y_var] <= y_range[1])
-                ]
-                x_span = x_range[1] - x_range[0]
-                y_span = y_range[1] - y_range[0]
-                binned_data = ak.histogram2d(
-                    subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
-                )[0]
+            return hv.Image(
+                np.rot90(binned_data.to_ndarray()), bounds=(0, 0, 1, 1)
+            ).opts(
+                cmap=cmap,
+                width=width,
+                height=height,
+                xlabel=x_var,
+                ylabel=y_var,
+                color_bar=True,
+            )
+        else:
+            subset_data = data[
+                (data[x_var] >= x_range[0])
+                & (data[x_var] <= x_range[1])
+                & (data[y_var] >= y_range[0])
+                & (data[y_var] <= y_range[1])
+            ]
+            x_span = x_range[1] - x_range[0]
+            y_span = y_range[1] - y_range[0]
+            binned_data = ak.histogram2d(
+                subset_data[x_var], subset_data[y_var], bins=(x_bin, y_bin)
+            )[0]
 
-                if log_checkbox:
-                    binned_data = ak.ArrayView(
-                        ak.log(binned_data.base), binned_data.shape
-                    )
-
-                saved_binned_data = binned_data
+            if log_checkbox:
+                binned_data = ak.ArrayView(ak.log(binned_data.base), binned_data.shape)
 
             params.status_spinner.name = "rendering ..."
             params.status_spinner.color = "success"
 
             return hv.Image(
                 np.rot90(binned_data.to_ndarray()),
-                bounds=(
-                    x_range[0],
-                    y_range[0],
-                    x_range[0] + x_span,
-                    y_range[0] + y_span,
-                ),
-            ).opts(
-                cmap=cmap,
-                width=width,
-                height=height,
-                xlabel=x_var,
-                ylabel=y_var,
-                colorbar=True,
-            )
-
-        if saved_cmap != cmap:
-
-            saved_cmap = cmap
-
-        if x_range is None or y_range is None or not x_range or not y_range:
-            params.status_spinner.name = "rendering ..."
-            params.status_spinner.color = "success"
-
-            return hv.Image(
-                np.rot90(saved_binned_data.to_ndarray()), bounds=(0, 0, 1, 1)
-            ).opts(
-                cmap=cmap,
-                width=width,
-                height=height,
-                xlabel=x_var,
-                ylabel=y_var,
-                colorbar=True,
-            )
-        else:
-            x_span = x_range[1] - x_range[0]
-            y_span = y_range[1] - y_range[0]
-
-            params.status_spinner.name = "rendering ..."
-            params.status_spinner.color = "success"
-
-            return hv.Image(
-                np.rot90(saved_binned_data.to_ndarray()),
                 bounds=(
                     x_range[0],
                     y_range[0],
