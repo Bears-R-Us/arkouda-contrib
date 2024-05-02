@@ -443,14 +443,12 @@ def explore(
         z_score,
     ):
 
-        params.status_spinner.value = True
-        params.status_spinner.name = "calculating bins ..."
-        params.status_spinner.color = "primary"
-
         data = full_data
 
         if remove_outliers:
+            params.status_spinner.value = True
             params.status_spinner.name = "removing outliers ..."
+            params.status_spinner.color = "primary"
             z_scores_1 = (data[x_var] - ak.mean(data[x_var])) / ak.std(data[x_var])
             z_scores_2 = (data[y_var] - ak.mean(data[y_var])) / ak.std(data[y_var])
 
@@ -460,15 +458,19 @@ def explore(
             data = data[ak.in1d(data[x_var], var1) & ak.in1d(data[y_var], var2)]
 
         if x_range is None or y_range is None or not x_range or not y_range:
+            params.status_spinner.value = True
+            params.status_spinner.name = "calculating bins ..."
+            params.status_spinner.color = "primary"
             binned_data = ak.histogram2d(data[x_var], data[y_var], bins=(x_bin, y_bin))[
                 0
             ]
 
             if log_checkbox:
+                params.status_spinner.name = "log transforming ..."
                 binned_data = ak.ArrayView(ak.log(binned_data.base), binned_data.shape)
-                params.status_spinner.name = "rendering ..."
-                params.status_spinner.color = "success"
-
+                
+            params.status_spinner.name = "rendering ..."
+            params.status_spinner.color = "success"
             return hv.Image(
                 np.rot90(binned_data.to_ndarray()), bounds=(0, 0, 1, 1)
             ).opts(
@@ -480,6 +482,9 @@ def explore(
                 color_bar=True,
             )
         else:
+            params.status_spinner.value = True
+            params.status_spinner.name = "calculating bins ..."
+            params.status_spinner.color = "primary"
             subset_data = data[
                 (data[x_var] >= x_range[0])
                 & (data[x_var] <= x_range[1])
@@ -493,11 +498,11 @@ def explore(
             )[0]
 
             if log_checkbox:
+                params.status_spinner.name = "log transforming ..."
                 binned_data = ak.ArrayView(ak.log(binned_data.base), binned_data.shape)
 
             params.status_spinner.name = "rendering ..."
             params.status_spinner.color = "success"
-
             return hv.Image(
                 np.rot90(binned_data.to_ndarray()),
                 bounds=(
