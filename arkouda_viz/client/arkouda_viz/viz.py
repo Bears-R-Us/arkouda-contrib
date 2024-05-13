@@ -5,6 +5,8 @@ import param
 from typing import Tuple, Union
 import numpy as np
 import math
+from bokeh.models import HoverTool
+
 
 """
 Helper method for setting up the plot rendering environment.
@@ -468,7 +470,7 @@ def explore(
             if log_checkbox:
                 params.status_spinner.name = "log transforming ..."
                 binned_data = ak.ArrayView(ak.log(binned_data.base), binned_data.shape)
-                
+
             params.status_spinner.name = "rendering ..."
             params.status_spinner.color = "success"
             return hv.Image(
@@ -480,6 +482,9 @@ def explore(
                 xlabel=x_var,
                 ylabel=y_var,
                 color_bar=True,
+                tools=[
+                    HoverTool(tooltips=[("x", "$x"), ("y", "$y"), ("count", "@image")])
+                ],
             )
         else:
             params.status_spinner.value = True
@@ -518,6 +523,9 @@ def explore(
                 xlabel=x_var,
                 ylabel=y_var,
                 colorbar=True,
+                tools=[
+                    HoverTool(tooltips=[("x", "$x"), ("y", "$y"), ("count", "@image")])
+                ],
             )
 
     @pn.depends(
