@@ -226,7 +226,12 @@ spec:
       source: |
         import os
         import time
+        os.environ['ARKOUDA_CLIENT_MODE'] = 'API'
+
+        from arkouda.logger import getArkoudaLogger
         from arkouda_integration.k8s import KubernetesDao
+
+        logger = getArkoudaLogger(name="arkouda-locale-verify")
 
         app_name = os.environ['APP_NAME']
         namespace = os.environ['NAMESPACE']
@@ -244,11 +249,11 @@ spec:
         num_deployed_locales = len(dao.get_pod_ips(namespace=namespace, app_name=app_name))
 
         while num_deployed_locales < num_locales:
-            print(f'{num_deployed_locales} of {num_locales} locales deployed')
+            logger.info(f'{num_deployed_locales} of {num_locales} locales deployed')
             time.sleep(5)
             num_deployed_locales = len(dao.get_pod_ips(namespace=namespace, app_name=app_name))
 
-        print(f"{num_locales} locales deployed, arkouda-locale deployment complete")
+        logger.info(f"{num_locales} locales deployed, arkouda-locale deployment complete")
 
   - name: create-locale-headless-service
     resource:
