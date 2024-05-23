@@ -187,7 +187,7 @@ spec:
                     - name: NUM_LOCALES
                       value: '{{ workflow.parameters.arkouda-number-of-locales }}'
                     - name: MEMTRACK
-                      value: '{{ workflow.parameters. }}'
+                      value: '{{ workflow.parameters.mem-track }}'
                     - name: CHPL_RT_NUM_THREADS_PER_LOCALE
                       value: '{{ workflow.parameters.chpl-num-threads-per-locale }}'
               volumes:

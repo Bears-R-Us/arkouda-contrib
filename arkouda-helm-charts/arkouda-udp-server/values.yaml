@@ -10,7 +10,7 @@ resources:
 
 ######################## Pod Settings ########################
 
-releaseVersion: 3092_add_support_for_TLS_token_authentication_v2 # bearsrus arkouda-udp-server image version
+releaseVersion: v2024.04.19 # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 ################ Arkouda Server Configuration ################
@@ -23,7 +23,7 @@ server:
   memMax: 1000000000 # maximum bytes of RAM to be used per locale
   threadsPerLocale: 2 # number of cpu cores to be used per locale
   logLevel: LogLevel.DEBUG # logging level
-  name: project-a
+  name: # name of server
   service:
     type: ClusterIP
     port: 5555 # Arkouda k8s service port
@@ -40,20 +40,20 @@ locale:
 
 external:
   k8sHost: # Kubernetes API url used to register service(s)
-  namespace: arkouda # namespace Arkouda will register service
+  namespace: # namespace Arkouda will register service
 
 persistence:
   enabled: true # indicates whether files can be written to/read from the host system
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
-  hostPath: /mnt/data/arkouda-files # host directory for reading/writing Arkouda files
+  hostPath: # host directory for reading/writing Arkouda files
 
 metricsExporter:
   name: # Kubernetes app and server name for prometheus-arkouda-exporter
-  releaseVersion: v2024.03.18 # bearsrus prometheus-arkouda-exporter image version
+  releaseVersion: v2024.04.19 # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
   pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
   serviceMonitor: 
-    enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
+    enabled: # indicates if ServiceMonitor registration is to be used, defaults to true
     pollingInterval: 15s
     additionalLabels:
       launcher: kubernetes # labels that enable Prometheus to discover Arkouda ServiceMonitor
