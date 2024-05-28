@@ -8,8 +8,6 @@ spec:
     parameters:
     - name: arkouda-serviceaccount-name
       value: arkouda-serviceacccount
-    - name: arkouda-serviceaccount-token-name
-      value: arkouda-serviceaccount-token
     - name: arkouda-user
       value: ubuntu
     - name: arkouda-uid
@@ -45,6 +43,11 @@ spec:
   - name: deploy-arkouda-on-kubernetes
     dag:
       tasks:
+        - name: create-pod-role
+          template: create-pod-role
+        - name: create-pod-role-binding
+          template: create-pod-role-binding
+          depends: 'create-pod-role.Succeeded'
         - name: create-locale-launch-script-config-map
           template: create-locale-launch-script-config-map
         - name: deploy-arkouda-locale
@@ -54,11 +57,9 @@ spec:
           template: create-locale-headless-service
         - name: create-locale-ssh-service
           template: create-locale-ssh-service
-        - name: create-pod-role
-          template: create-pod-role
-        - name: create-pod-role-binding
-          template: create-pod-role-binding
-          depends: 'create-pod-role.Succeeded'
+        - name: verify-locale-deployment
+          template: verify-locale-deployment
+          depends: 'deploy-arkouda-locale.Succeeded'
         - name: create-service-role
           template: create-service-role
         - name: create-service-role-binding
@@ -80,7 +81,7 @@ spec:
           depends: 'deploy-arkouda-locale.Succeeded'
         - name: deploy-arkouda-server
           template: deploy-server
-          depends: 'deploy-arkouda-locale.Succeeded && create-locale-ssh-service.Succeeded && create-locale-headless-service.Succeeded'
+          depends: 'verify-locale-deployment.Succeeded && create-locale-ssh-service.Succeeded && create-locale-headless-service.Succeeded'
         - name: create-metrics-exporter-service
           template: create-metrics-exporter-service
         - name: create-servicemonitor
@@ -200,6 +201,59 @@ spec:
                     items:
                       - key: script
                         path: start-arkouda-locale.sh
+
+  - name: verify-locale-deployment
+    volumes:
+      - name: sa
+        secret:
+          secretName: "{{ workflow.parameters.arkouda-serviceaccount-name }}"
+    script:
+      image: bearsrus/arkouda-integration:{{ workflow.parameters.arkouda-release-version }}
+      imagePullPolicy: "{{ workflow.parameters.image-pull-policy }}" 
+      command: [python3]
+      env:
+        - name: APP_NAME
+          value: "{{ workflow.parameters.arkouda-instance-name }}-locale"
+        - name: NUM_LOCALES
+          value: "{{ workflow.parameters.arkouda-number-of-locales }}"
+        - name: K8S_HOST
+          value: "{{ workflow.parameters.kubernetes-api-url }}"
+        - name: NAMESPACE
+          value: "{{ workflow.parameters.arkouda-namespace }}"
+      volumeMounts:
+        - name: sa
+          mountPath: /opt/sa 
+      source: |
+        import os
+        import time
+        os.environ['ARKOUDA_CLIENT_MODE'] = 'API'
+
+        from arkouda.logger import getArkoudaLogger
+        from arkouda_integration.k8s import KubernetesDao
+
+        logger = getArkoudaLogger(name="arkouda-locale-verify")
+
+        app_name = os.environ['APP_NAME']
+        namespace = os.environ['NAMESPACE']
+        num_locales = int(os.environ['NUM_LOCALES'])
+        k8s_host = os.environ['K8S_HOST']
+
+        cacert_file = '/opt/sa/ca.crt'
+        with open("/opt/sa/token", "r") as token_file:
+            token = token_file.read()
+
+        dao = KubernetesDao(cacert_file=cacert_file,
+                            token=token,
+                            k8s_host=k8s_host)
+
+        num_deployed_locales = len(dao.get_pod_ips(namespace=namespace, app_name=app_name))
+
+        while num_deployed_locales < num_locales:
+            logger.info(f'{num_deployed_locales} of {num_locales} locales deployed')
+            time.sleep(5)
+            num_deployed_locales = len(dao.get_pod_ips(namespace=namespace, app_name=app_name))
+
+        logger.info(f"{num_locales} locales deployed, arkouda-locale deployment complete")
 
   - name: create-locale-headless-service
     resource:

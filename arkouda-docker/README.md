@@ -2,6 +2,32 @@
 
 The arkouda-docker project delivers Chapel and Arkouda docker images that enable containerized Arkouda to be deployed on Kubernetes, Slurm >= 21.08.5, and bare metal.  
 
+# arkouda-integration
+
+## Background
+
+The arkouda-integration image encapsulates the [arkouda_integration](../arkouda_integration) Python library used to integrate Arkouda with external systems such as Kubernetes.
+
+## Building arkouda-integration
+
+```
+# set env variables
+export ARKOUDA_BRANCH_NAME=2024.04.19
+export ARKOUDA_DISTRO_NAME=v2024.04.19
+export ARKOUDA_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda/archive/refs/tags/v2024.04.19.zip
+export ARKOUDA_CONTRIB_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip
+export ARKOUDA_CONTRIB_DISTRO_NAME=main
+export ARKOUDA_INTEGRATION_VERSION=v2024.04.19
+
+docker build --build-arg ARKOUDA_DISTRO_NAME=$ARKOUDA_DISTRO_NAME \
+             --build-arg ARKOUDA_BRANCH_NAME=$ARKOUDA_BRANCH_NAME \
+             --build-arg ARKOUDA_DOWNLOAD_URL=$ARKOUDA_DOWNLOAD_URL \
+             --build-arg ARKOUDA_CONTRIB_DOWNLOAD_URL=$ARKOUDA_CONTRIB_DOWNLOAD_URL \
+             --build-arg ARKOUDA_CONTRIB_DISTRO_NAME=$ARKOUDA_CONTRIB_DISTRO_NAME \
+             -f prometheus-arkouda-exporter -t bearsrus/arkouda-integration:$ARKOUDA_INTEGRATION_VERSION .
+
+```
+
 # arkouda-full-stack
 
 ## Background
