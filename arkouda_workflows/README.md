@@ -2,7 +2,7 @@
 
 ## Background
 
-[Argo Workflows](https://argoproj.github.io/argo-workflows/) is an ideal approach to manage all the dependencies involved in deploying Arkouda on Kubernetes (AoK) via [arkouda-udp-locale](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-locale) and [arkouda-udp-server](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server) deployments. Specifically, all arkouda-udp-locale pods must be up and running so that arkouda-udp-server can discover the locale pod ip addresses and launch the Arkouda cluster via the GASNET/UDP CHAPEL_COMM_SUBSTRATE.
+[Argo Workflows](https://argoproj.github.io/argo-workflows/) is an ideal approach to manage all the dependencies involved in deploying Arkouda on Kubernetes (AoK) via [arkouda-udp-locale](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-locale) and [arkouda-udp-server](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server) deployments. Specifically, all arkouda-udp-locale pods _must be up and running_ so that the arkouda-udp-server pod can discover the locale pod ip addresses and launch the Arkouda cluster via the GASNET/UDP CHAPEL\_COMM\_SUBSTRATE.
 
 In addition, Argo Workflows is a convenient means for deploying [prometheus-arkouda-exporter](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/prometheus-arkouda-exporter) deployment.
 
@@ -17,11 +17,11 @@ There are four Arkouda Argo workflows:
 3. deploy-prometheus-arkouda-exporter
 4. delete-prometheus-arkouda-exporter
 
-The first two workflows are for deploying/deleting AoK while the latter two are for deploying prometheus-arkouda-exporter that exports Arkouda metrics for non-AoK deployments such as Arkouda-on-Slurm.
+The first two workflows are for deploying/deleting AoK while the latter two are for deploying prometheus-arkouda-exporter that exports Arkouda metrics for non-AoK deployments such as Arkouda-on-Slurm. Note: for AoK, prometheus-arkouda-exporter is bundled with the arkouda-udp-server pod.
 
 ## CronWorkflows
 
-In addition to Argo Workflows, there are two Arkouda [Argo CronWorkflows](https://argoproj.github.io/argo-workflows/cron-workflows/) that deploy and delete Arkouda at specific days and times via integration of Argo Workflows with [Unix/Linux crontab](https://www.techtarget.com/searchdatacenter/definition/crontab#:~:text=In%20Unix%20and%20Linux%2C%20cron,d%20scripts)
+In addition to Argo Workflows, there are two Arkouda [Argo CronWorkflows](https://argoproj.github.io/argo-workflows/cron-workflows/) that deploy and delete Arkouda, respectively, at specific days and times via integration of Argo Workflows with [Unix/Linux crontab](https://www.techtarget.com/searchdatacenter/definition/crontab#:~:text=In%20Unix%20and%20Linux%2C%20cron,d%20scripts)
 
 ## WorkflowTemplates
 
@@ -139,13 +139,11 @@ spec:
       instance: arkouda-on-k8s-metrics-exporter
 ``` 
 
-The label matching one of the Prometheus matchLabels elements is specified in the prometheus-match-label Argo workflow parameters as shown below. 
-
 ## Commands
 
 ### deploy arkouda workflow
 
-The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK utilizing several environment variables. In the base configuration Arkouda runs as the default AOK user,  an example of which is shown below:
+The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK utilizing several environment variables. In the base configuration Arkouda runs as the default AoK user,  an example of which is shown below:
 
 ```
 export KUBERNETES_URL=https://localhost:6443
@@ -179,6 +177,7 @@ Configuration parameters of note:
 1. KUBERNETES\_API: URL for Kubernetes API, which is used to create/read pods, create services as well as servicemonitor
 2. ARKOUDA\_SERVICEACCOUNT\_NAME: name of Kubernetes ServiceAccount used by Arkouda to register with Kubernetes and Prometheus
 3. ARKOUDA\_SSH\_SECRET secret encapsulating SSH permissions required for deploying Arkouda via UDP
+4. ARKOUDA\_PROMETHEUS\_MATCH\_LABEL: the label Prometheus matches and uses to discover prometheus-arkouda-exporter scrape endpoints. 
 
 To run Arkouda as a specific  user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions, the following env variables and Argo workflow parameters are added:
 
