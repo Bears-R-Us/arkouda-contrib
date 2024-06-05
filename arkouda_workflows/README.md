@@ -2,11 +2,15 @@
 
 ## Background
 
-[Argo Workflows](https://argoproj.github.io/argo-workflows/) is an ideal approach to manage all the dependencies involved in deploying Arkouda on Kubernetes (AoK) via [arkouda-udp-locale](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-locale) and [arkouda-udp-server](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server) as well as the [prometheus-arkouda-exporter](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/prometheus-arkouda-exporter) deployment. Specifically, all arkouda-udp-locale pods must be up and running so that arkouda-udp-server can discover the locale pod ip addresses and launch the Arkouda cluster via the GASNET/UDP CHAPEL_COMM_SUBSTRATE.
+[Argo Workflows](https://argoproj.github.io/argo-workflows/) is an ideal approach to manage all the dependencies involved in deploying Arkouda on Kubernetes (AoK) via [arkouda-udp-locale](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-locale) and [arkouda-udp-server](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server) deployments. Specifically, all arkouda-udp-locale pods must be up and running so that arkouda-udp-server can discover the locale pod ip addresses and launch the Arkouda cluster via the GASNET/UDP CHAPEL_COMM_SUBSTRATE.
+
+In addition, Argo Workflows is a convenient means for deploying [prometheus-arkouda-exporter](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/prometheus-arkouda-exporter) deployment.
+
+Argo Workflows also provides a more straightforward means of programatically launching AoK as well as prometheus-arkouda-exporter via the [Hera](https://hera-workflows.readthedocs.io/en/stable/) Argo Workflows-Argo Events python client.
 
 ## Workflows
 
-There are four Arkouda argo workflows:
+There are four Arkouda Argo workflows:
 
 1. deploy-arkouda-on-kubernetes
 2. delete-arkouda-on-kubernetes
@@ -15,25 +19,34 @@ There are four Arkouda argo workflows:
 
 The first two workflows are for deploying/deleting AoK while the latter two are for deploying prometheus-arkouda-exporter that exports Arkouda metrics for non-AoK deployments such as Arkouda-on-Slurm.
 
-In addition to Argo Workflows, there are two Arkouda [Argo Cron Workflows](https://argoproj.github.io/argo-workflows/cron-workflows/) that deploy and delete Arkouda at specific days and times via integration of Argo Workflows with [Unix/Linux crontab](https://www.techtarget.com/searchdatacenter/definition/crontab#:~:text=In%20Unix%20and%20Linux%2C%20cron,d%20scripts)
+## CronWorkflows
 
-Both the Arkouda Workflows and CronWorkflows are based upon the Arkouda Workflow-Templates.
+In addition to Argo Workflows, there are two Arkouda [Argo CronWorkflows](https://argoproj.github.io/argo-workflows/cron-workflows/) that deploy and delete Arkouda at specific days and times via integration of Argo Workflows with [Unix/Linux crontab](https://www.techtarget.com/searchdatacenter/definition/crontab#:~:text=In%20Unix%20and%20Linux%2C%20cron,d%20scripts)
+
+## WorkflowTemplates
+
+Both the Arkouda Workflows and CronWorkflows are based upon the Arkouda [deploy](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/arkouda_workflows/deploy-arkouda-on-kubernetes-workflow-template.yaml) and [delete](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/arkouda_workflows/delete-arkouda-on-kubernetes-workflow-template.yaml) WorkflowTemplates, respectively. Similarly, the prometheus-arkouda-exporter workflows are based upon the corresponding [deploy](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/arkouda_workflows/deploy-prometheus-arkouda-exporter-workflow-template.yaml) and [delete](https://github.com/Bears-R-Us/arkouda-contrib/blob/main/arkouda_workflows/delete-prometheus-arkouda-exporter-workflow-template.yaml) WorkflowTemplates.
 
 ## Prerequisites
 
-### Service Account and Role/Rolebinding
+### Overview
 
-#### Arkouda Argo Workflows ServiceAccount
+There are two sets of [ServiceAccounts](https://kubernetes.io/docs/concepts/security/service-accounts/) and [Roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole)/[RoleBindings](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding) used for deploying Arkouda and prometheus-arkouda-exporter on Kubernetes:
 
-The [arkouda-workflows-service-account.yaml](arkouda-workflows-service-account.yaml) file encapsulates the following elements to enable the deploy-arkouda-on-kubernetes-workflow and deploy-arkouda-on-kubernetes-workflow to add/delete Kubernetes objects as needed to deploy and delete AoK:
+1. Arkouda Argo Workflows: ServiceAccount and Role/RoleBinding for deploying the Arkouda Argo Workflows
+2. Arkouda: ServiceAccount bound to Kubernetes roles required by the arkouda-udp-server pod to (1) discover all arkouda-udp-locale pods and (2) register an Arkouda Kubernetes service enabling service discovery. The Arkouda ServiceAccount is bound to the Arkouda [Pod](https://github.com/Bears-R-Us/arkouda-contrib/blob/e2e9640c677d62ffae8d0b37fea4e9cd41636342/arkouda_workflows/deploy-arkouda-on-kubernetes-workflow-template.yaml#L286) [Service](https://github.com/Bears-R-Us/arkouda-contrib/blob/e2e9640c677d62ffae8d0b37fea4e9cd41636342/arkouda_workflows/deploy-arkouda-on-kubernetes-workflow-template.yaml#L315), and [ServiceMonitor](https://github.com/Bears-R-Us/arkouda-contrib/blob/e2e9640c677d62ffae8d0b37fea4e9cd41636342/arkouda_workflows/deploy-arkouda-on-kubernetes-workflow-template.yaml#L345) roles and correesponding RoleBindings upon deployment. 
+
+### Arkouda Argo Workflows ServiceAccount and Role/RoleBinding
+
+The [arkouda-workflows-service-account.yaml](arkouda-workflows-service-account.yaml) file encapsulates the following elements to enable the deploy-arkouda-on-kubernetes-workflow and deploy-arkouda-on-kubernetes-workflow to add/delete Kubernetes objects as needed to deploy and delete AoK as well as prometheus-arkouda-exporter:
 
 1. arkouda-workflows-service-account: k8s ServiceAccount 
 2. arkouda-workflows-role: Role encapsulating requisite permissions
-3. arkouda-workflows-rolebinding: RoleBinding binding the arkouda-workflows-service-account to the arkouda-workflows-role
+3. arkouda-workflows-rolebinding: RoleBinding that binds the arkouda-workflows-service-account to the arkouda-workflows-role
 
-#### arkouda\_server ServiceAccount
+### Arkouda ServiceAccount
 
-A separate ServiceAccount used by arkouda\_server to register Arkouda with Kubernetes along with a corresponding bearer token Secret are also required. An example ServiceAccount create sequence is shown below:
+A ServiceAccount along with a corresponding bearer token Secret are prerequisites. An example ServiceAccount and bearer token create sequence is shown below:
 
 An example ServiceAccount definition is as follows:
 
@@ -53,19 +66,20 @@ export NAMESPACE=arkouda
 kubectl apply -n arkouda -f arkouda-sa.yaml
 ```
 
+Since the Arkouda ServiceAccount is bound to the Pod, Service, and ServiceMonitor roles at workflow deployment time as detailed above, _only the Arkouda ServiceAccount is a prerequisite._
+
 ### Secrets
 
 The following secrets are required to deploy AoK:
 
 1. arkouda-ssh: encapsulates the SSH permissions required to launch Arkouda locales deployed in Kubernetes pods via the Chapel UDP substrate
-2. arkouda-token: encapsulates the bearer token used by the Arkouda ServiceAccount to authenticate to the Kubernetes API, which is required for
-registering/deregistering Arkouda with Kubernetes. 
+2. arkouda-token: encapsulates the bearer token used by the Arkouda ServiceAccount to authenticate to the Kubernetes API. Again, as detailed above, AoK accesses the Kubernetes API to (1) discover arkouda-udp-locale pods and (2) create/delete the Arkouda service used for Arkouda service discovery.
 
 Information regarding the Arkouda SSH and bearer token secrets is [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#ssh-secret) and [here](https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda-helm-charts/arkouda-udp-server#serviceaccount), respectively.
 
 ### Prometheus
 
-#### Promethues Install
+#### Prometheus Install
 
 For metrics-enabled AoK as well as arkouda-prometheus-exporter, a Prometheus Server and [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) are required. The prometheus-community has an excellent [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) Helm chart that's a convenient way to install 1..n elements of a Prometheus stack including Prometheus Server and Prometheus Operator.  
 
@@ -95,7 +109,7 @@ spec:
 
 ##### Configuring serviceMonitorSelector
 
-The serviceMonitorSelector element of the Prometheus configuratio specifies the label(s) Prometheus uses to discover ServiceMonitors. In the example below, Prometheus discovers and registers any ServiceMonitor with the ```release: kube-stack``` label: 
+The serviceMonitorSelector element of the Prometheus configuration specifies the label(s) Prometheus uses to discover ServiceMonitors. In the example below, Prometheus discovers and registers any ServiceMonitor with the ```release: kube-stack``` label: 
 
 ```
 spec:
@@ -106,7 +120,7 @@ spec:
 
 ### prometheus-arkouda-exporter ServiceMonitor
 
-The prometheus-arkouda-exporter is rendered discoverable via a label matching one of the labels specified in the target Prometheus spec.serviceMonitorSelector.matchLabels elements. In the above example the ```release: kubestack```  label is defined. Accordingly, prometheus-arkouda-exporter would be discoverable via the following ServiceMonitor configuration:
+The prometheus-arkouda-exporter is rendered discoverable via label matching one of the labels specified in the target Prometheus spec.serviceMonitorSelector.matchLabels elements. In the above example the ```release: kubestack```  label is defined. Accordingly, prometheus-arkouda-exporter would be discoverable via the following prometheus-arkouda-exporter ServiceMonitor configuration:
 
 ```
 apiVersion: monitoring.coreos.com/v1
@@ -187,7 +201,7 @@ export KUBERNETES_URL=https://localhost:6443 # result of kubectl cluster-info
 sh delete-arkouda-on-kubernetes-command.sh 
 ```
 
-### deploy prometheus-arkouda-exporter workflow
+### deploy-prometheus-arkouda-exporter workflow
 
 The [deploy-prometheus-arkouda-exporter-command.sh](deploy-prometheus-arkouda-exporter-command.sh) script is used to deploy prometheus-arkouda-exporter, an example of which is shown below:
 
@@ -206,7 +220,7 @@ export ARKOUDA_LAUNCHER=slurm
 sh deploy-prometheus-arkouda-exporter-command.sh
 ```
 
-### delete prometheus-arkouda-exporter workflow
+### delete-prometheus-arkouda-exporter workflow
 
 The [delete-prometheus-arkouda-exporter-command.sh](delete-prometheus-arkouda-exporter-command.sh) script is used to delete prometheus-arkouda-exporter, an example of which is shown below:
 
@@ -219,6 +233,8 @@ sh delete-prometheus-arkouda-exporter-command.sh
 ```
 
 ## CronWorkflows
+
+### deploy-arkouda-on-kubernetes-cronworkflow
 
 The [deploy-arkouda-on-kubernetes-cronworkflow.sh](deploy-arkouda-on-kubernetes-cronworkflow.sh) script is used to deploy the deploy-arkouda-on-kubernetes CronWorkflow, which utilizes several environment variables to deploy AoK on a specific day and time. An example is shown below:
 
@@ -260,7 +276,7 @@ spec:
   schedule: "* 07 * * *"
 ```
 
-### delete arkouda cron workflow
+### delete-arkouda-on-kubernetes-cronworkflow
 
 The [delete-arkouda-on-kubernetes-cronworkflow.sh](delete-arkouda-on-kubernetes-cronworkflow.sh) script is used deploy the delete-arkouda-on-kubernetes CronWorkflow, which utilizes several environment variables to delete AoK on a specific day and time. An example is shown below:
 
