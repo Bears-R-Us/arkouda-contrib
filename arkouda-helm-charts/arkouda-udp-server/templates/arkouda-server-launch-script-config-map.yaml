@@ -30,15 +30,15 @@ data:
                  '-c=$CACERT_FILE' '-k=$TOKEN' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
      sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
-     {{- if eq .Values.group.enabled true }}
+     {{- if .Values.group.enabled }}
      # Add group corresponding to gid and user
-     sudo groupadd -g {{ .Values.group.gid }} {{ .Values.group.name }}
+     sudo groupadd -g {{ .Values.group.gid | int64 | quote }} {{ .Values.group.name }}
      sudo groupadd {{ .Values.user.name }}
      {{- end }}
 
-     {{- if eq .Values.user.enabled true }} 
+     {{- if .Values.user.enabled }} 
      # Add user with home directory
-     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid }} -g {{ .Values.group.gid }}
+     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid | int64 | quote }} -g {{ .Values.group.gid | int64 | quote }}
 
      # Add user to user group
      sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
@@ -66,7 +66,7 @@ data:
      export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
 
      # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
-     {{- if eq .Values.server.metrics.collectMetrics true }}
+     {{- if .Values.server.metrics.collectMetrics }}
      /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
                                                       --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
                                                       --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \

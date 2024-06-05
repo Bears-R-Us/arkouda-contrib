@@ -1,4 +1,4 @@
-# Default values for arkouda-udp-server chart.
+# values for arkouda-udp-server chart.
 
 resources:
   limits:
@@ -16,7 +16,7 @@ imagePullPolicy: Always
 ################ Arkouda Server Configuration ################
 
 server: 
-  numLocales: 3  # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
   authenticate: false # whether to require token authentication
   verbose: false # enable verbose logging
   memTrack: true # enable memory tracking (required for memMax and metrics export)
@@ -29,7 +29,7 @@ server:
     port: 5555 # Arkouda k8s service port
     name: # k8s service name for Arkouda server
   metrics:
-    collectMetrics: true # indicates whether to collecte metrcis
+    collectMetrics: # indicates whether to collect metrics
     service:
       name: # service name for Arkouda metrics service endpoint
       port: 5556
@@ -43,7 +43,7 @@ external:
   namespace: # namespace Arkouda will register service
 
 persistence:
-  enabled: true # indicates whether files can be written to/read from the host system
+  enabled: # indicates whether files can be written to/read from the host system
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
   hostPath: # host directory for reading/writing Arkouda files
 
@@ -62,12 +62,12 @@ metricsExporter:
       - launcher
 
 user:
-  enabled: false # indicates whether to run Arkouda as a specified user
+  enabled: # indicates whether to run Arkouda as a specified user
   name: # name of user running arkouda and CN for corresponding secret for rolebindings
   uid: # uid of user running Arkouda
 
 group:
-  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 

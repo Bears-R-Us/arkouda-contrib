@@ -7,7 +7,7 @@ metadata:
 spec:
       restartPolicy: Never
       containers:
-        {{- if eq .Values.server.metrics.collectMetrics true }}
+        {{- if .Values.server.metrics.collectMetrics }}
         - name: arkouda-metrics-server
           image: bearsrus/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
           imagePullPolicy: {{ .Values.metricsExporter.imagePullPolicy }}
@@ -32,7 +32,7 @@ spec:
           lifecycle:
             preStop:
               exec:
-              {{- if eq .Values.server.metrics.collectMetrics true }}
+              {{- if .Values.server.metrics.collectMetrics }}
                 command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; metricsService=os.environ["METRICS_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cacert_file=os.environ["CACERT_FILE"],token=os.environ["SSL_TOKEN"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace); dao.delete_service(service_name=metricsService,namespace=namespace)']
               {{ else }}
                 command: ['python3','-c', 'import os; service=os.environ["EXTERNAL_SERVICE_NAME"]; namespace=os.environ["NAMESPACE"]; from arkouda_integration.k8s import KubernetesDao; dao = KubernetesDao(cacert_file=os.environ["CACERT_FILE"],token=os.environ["SSL_TOKEN"],k8s_host=os.environ["K8S_HOST"]); dao.delete_service(service_name=service,namespace=namespace)']
@@ -52,7 +52,7 @@ spec:
             mountPath: "/home/ubuntu/ssh-keys"
           - name: sa
             mountPath: /opt/sa
-          {{- if eq .Values.persistence.enabled true }}
+          {{- if .Values.persistence.enabled }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}
           {{- end }}
@@ -117,7 +117,7 @@ spec:
         - name: sa
           secret:
             secretName: {{ .Values.secrets.sa }}
-        {{- if eq .Values.persistence.enabled true }}
+        {{- if .Values.persistence.enabled }}
         - name: locale
           hostPath:
             path: {{ .Values.persistence.hostPath }}
