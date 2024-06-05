@@ -141,7 +141,7 @@ spec:
 
 ## Commands
 
-### deploy arkouda workflow
+### deploy-arkouda-on-kubernetes-workflow
 
 The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-command.sh) script is used to deploy AoK utilizing several environment variables. In the base configuration Arkouda runs as the default AoK user,  an example of which is shown below:
 
@@ -152,7 +152,6 @@ export ARKOUDA_CPU_CORES=2000m
 export CHPL_NUM_THREADS_PER_LOCALE=2
 export CHPL_MEM_MAX=1000000000
 export ARKOUDA_SERVICEACCOUNT_NAME=arkouda-on-k8s 
-export ARKOUDA_SERVICEACCOUNT_TOKEN_NAME=arkouda-on-k8s 
 export ARKOUDA_SSH_SECRET=arkouda-ssh
 export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_NUMBER_OF_LOCALES=2
@@ -177,9 +176,9 @@ Configuration parameters of note:
 1. KUBERNETES\_API: URL for Kubernetes API, which is used to create/read pods, create services as well as servicemonitor
 2. ARKOUDA\_SERVICEACCOUNT\_NAME: name of Kubernetes ServiceAccount used by Arkouda to register with Kubernetes and Prometheus
 3. ARKOUDA\_SSH\_SECRET secret encapsulating SSH permissions required for deploying Arkouda via UDP
-4. ARKOUDA\_PROMETHEUS\_MATCH\_LABEL: the label Prometheus matches and uses to discover prometheus-arkouda-exporter scrape endpoints. 
+4. ARKOUDA\_PROMETHEUS\_MATCH\_LABEL: the label used to register prometheus-arkouda-exporter with the target Prometheus instance 
 
-To run Arkouda as a specific  user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions, the following env variables and Argo workflow parameters are added:
+To run Arkouda as a specific user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions, the following env variables and Argo workflow parameters are added to the base configuration above:
 
 ```
 export ARKOUDA_USER=bearsrus
@@ -188,7 +187,7 @@ export ARKOUDA_GROUP=bearsrus-arkouda-users
 export ARKOUDA_GID=1019
 ```
 
-### delete arkouda workflow
+### delete-arkouda-on-kubernetes-workflow
 
 The [delete-arkouda-on-kubernetes-command.sh](delete-arkouda-on-kubernetes-command.sh) script is used to delete AoK utilizing several environment variables. An example is shown below:
 
@@ -244,7 +243,6 @@ export ARKOUDA_CPU_CORES=2000m
 export CHPL_NUM_THREADS_PER_LOCALE=2
 export CHPL_MEM_MAX=1000000000
 export ARKOUDA_SERVICEACCOUNT_NAME=arkouda-on-k8s
-export ARKOUDA_SERVICEACCOUNT_TOKEN_NAME=arkouda-on-k8s
 export ARKOUDA_SSH_SECRET=arkouda-ssh
 export ARKOUDA_NAMESPACE=arkouda
 export ARKOUDA_NUMBER_OF_LOCALES=2
