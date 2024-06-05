@@ -2,17 +2,14 @@
   <img src="./pictures/logo.png"/>
 </p>
 
-This is a client only implementation of vizualizations using Arkouda. Thus, all code is python and uses only server elements currently included in the main arkouda repository. 
-
 ## Functionality Implemented
-- 'area()' - 
+- 'area()' - Creates an area plot with or without a variable dropdown menu based on single or multiple columns.
 
-- 'hist()' - 
+- 'hist()' - Creates a histogram with or without a variable dropdown menu based on single or multiple columns.
 
-- 'boxWhisker()' -
+- 'boxWhisker()' - Creates a box and whisker plot with or without a variable dropdown menu based on single or multiple columns.
 
-
-- 'explore()' - Takes an Arkouda DataFrame along with optional parameters and creates an interactive plot using datashader. The method then updates the plot based on the user's selections of a variety of widgets.
+- 'explore()' - Creates an interactive plot using datashader. The method then updates the plot based on the user's selections of a variety of widgets.
 
 ## Usage
 
@@ -25,5 +22,5 @@ pip install arkouda
 In your code,
 
 ```python
-import arkouda_viz
+import arkouda_viz # as akv
 ```

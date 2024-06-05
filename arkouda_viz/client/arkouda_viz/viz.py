@@ -1,3 +1,4 @@
+
 import arkouda as ak
 import holoviews as hv
 import panel as pn
@@ -377,13 +378,18 @@ def explore(
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64", "uint64"]
+                if dtype in ["int64", "uint64", "float64"]
             ]
+
+            string_columns = [
+                col for col, dtype in data.dtypes.items() if dtype in ["str"]
+            ]
+
             if len(numeric_columns) < 2:
                 raise ValueError(
                     "The provided DataFrame does not have at least two numeric columns."
                 )
-            full_data = data[numeric_columns]
+            full_data = data[numeric_columns + string_columns]
         elif (
             isinstance(data, tuple)
             and len(data) == 2
@@ -411,6 +417,16 @@ def explore(
         y_var = param.Selector(
             label="y-variable", default=data.columns[1], objects=data.columns
         )
+
+        string_params = {}
+        for s in range(len(string_columns)):
+            curr = pn.widgets.MultiSelect(
+                name=string_columns[s],
+                value=list(ak.unique(data[string_columns[s]]).to_ndarray()),
+                options=list(ak.unique(data[string_columns[s]]).to_ndarray()),
+                size=8,
+            )
+            string_params[string_columns[s]] = curr
 
         x_bin = param.Integer(label="x-bin", default=xbins, bounds=(1, width))
         y_bin = param.Integer(label="y-bin", default=ybins, bounds=(1, height))
@@ -443,9 +459,16 @@ def explore(
         remove_outliers,
         log_checkbox,
         z_score,
+        **kwargs,
     ):
 
         data = full_data
+
+        if kwargs:
+            for key in kwargs:
+                vals = kwargs[key]
+                col = key
+                data = data[data[col].isin(vals)]
 
         if remove_outliers:
             params.status_spinner.value = True
@@ -483,7 +506,9 @@ def explore(
                 ylabel=y_var,
                 color_bar=True,
                 tools=[
-                    HoverTool(tooltips=[("x", "$x"), ("y", "$y"), ("count", "@image")])
+                    HoverTool(
+                        tooltips=[(x_var, "$x"), (y_var, "$y"), ("count", "@image")]
+                    )
                 ],
             )
         else:
@@ -524,7 +549,9 @@ def explore(
                 ylabel=y_var,
                 colorbar=True,
                 tools=[
-                    HoverTool(tooltips=[("x", "$x"), ("y", "$y"), ("count", "@image")])
+                    HoverTool(
+                        tooltips=[(x_var, "$x"), (y_var, "$y"), ("count", "@image")]
+                    )
                 ],
             )
 
@@ -537,9 +564,18 @@ def explore(
         remove_outliers=params.enable_slider_checkbox.param.value,
         log_checkbox=params.log_checkbox.param.value,
         z_score=params.z_score_threshold_slider,
+        **params.string_params,
     )
     def update(
-        cmap, x_var, y_var, x_bin, y_bin, remove_outliers, log_checkbox, z_score
+        cmap,
+        x_var,
+        y_var,
+        x_bin,
+        y_bin,
+        remove_outliers,
+        log_checkbox,
+        z_score,
+        **kwargs,
     ):
         params.z_score_threshold_slider.disabled = not remove_outliers
 
@@ -566,6 +602,7 @@ def explore(
                 remove_outliers,
                 log_checkbox,
                 z_score,
+                **kwargs,
             ),
             streams=[stream],
         )
@@ -577,6 +614,7 @@ def explore(
         params.param.cmap,
         params.param.x_var,
         params.param.y_var,
+        *params.string_params,
         params.param.x_bin,
         params.param.y_bin,
         pn.Row(params.enable_slider_checkbox, params.log_checkbox),
@@ -585,3 +623,5 @@ def explore(
         width=310,
     )
     return pn.Row(widget_column, update)
+
+
