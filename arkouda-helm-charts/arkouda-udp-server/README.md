@@ -187,9 +187,8 @@ resources:
 ```
 server: 
   numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
-  authenticate: false # whether to require token authentication
-  verbose: false # enable verbose logging
-  memTrack: true # enable memory tracking (required for memMax and metrics export)
+  authenticate: # whether to require token authentication, defaults to false
+  verbose: # enable verbose logging, defaults to false
   memMax: # maximum bytes of RAM to be used per locale
   threadsPerLocale: # number of cpu cores to be used per locale
   logLevel: LogLevel.DEBUG # logging level
@@ -229,7 +228,7 @@ The persistence section configures the container and host paths that, if persist
 
 ```
 persistence:
-  enabled: false # indicates whether files can be written to/read from the host system
+  enabled: # indicates whether files can be written to/read from the host system, defaults to false
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
   hostPath: /mnt/data/arkouda-files/ # host directory for reading/writing Arkouda files
 ```
@@ -262,7 +261,7 @@ The name and the uid for the user running Arkouda if user-specific Arkouda is en
 
 ```
 user:
-  enabled: false # indicates whether to run Arkouda as a specified user
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
   name: # name of user running arkouda and CN for corresponding secret for rolebindings
   uid: # uid of user running Arkouda
 ```
@@ -273,7 +272,7 @@ The name and gid corresponding the user Arkouda is running as. The gid is normal
 
 ```
 group:
-  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 ```

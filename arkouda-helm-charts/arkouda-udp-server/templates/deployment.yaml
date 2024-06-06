@@ -75,11 +75,11 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: AUTHENTICATE
-              value: {{ .Values.server.authenticate | quote}} 
+              value: {{ default "false" .Values.server.authenticate | quote }}
             - name: VERBOSE
-              value: {{ .Values.server.verbose | quote }}   
+              value: {{ default "false" .Values.server.verbose | quote }}
             - name: MEMTRACK
-              value: {{ .Values.server.memTrack | quote }}
+              value: 'true'
             - name: CHPL_RT_NUM_THREADS_PER_LOCALE
               value: {{ .Values.server.threadsPerLocale | quote }}
             - name: GASNET_SUPERNODE_MAXSIZE

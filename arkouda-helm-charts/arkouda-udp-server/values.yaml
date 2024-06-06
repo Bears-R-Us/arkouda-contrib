@@ -17,11 +17,10 @@ resources:
 
 server: 
   numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
-  authenticate: false # whether to require token authentication
-  verbose: false # enable verbose logging
-  memTrack: true # enable memory tracking (required for memMax and metrics export)
-  memMax: 1000000000 # maximum bytes of RAM to be used per locale
-  threadsPerLocale: # number of cpu cores to be used per locale
+  authenticate: # whether to require token authentication, defaults to false
+  verbose: # enable verbose logging, defaults to false
+  memMax: # maximum bytes of RAM to be used by Chapel per locale
+  threadsPerLocale: # number of cpu cores to be used by Chapel per locale
   logLevel: LogLevel.DEBUG # logging level
   name: # name of server
   service:
@@ -29,13 +28,13 @@ server:
     port: 5555 # Arkouda k8s service port
     name: # k8s service name for Arkouda server
   metrics:
-    collectMetrics: # indicates whether to collect metrics, defaults to false
+    collectMetrics: true # indicates whether to collect metrics, defaults to false
     service:
       name: # service name for Arkouda metrics service endpoint
       port: 5556
 
 locale:
-  name: # arkouda-udp-locale app name used to find locale IP addresses
+  name: arkouda-locale # arkouda-udp-locale app name used to find locale IP addresses
   podMethod: GET_POD_IPS 
 
 external:
