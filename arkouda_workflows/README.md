@@ -149,16 +149,11 @@ The [deploy-arkouda-on-kubernetes-command.sh](deploy-arkouda-on-kubernetes-comma
 export KUBERNETES_URL=https://localhost:6443
 export ARKOUDA_MEMORY=2048Mi
 export ARKOUDA_CPU_CORES=2000m
-export CHPL_NUM_THREADS_PER_LOCALE=2
-export CHPL_MEM_MAX=1000000000
-export ARKOUDA_SERVICEACCOUNT_NAME=arkouda-on-k8s 
+export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
 export ARKOUDA_SSH_SECRET=arkouda-ssh
 export ARKOUDA_NAMESPACE=arkouda
-export ARKOUDA_NUMBER_OF_LOCALES=2
-export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
 export ARKOUDA_METRICS_SERVICE_PORT=5556
 export ARKOUDA_VERSION=v2024.04.19
-export ARKOUDA_IMAGE_POLICY=IfNotPresent
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
 export ARKOUDA_SERVER_NAME=arkouda-on-k8s
 export ARKOUDA_LAUNCHER=kubernetes
@@ -167,6 +162,17 @@ export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
 export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
 export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
 export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
+export ARKOUDA_SERVICEACCOUNT_NAME=k8s-arkouda
+export ARKOUDA_SERVICEACCOUNT_TOKEN_NAME=k8s-arkouda-token
+export ARKOUDA_USER=user
+export ARKOUDA_UID=1005
+export ARKOUDA_GROUP=usergroup
+export ARKOUDA_GID=1006
+export ARKOUDA_NUMBER_OF_LOCALES=2
+export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
+export ARKOUDA_IMAGE_POLICY=IfNotPresent
+export CHPL_NUM_THREADS_PER_LOCALE=2
+export CHPL_MEM_MAX=1000000000
 
 sh deploy-arkouda-on-kubernetes-command.sh 
 ```
@@ -175,8 +181,9 @@ Configuration parameters of note:
 
 1. KUBERNETES\_API: URL for Kubernetes API, which is used to create/read pods, create services as well as servicemonitor
 2. ARKOUDA\_SERVICEACCOUNT\_NAME: name of Kubernetes ServiceAccount used by Arkouda to register with Kubernetes and Prometheus
-3. ARKOUDA\_SSH\_SECRET secret encapsulating SSH permissions required for deploying Arkouda via UDP
-4. ARKOUDA\_PROMETHEUS\_MATCH\_LABEL: the label used to register prometheus-arkouda-exporter with the target Prometheus instance 
+3. ARKOUDA\_SERVICEACCOUNT\_TOKEN\_NAME: name of Kubernetes service-account-token secret used to authenticate to Kubernetes API
+4. ARKOUDA\_SSH\_SECRET secret encapsulating SSH permissions required for deploying Arkouda via UDP
+5. ARKOUDA\_PROMETHEUS\_MATCH\_LABEL: the label used to register prometheus-arkouda-exporter with the target Prometheus instance 
 
 To run Arkouda as a specific user and corresponding group, the primary purpose of which is to enable output of Arkouda files to locations with specific user and group permissions, the following env variables and Argo workflow parameters are added to the base configuration above:
 
@@ -240,16 +247,11 @@ The [deploy-arkouda-on-kubernetes-cronworkflow.sh](deploy-arkouda-on-kubernetes-
 export KUBERNETES_URL=https://localhost:6443
 export ARKOUDA_MEMORY=2048Mi
 export ARKOUDA_CPU_CORES=2000m
-export CHPL_NUM_THREADS_PER_LOCALE=2
-export CHPL_MEM_MAX=1000000000
-export ARKOUDA_SERVICEACCOUNT_NAME=arkouda-on-k8s
+export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
 export ARKOUDA_SSH_SECRET=arkouda-ssh
 export ARKOUDA_NAMESPACE=arkouda
-export ARKOUDA_NUMBER_OF_LOCALES=2
-export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
 export ARKOUDA_METRICS_SERVICE_PORT=5556
 export ARKOUDA_VERSION=v2024.04.19
-export ARKOUDA_IMAGE_POLICY=IfNotPresent
 export ARKOUDA_INSTANCE_NAME=arkouda-on-k8s
 export ARKOUDA_SERVER_NAME=arkouda-on-k8s
 export ARKOUDA_LAUNCHER=kubernetes
@@ -258,6 +260,17 @@ export ARKOUDA_METRICS_SERVICE_HOST=arkouda-on-k8s-metrics
 export ARKOUDA_EXPORTER_APP_NAME=arkouda-on-k8s-exporter
 export ARKOUDA_EXPORTER_SERVICE_NAME=arkouda-on-k8s-exporter
 export ARKOUDA_PROMETHEUS_MATCH_LABEL="release: kube-stack"
+export ARKOUDA_SERVICEACCOUNT_NAME=k8s-arkouda
+export ARKOUDA_SERVICEACCOUNT_TOKEN_NAME=k8s-arkouda-token
+export ARKOUDA_USER=user
+export ARKOUDA_UID=1005
+export ARKOUDA_GROUP=usergroup
+export ARKOUDA_GID=1006
+export ARKOUDA_NUMBER_OF_LOCALES=2
+export ARKOUDA_TOTAL_NUMBER_OF_LOCALES=3
+export ARKOUDA_IMAGE_POLICY=IfNotPresent
+export CHPL_NUM_THREADS_PER_LOCALE=2
+export CHPL_MEM_MAX=1000000000
 
 sh deploy-arkouda-on-kubernetes-cronworkflow.sh
 ```

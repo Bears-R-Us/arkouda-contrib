@@ -7,7 +7,7 @@ spec:
   arguments:
     parameters:
     - name: arkouda-serviceaccount-name
-      value: arkouda-serviceacccount
+    - name: arkouda-serviceaccount-token-name
     - name: arkouda-user
       value: ubuntu
     - name: arkouda-uid
@@ -206,7 +206,7 @@ spec:
     volumes:
       - name: sa
         secret:
-          secretName: "{{ workflow.parameters.arkouda-serviceaccount-name }}"
+          secretName: "{{ workflow.parameters.arkouda-serviceaccount-token-name }}"
     script:
       image: bearsrus/arkouda-integration:{{ workflow.parameters.arkouda-release-version }}
       imagePullPolicy: "{{ workflow.parameters.image-pull-policy }}" 
@@ -567,7 +567,7 @@ spec:
               volumes:              
                 - name: sa
                   secret:
-                    secretName: "{{ workflow.parameters.arkouda-serviceaccount-name }}"
+                    secretName: "{{ workflow.parameters.arkouda-serviceaccount-token-name }}"
                 - name: ssh
                   secret:
                     secretName: "{{ workflow.parameters.arkouda-ssh-secret }}"
