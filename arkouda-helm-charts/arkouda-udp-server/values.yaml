@@ -1,5 +1,10 @@
 # values for arkouda-udp-server chart.
 
+######################## Pod Settings ########################
+
+releaseVersion: # bearsrus arkouda-udp-server image version
+imagePullPolicy: Always
+
 resources:
   limits:
     cpu: 1000m
@@ -7,11 +12,6 @@ resources:
   requests:
     cpu: 1000m
     memory: 2048Mi
-
-######################## Pod Settings ########################
-
-releaseVersion: v2024.04.19 # bearsrus arkouda-udp-server image version
-imagePullPolicy: Always
 
 ################ Arkouda Server Configuration ################
 
@@ -21,7 +21,7 @@ server:
   verbose: false # enable verbose logging
   memTrack: true # enable memory tracking (required for memMax and metrics export)
   memMax: 1000000000 # maximum bytes of RAM to be used per locale
-  threadsPerLocale: 2 # number of cpu cores to be used per locale
+  threadsPerLocale: # number of cpu cores to be used per locale
   logLevel: LogLevel.DEBUG # logging level
   name: # name of server
   service:
@@ -29,7 +29,7 @@ server:
     port: 5555 # Arkouda k8s service port
     name: # k8s service name for Arkouda server
   metrics:
-    collectMetrics: # indicates whether to collect metrics
+    collectMetrics: # indicates whether to collect metrics, defaults to false
     service:
       name: # service name for Arkouda metrics service endpoint
       port: 5556
@@ -43,13 +43,13 @@ external:
   namespace: # namespace Arkouda will register service
 
 persistence:
-  enabled: # indicates whether files can be written to/read from the host system
+  enabled: # indicates whether files can be written to/read from the host system, defaults to false
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
   hostPath: # host directory for reading/writing Arkouda files
 
 metricsExporter:
   name: # Kubernetes app and server name for prometheus-arkouda-exporter
-  releaseVersion: v2024.04.19 # bearsrus prometheus-arkouda-exporter image version
+  releaseVersion: # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
   pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
   serviceMonitor: 
@@ -62,12 +62,12 @@ metricsExporter:
       - launcher
 
 user:
-  enabled: # indicates whether to run Arkouda as a specified user
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
   name: # name of user running arkouda and CN for corresponding secret for rolebindings
   uid: # uid of user running Arkouda
 
 group:
-  enabled: # indicates whether to run Arkouda as a specified user with corresponding group
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 

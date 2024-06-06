@@ -295,3 +295,49 @@ An example Helm install command is shown below:
 ```
 helm install -n arkouda arkouda-server arkouda-udp-server/
 ```
+
+## Troubleshooting
+
+### SSH Permission Denied 
+
+The following error occurs when the user defined in the arkouda-udp-locale and arkouda-udp-server helm deployments differ:
+
+```
+Warning: Permanently added '10.42.3.59' (ED25519) to the list of known hosts.
+Warning: Permanently added '10.42.3.77' (ED25519) to the list of known hosts.
+Warning: Permanently added '10.42.2.5' (ED25519) to the list of known hosts.
+Permission denied, please try again.
+Permission denied, please try again.
+ubuntu@10.42.3.59: Permission denied (publickey,password).
+Permission denied, please try again.
+Permission denied, please try again.
+ubuntu@10.42.2.5: Permission denied (publickey,password).
+```
+
+To fix, check the user and group definition sections of the arkouda-udp-locale/values.yaml and arkouda-udp-server/values.yaml files and ensure they match. To run Arkouda as the default user, both values.yaml files must have the following configuration;
+
+```
+user:
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
+
+group:
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
+```
+
+To run Arkouda as a specific user in a specific group, both values.yaml files must have the following configuration:
+
+```
+user:
+  enabled: true # indicates whether to run Arkouda as a specified user, defaults to false
+  name: user # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: 1005 # uid of user running Arkouda
+
+group:
+  enabled: true # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: usergroup # name of group user needs to configured for to execute host commands
+  gid: 1006  # gid of group user needs to configured for to execute host commands
+```
