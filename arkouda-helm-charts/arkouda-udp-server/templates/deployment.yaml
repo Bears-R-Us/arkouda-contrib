@@ -17,7 +17,7 @@ spec:
             - name: EXPORT_PORT
               value: "5080"
             - name: POLLING_INTERVAL_SECONDS
-              value: {{ .Values.metricsExporter.pollingIntervalSeconds | quote}}
+              value: {{ default "30" .Values.metricsExporter.pollingIntervalSeconds | quote}}
             - name: ARKOUDA_SERVER_NAME
               value: {{ .Values.metricsExporter.arkoudaServerName | quote}}
             - name: ARKOUDA_METRICS_SERVICE_HOST

@@ -240,12 +240,12 @@ The metricsExporter section configures the embedded prometheus-arkouda-exporter 
 ```
 metricsExporter:
   name: # Kubernetes app and server name for prometheus-arkouda-exporter
-  releaseVersion: v2024.04.19 # bearsrus prometheus-arkouda-exporter image version
+  releaseVersion: # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
+  pollingIntervalSeconds: 10 # interval prometheus-arkouda-exporter pulls metrics from Arkouda, defaults to 30
   serviceMonitor:
     enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
-    pollingInterval: 15s
+    pollingInterval: # interval that ServiceMonitor polls prometheus-arkouda-exporter, defaults to 15s
     additionalLabels:
       launcher: kubernetes
     targetLabels:

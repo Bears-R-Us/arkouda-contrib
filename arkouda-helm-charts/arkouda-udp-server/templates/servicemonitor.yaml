@@ -11,7 +11,7 @@ metadata:
 spec:
   endpoints:
     - port: http
-      interval: {{ .Values.metricsExporter.serviceMonitor.pollingInterval | quote }}
+      interval: {{ default "15s" .Values.metricsExporter.serviceMonitor.pollingInterval | quote }}
       path: /metrics
   selector:
     matchLabels:

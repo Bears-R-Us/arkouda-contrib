@@ -19,7 +19,7 @@ server:
   numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
   authenticate: # whether to require token authentication, defaults to false
   verbose: # enable verbose logging, defaults to false
-  memMax: # maximum bytes of RAM to be used by Chapel per locale
+  memMax: 1000000000 # maximum bytes of RAM to be used by Chapel per locale
   threadsPerLocale: # number of cpu cores to be used by Chapel per locale
   logLevel: LogLevel.DEBUG # logging level
   name: # name of server
@@ -34,7 +34,7 @@ server:
       port: 5556
 
 locale:
-  name: arkouda-locale # arkouda-udp-locale app name used to find locale IP addresses
+  name: # arkouda-udp-locale app name used to find locale IP addresses
   podMethod: GET_POD_IPS 
 
 external:
@@ -50,10 +50,10 @@ metricsExporter:
   name: # Kubernetes app and server name for prometheus-arkouda-exporter
   releaseVersion: # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
+  pollingIntervalSeconds: # interval prometheus-arkouda-exporter pulls metrics from Arkouda, defaults to 30
   serviceMonitor: 
     enabled: # indicates if ServiceMonitor registration is to be used, defaults to true
-    pollingInterval: 15s
+    pollingInterval:  # interval that ServiceMonitor polls prometheus-arkouda-exporter, defaults to 15s
     additionalLabels:
       launcher: kubernetes # labels that enable Prometheus to discover Arkouda ServiceMonitor
     targetLabels:
