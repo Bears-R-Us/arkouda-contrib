@@ -2,7 +2,7 @@
 
 ######################## Pod Settings ########################
 
-releaseVersion: v2024.04.19 # bearsrus arkouda-udp-server image version
+releaseVersion: # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 resources:
@@ -17,7 +17,6 @@ resources:
 
 locale: 
   numLocales: # number of arkouda-udp-locale pods
-  memTrack: # enable Chapel memory tracking for metrics capture, defaults to true
   name: # Kubernetes app name used by arkouda-udp-server for pod discovery
   threadsPerLocale: # number of cpu cores assigned to each Arkouda locale
 
