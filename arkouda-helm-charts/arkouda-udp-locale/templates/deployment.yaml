@@ -30,7 +30,7 @@ spec:
           volumeMounts:
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
-          {{- if eq .Values.persistence.enabled true }}
+          {{- if .Values.persistence.enabled }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}
           {{- end }}
@@ -45,14 +45,14 @@ spec:
             - name: NUM_LOCALES
               value: {{ .Values.locale.numLocales | quote }}
             - name: MEMTRACK
-              value: {{ .Values.locale.memTrack | quote }}
+              value: 'true'
             - name: CHPL_RT_NUM_THREADS_PER_LOCALE
               value: {{ .Values.locale.threadsPerLocale | quote }} 
       volumes:
         - name: ssh
           secret:
             secretName: {{ .Values.secrets.ssh }}
-        {{- if eq .Values.persistence.enabled true }}
+        {{- if .Values.persistence.enabled }}
         - name: locale
           hostPath:
             path: {{ .Values.persistence.hostPath }}

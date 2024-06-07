@@ -19,6 +19,7 @@ argo submit -n $ARKOUDA_NAMESPACE \
             -p chpl-num-threads-per-locale=$CHPL_NUM_THREADS_PER_LOCALE \
             -p chpl-mem-max=$CHPL_MEM_MAX \
 	    -p arkouda-serviceaccount-name=$ARKOUDA_SERVICEACCOUNT_NAME \
+	    -p arkouda-serviceaccount-token-name=$ARKOUDA_SERVICEACCOUNT_TOKEN_NAME \
 	    -p arkouda-user=$ARKOUDA_USER \
 	    -p arkouda-uid="$ARKOUDA_UID" \
 	    -p arkouda-group=$ARKOUDA_GROUP \

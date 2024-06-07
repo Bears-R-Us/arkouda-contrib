@@ -1,8 +1,8 @@
-# Default values for arkouda-udp-locale Helm chart
+# arkouda-udp-locale chart values
 
 ######################## Pod Settings ########################
 
-releaseVersion: v2024.04.19 # bearsrus arkouda-udp-server image version
+releaseVersion: # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 resources:
@@ -16,23 +16,22 @@ resources:
 ################ Arkouda Locale Configuration ################
 
 locale: 
-  numLocales: 2 # number of arkouda-udp-locale pods
-  memTrack: true
+  numLocales: # number of arkouda-udp-locale pods
   name: # Kubernetes app name used by arkouda-udp-server for pod discovery
-  threadsPerLocale: 2 # number of cpu cores assigned to each Arkouda locale
+  threadsPerLocale: # number of cpu cores assigned to each Arkouda locale
 
 persistence: 
-  enabled: false
+  enabled: # indicates if persistence of files to host is enabled, defaults to false
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
-  hostPath: # host directory for reading/writing Arkouda files
+  hostPath: # host directory for reading/writing Arkouda files if persistence is enabled
 
 user:
-  enabled: false # indicates whether to run Arkouda as a specified user
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
   name: # name of user running Arkouda
   uid: # uid of user running Arkouda
 
 group:
-  enabled: false
+  enabled: # indicates whether to run Arkouda as a specified user and group, defaults to false
   name: # name of group user needs to be a member of to execute host commands
   gid: # gid of group Arkouda user needs to be a member of to execute host commands
 

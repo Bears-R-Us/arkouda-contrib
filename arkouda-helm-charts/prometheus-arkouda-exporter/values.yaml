@@ -1,19 +1,19 @@
-# Default values for prometheus-arkouda-exporter chart.
+# Values for prometheus-arkouda-exporter chart.
 
 replicaCount: 1
 
-resources: {}
+########################## Pod Settings ###########################
+
+releaseVersion: # prometheus-arkouda-exporter release version
+imagePullPolicy: IfNotPresent
+
+resources:
   limits:
     cpu: 1000m
     memory: 1024Mi
   requests:
     cpu: 500m
     memory: 512Mi
-
-########################## Pod Settings ###########################
-
-releaseVersion: v2024.04.19 # prometheus-arkouda-exporter release version
-imagePullPolicy: IfNotPresent
 
 ############ prometheus-arkouda-exporter Configuration ############
 
@@ -23,13 +23,21 @@ arkouda:
       name: # Arkouda instance app name
       namespace: # namespace Arkouda is deployed to
     service:
-      name: # Arkouda metrics service endpoint name including namespace
+      name: # Arkouda metrics service endpoint name
       port: # Arkouda metrics service port
 
 exporter:
   server:
     appName: # prometheus-arkouda-exporter app name (binds service to prometheus-arkouda-exporter)
-    pollingIntervalSeconds: 30 # number of seconds between metrics pulls from Arkouda
+    pollingIntervalSeconds: # number of seconds between metrics pulls from Arkouda, defaults to 30
     namespace: # namespace prometheus-arkouda-exporter is deployed to
   service:
     name: # prometheus-arkouda-exporter service name (used by Prometheus to scrape)
+  serviceMonitor:
+    enabled: # indicates if ServiceMonitor registration is to be used, defaults to false
+    pollingInterval: 30s # polling interval in the form of seconds, default value is 15s
+    additionalLabels:
+      launcher: kubernetes # labels that enable Prometheus to discover Arkouda ServiceMonitor
+    targetLabels:
+      - arkouda_instance
+      - launcher

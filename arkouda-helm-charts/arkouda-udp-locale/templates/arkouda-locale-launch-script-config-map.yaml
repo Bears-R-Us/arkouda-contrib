@@ -10,15 +10,15 @@ data:
      #!/bin/bash
      sudo service ssh start
 
-     {{- if eq .Values.group.enabled true }}
+     {{- if .Values.group.enabled }}
      # Add group corresponding to gid and user
-     sudo groupadd -g {{ .Values.group.gid }} {{ .Values.group.name }}
+     sudo groupadd -g {{ .Values.group.gid | int64 | quote }} {{ .Values.group.name }}
      sudo groupadd {{ .Values.user.name }}
      {{- end }}
 
-     {{- if eq .Values.user.enabled true }}
+     {{- if .Values.user.enabled }}
      # Add user with home directory
-     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid }} -g {{ .Values.group.gid }}
+     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid | int64 | quote }} -g {{ .Values.group.gid | int64 | quote }}
 
      # Add user to user group
      sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}

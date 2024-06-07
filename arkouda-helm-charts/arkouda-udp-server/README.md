@@ -187,9 +187,8 @@ resources:
 ```
 server: 
   numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
-  authenticate: false # whether to require token authentication
-  verbose: false # enable verbose logging
-  memTrack: true # enable memory tracking (required for memMax and metrics export)
+  authenticate: # whether to require token authentication, defaults to false
+  verbose: # enable verbose logging, defaults to false
   memMax: # maximum bytes of RAM to be used per locale
   threadsPerLocale: # number of cpu cores to be used per locale
   logLevel: LogLevel.DEBUG # logging level
@@ -229,7 +228,7 @@ The persistence section configures the container and host paths that, if persist
 
 ```
 persistence:
-  enabled: false # indicates whether files can be written to/read from the host system
+  enabled: # indicates whether files can be written to/read from the host system, defaults to false
   containerPath: /arkouda-files # container directory for reading/writing Arkouda files
   hostPath: /mnt/data/arkouda-files/ # host directory for reading/writing Arkouda files
 ```
@@ -241,12 +240,12 @@ The metricsExporter section configures the embedded prometheus-arkouda-exporter 
 ```
 metricsExporter:
   name: # Kubernetes app and server name for prometheus-arkouda-exporter
-  releaseVersion: v2024.04.19 # bearsrus prometheus-arkouda-exporter image version
+  releaseVersion: # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  pollingIntervalSeconds: 10 # polling interval prometheus-arkouda-exporter willl pull metrics from Arkouda
+  pollingIntervalSeconds: 10 # interval prometheus-arkouda-exporter pulls metrics from Arkouda, defaults to 30
   serviceMonitor:
     enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
-    pollingInterval: 15s
+    pollingInterval: # interval that ServiceMonitor polls prometheus-arkouda-exporter, defaults to 15s
     additionalLabels:
       launcher: kubernetes
     targetLabels:
@@ -262,7 +261,7 @@ The name and the uid for the user running Arkouda if user-specific Arkouda is en
 
 ```
 user:
-  enabled: false # indicates whether to run Arkouda as a specified user
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
   name: # name of user running arkouda and CN for corresponding secret for rolebindings
   uid: # uid of user running Arkouda
 ```
@@ -273,7 +272,7 @@ The name and gid corresponding the user Arkouda is running as. The gid is normal
 
 ```
 group:
-  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 ```
@@ -294,4 +293,50 @@ An example Helm install command is shown below:
 
 ```
 helm install -n arkouda arkouda-server arkouda-udp-server/
+```
+
+## Troubleshooting
+
+### SSH Permission Denied 
+
+The following error occurs when the user defined in the arkouda-udp-locale and arkouda-udp-server helm deployments differ:
+
+```
+Warning: Permanently added '10.42.3.59' (ED25519) to the list of known hosts.
+Warning: Permanently added '10.42.3.77' (ED25519) to the list of known hosts.
+Warning: Permanently added '10.42.2.5' (ED25519) to the list of known hosts.
+Permission denied, please try again.
+Permission denied, please try again.
+ubuntu@10.42.3.59: Permission denied (publickey,password).
+Permission denied, please try again.
+Permission denied, please try again.
+ubuntu@10.42.2.5: Permission denied (publickey,password).
+```
+
+To fix, check the user and group definition sections of the arkouda-udp-locale/values.yaml and arkouda-udp-server/values.yaml files and ensure they match. To run Arkouda as the default user, both values.yaml files must have the following configuration;
+
+```
+user:
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
+
+group:
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
+```
+
+To run Arkouda as a specific user in a specific group, both values.yaml files must have the following configuration:
+
+```
+user:
+  enabled: true # indicates whether to run Arkouda as a specified user, defaults to false
+  name: user # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: 1005 # uid of user running Arkouda
+
+group:
+  enabled: true # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: usergroup # name of group user needs to configured for to execute host commands
+  gid: 1006  # gid of group user needs to configured for to execute host commands
 ```

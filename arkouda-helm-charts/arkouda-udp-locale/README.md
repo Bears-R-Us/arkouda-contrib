@@ -2,11 +2,11 @@
 
 ## Overview
 
-The arkouda-udp-locale Helm chart deploys 1..n arkouda-udp-locale docker containers that, together with the arkouda-udp-server bootstrap container, compose the Arkouda-on-Kubernetes deployment. The arkouda-udp-locale Helm chart is deployed first and, once all of the arkouda-udp-locale pods are running, the arkouda-udp-server Helm chart is deployed. The arkouda-udp-server container uses ssh to establish a gasnet/udp-managed Arkouda multi-locale instance.
+The arkouda-udp-locale Helm chart deploys 1..n arkouda-udp-locale docker containers that, together with the arkouda-udp-server bootstrap container, compose the Arkouda-on-Kubernetes deployment. The arkouda-udp-locale Helm chart is deployed first and, once all of the arkouda-udp-locale pods are running, the arkouda-udp-server Helm chart is deployed. The arkouda-udp-server container uses ssh to establish a GASNET/UDP-managed Arkouda multi-locale instance.
 
 ## Configuration
 
-The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml) file.
+The arkouda-udp-locale Helm deployment is configured within the [values.yaml](values.yaml) file.
 
 The releaseVersion parameter (Arkouda tag) and imagePullPolicy are set at the top of the Pod Settings section.
 
@@ -31,7 +31,6 @@ The locale configuration section sets the number of arkouda-locale containers to
 ```
 locale: 
   numLocales: # number of arkouda-udp-locale pods
-  memTrack: true
   name: # Kubernetes app name used by arkouda-udp-server for pod discovery
   threadsPerLocale: # number of cpu cores assigned to each Arkouda locale
 ```
@@ -53,7 +52,7 @@ The name and the uid for the user running Arkouda if user-specific Arkouda is en
 
 ```
 user:
-  enabled: false # indicates whether to run Arkouda as a specified user
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
   name: # name of user running arkouda and CN for corresponding secret for rolebindings
   uid: # uid of user running Arkouda
 ```
@@ -64,7 +63,7 @@ The name and gid corresponding the user Arkouda is running as. The gid is normal
 
 ```
 group:
-  enabled: false # indicates whether to run Arkouda as a specified user with corresponding group
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 ```
