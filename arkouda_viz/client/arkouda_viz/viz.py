@@ -19,6 +19,8 @@ width : int
     Width of the plot.
 height : int
     Height of the plot.
+dpi : int
+    Dots per inch of the plot if matplotlib is used as the engine.
 Returns
 -------
 Dictionary
@@ -26,16 +28,17 @@ Dictionary
 """
 
 
-def render_env(engine: str, width: int, height: int):
+def render_env(engine: str, width: int, height: int, dpi: int):
     if engine in ("bokeh", "b"):
-        hv.extension("bokeh", inline=True)
+        hv.extension("bokeh", inline=True, logo=False)
         return dict(width=width, height=height)
     elif engine in ("plotly", "p"):
-        hv.extension("plotly", inline=True)
+        hv.extension("plotly", inline=True, logo=False)
         return dict(width=width, height=height)
     elif engine in ("matplotlib", "m"):
-        hv.extension("matplotlib", inline=True)
-        return dict(fig_inches=(5, 5))
+        hv.extension("matplotlib", inline=True, logo=False)
+        fig_inches = (width / dpi, height / dpi)
+        return dict(fig_inches=fig_inches, aspect=width/height)
     else:
         raise ValueError("Please provide a supported plotting engine.")
 
@@ -52,6 +55,8 @@ width : int
     Width of the plot.
 height : int
     Height of the plot.
+dpi : int
+    Dots per inch of the plot if matplotlib is used as the engine.
 Returns
 -------
 hv.Area()
@@ -65,9 +70,11 @@ def area(
     engine: str = "matplotlib",
     width: int = 500,
     height: int = 500,
+    dpi: int = 100
 ):
-    opts = render_env(engine, width=width, height=height)
-    if data is not None:
+    opts = render_env(engine, width=width, height=height, dpi=dpi)
+
+    if data:
         if isinstance(data, ak.DataFrame):
             numeric_columns = [
                 col
@@ -79,15 +86,15 @@ def area(
                     "The provided ak.DataFrame does not have at least one numeric columns."
                 )
             data = data[numeric_columns]
-            h, b = ak.histogram(data[data.columns[0]], bins=bins)
+            h = ak.histogram(data[data.columns[0]], bins=bins)[0]
 
             all_widget = pn.widgets.Checkbox(name="all")
             stack_widget = pn.widgets.Checkbox(name="stack")
             var_widget = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=list(data.columns)
+                name="variable", value=data.columns[0], options=list(data.columns), sizing_mode = 'stretch_width'
             )
             opacity_widget = pn.widgets.FloatSlider(
-                name="opacity", start=0.5, end=1, step=0.1, value=0.5
+                name="opacity", start=0.5, end=1, step=0.1, value=0.5, sizing_mode = 'stretch_width', disabled=True
             )
 
             @pn.depends(
@@ -112,25 +119,20 @@ def area(
                     return overlay.opts(legend_position="top_right", **opts)
 
                 elif stack:
-                    areas = []
+                    overlays = []
+                    cumulative = np.zeros(bins)
                     for column in data.columns:
                         h, b = ak.histogram(data[column], bins=bins)
-                        areas.append(
-                            hv.Area((h.to_ndarray()), label=column).opts(
+                        cumulative += h.to_ndarray()
+                        overlays.append(
+                            hv.Area((b[:-1].to_ndarray(), cumulative), label=column).opts(
                                 alpha=opacity_value,
                                 xlabel="all variables",
                                 ylabel="count",
                                 **opts,
                             )
                         )
-
-                    max_count = np.max([h.max() for h in areas])
-
-                    return hv.Area.stack(hv.Overlay(areas)).opts(
-                        legend_position="top_right",
-                        ylim=(0, max_count),
-                        **opts,
-                    )
+                    return hv.Overlay(overlays).opts(legend_position="top_right", **opts)
 
                 else:
                     h, b = ak.histogram(data[var], bins=bins)
@@ -142,6 +144,7 @@ def area(
                 if event.obj.name == "all":
                     stack_widget.disabled = event.new
                     var_widget.disabled = event.new
+                    opacity_widget.disabled = not event.new
                 elif event.obj.name == "stack":
                     all_widget.disabled = event.new
                     var_widget.disabled = event.new
@@ -151,11 +154,11 @@ def area(
             stack_widget.param.watch(handle_checkbox_change, "value")
 
             widgets = pn.WidgetBox(
-                var_widget, all_widget, stack_widget, opacity_widget, width=200
+                var_widget, all_widget, stack_widget, opacity_widget, width=200, sizing_mode = 'stretch_height'
             )
             return pn.Row(widgets, create_figure).servable("Area")
         if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
-            h, b = ak.histogram(data, bins=bins)
+            h = ak.histogram(data, bins=bins)[0]
             return hv.Area(h.to_ndarray()).opts(**opts)
         else:
             raise ValueError(
@@ -179,6 +182,8 @@ width : int
     Width of the plot.
 height : int
     Height of the plot.
+dpi : int
+    Dots per inch of the plot if matplotlib is used as the engine.
 Returns
 -------
 hv.Histogram() or pn.Row(pn.WidgetBox(), hv.Histogram).
@@ -192,9 +197,10 @@ def hist(
     engine: str = "matplotlib",
     width: int = 500,
     height: int = 500,
+    dpi: int = 100,
 ):
-    opts = render_env(engine, width=width, height=height)
-    if data is not None:
+    opts = render_env(engine, width=width, height=height, dpi=dpi)
+    if data:
         if isinstance(data, ak.DataFrame):
             numeric_columns = [
                 col
@@ -207,16 +213,18 @@ def hist(
                 )
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
-            var = pn.widgets.Select(
+            var_widget = pn.widgets.Select(
                 name="variable", value=data.columns[0], options=list(data.columns)
             )
 
-            @pn.depends(var.param.value)
+            @pn.depends(var_widget.param.value)
             def create_figure(var):
                 h, b = ak.histogram(data[var], bins=bins)
                 return hv.Histogram((h.to_ndarray(), b.to_ndarray())).opts(**opts)
 
-            widgets = pn.WidgetBox(var, width=200)
+            widgets = pn.WidgetBox(
+                var_widget, width=200, sizing_mode = 'stretch_height'
+            )
             return pn.Row(widgets, create_figure).servable("Histogram")
         if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
             h, b = ak.histogram(data, bins=bins)
@@ -367,9 +375,10 @@ def explore(
     engine: str = "bokeh",
     width: int = 500,
     height: int = 500,
+    dpi: int = 100,
     background: str = "any",
 ):
-    render_env(engine, width=width, height=height)
+    render_env(engine, width=width, height=height, dpi=dpi)
     pn.extension()
     pn.config.throttled = True
     full_data = None
