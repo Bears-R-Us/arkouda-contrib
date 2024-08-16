@@ -1,12 +1,20 @@
 
 import arkouda as ak
+import geopandas as gpd
 import holoviews as hv
+import math
+import matplotlib.pyplot as plt
+import numpy as np
 import panel as pn
 import param
-from typing import Tuple, Union
-import numpy as np
-import math
+import plotly.figure_factory as ff
+
 from bokeh.models import HoverTool
+from bokeh.palettes import Category10
+from bokeh.plotting import figure
+from holoviews.operation.datashader import datashade, rasterize
+from typing import Tuple, Union
+
 
 
 """
@@ -42,7 +50,122 @@ def render_env(engine: str, width: int, height: int, dpi: int):
     else:
         raise ValueError("Please provide a supported plotting engine.")
 
+"""
+Plots a scatter plot for numeric data.
+Parameters
+----------
+data : ak.DataFrame or ak.pdarray
+    The data to be plotted.
+engine : string
+    The plotting engine.
+width : int
+    Width of the plot.
+height : int
+    Height of the plot.
+dpi : int
+    Dots per inch of the plot if matplotlib is used as the engine.
+color : string
+    Color for the points.
+Returns
+-------
+hv.Area()
+    An area plot with or without a variable dropdown menu based in single or multiple columns.
+"""
 
+def scatter(
+    data: Union[ak.DataFrame, Tuple[ak.pdarray, ak.pdarray]] = None,
+    engine: str = "matplotlib",
+    width: int = 500,
+    height: int = 500,
+    dpi: int = 100,
+):
+    opts = render_env(engine, width=width, height=height, dpi=dpi)
+    pn.config.throttled = True
+
+    if data:
+        if isinstance(data, ak.DataFrame):
+            numeric_columns = [
+                col for col, dtype in data.dtypes.items() if dtype in ["float64", "int64"]
+            ]
+            if len(numeric_columns) < 2:
+                raise ValueError(
+                    "The provided ak.DataFrame does not have at least two numeric columns."
+                )
+            data = data[numeric_columns]
+            x_var_widget = pn.widgets.Select(
+                name="x-variable", value=data.columns[0], options=list(data.columns)
+            )
+            y_var_widget = pn.widgets.Select(
+                name="y-variable", value=data.columns[1], options=list(data.columns)
+            )
+            color_widget = pn.widgets.ColorPicker(name="color", value='#1f77b4')
+            size_widget = pn.widgets.IntSlider(
+                name="size", start=1, end=20, step=1, value=5
+            )
+
+            @pn.depends(x_var_widget.param.value, y_var_widget.param.value, color_widget.param.value, size_widget.param.value)
+            def create_figure(x_var, y_var, color, size):
+                x_data = data[x_var]
+                y_data = data[y_var]
+                scatter = hv.Scatter((x_data.to_ndarray(), y_data.to_ndarray()))
+                if engine == "matplotlib":
+                    fig, ax = plt.subplots(figsize=(width / dpi, height / dpi))
+                    ax.scatter(x_data.to_ndarray(), y_data.to_ndarray(), color=color, s=size)
+                    ax.set_xlabel(x_var)
+                    ax.set_ylabel(y_var)
+                    return fig
+
+                elif engine == "bokeh":
+                    p = figure(width=width, height=height)
+                    p.scatter(x_data.to_ndarray(), y_data.to_ndarray(), color=color, size=size)
+                    p.xaxis.axis_label = x_var
+                    p.yaxis.axis_label = y_var
+                    return p
+
+                elif engine == "plotly":
+                    fig = hv.Scatter((x_data.to_ndarray(), y_data.to_ndarray())).opts(
+                        color=color,
+                        size=size,
+                        xlabel=x_var,
+                        ylabel=y_var,
+                        **opts
+                    ).to_plotly()
+                    return fig
+
+            widgets = pn.WidgetBox(x_var_widget, y_var_widget, color_widget, size_widget, width=200)
+            return pn.Row(widgets, pn.pane.Matplotlib(create_figure) if engine == "matplotlib" else create_figure).servable("Scatter Plot")
+
+        elif isinstance(data, tuple) and len(data) == 2 and all(isinstance(item, ak.pdarray) for item in data):
+            x_data = data[0]
+            y_data = data[1]
+            if engine == "matplotlib":
+                fig, ax = plt.subplots(figsize=(width / dpi, height / dpi))
+                ax.scatter(x_data.to_ndarray(), y_data.to_ndarray())
+                ax.set_xlabel("X")
+                ax.set_ylabel("Y")
+                return pn.pane.Matplotlib(fig).servable("Scatter Plot")
+
+            elif engine == "bokeh":
+                p = figure(width=width, height=height)
+                p.scatter(x_data.to_ndarray(), y_data.to_ndarray())
+                p.xaxis.axis_label = "X"
+                p.yaxis.axis_label = "Y"
+                return p
+
+            elif engine == "plotly":
+                fig = hv.Scatter((x_data.to_ndarray(), y_data.to_ndarray())).opts(
+                    xlabel="X",
+                    ylabel="Y",
+                    **opts
+                ).to_plotly()
+                return pn.pane.Plotly(fig).servable("Scatter Plot")
+
+        else:
+            raise ValueError(
+                "Invalid data. Please provide an ak.DataFrame or a tuple of two ak.pdarray."
+            )
+    else:
+        raise ValueError("No data was provided.")
 """
 Plots an area plot for numeric data.
 Parameters
@@ -73,6 +196,7 @@ def area(
     dpi: int = 100
 ):
     opts = render_env(engine, width=width, height=height, dpi=dpi)
+    pn.config.throttled = True
 
     if data:
         if isinstance(data, ak.DataFrame):
@@ -96,17 +220,28 @@ def area(
             opacity_widget = pn.widgets.FloatSlider(
                 name="opacity", start=0.5, end=1, step=0.1, value=0.5, sizing_mode = 'stretch_width', disabled=True
             )
+            bins_widget = pn.widgets.IntSlider(
+                name="bins", start=1, end=width, step=1, value=bins, sizing_mode='stretch_width'
+            )
+            log_scale_widget = pn.widgets.Checkbox(name="log scale", value=False)
+            color_widget = pn.widgets.ColorPicker(name="color", value='#1f77b4')
+
 
             @pn.depends(
                 all_widget.param.value,
                 stack_widget.param.value,
                 var_widget.param.value,
                 opacity_widget.param.value,
+                bins_widget.param.value,
+                log_scale_widget.param.value,
+                color_widget.param.value,
             )
-            def create_figure(all, stack, var, opacity_value):
+            def create_figure(all, stack, var, opacity_value, bins, log_scale, color):
+                color_palette = Category10[len(data.columns)] if len(data.columns) <= 10 else pn.palettes.Plasma[len(data.columns)]
+
                 if all:
                     overlay = hv.Overlay()
-                    for column in data.columns:
+                    for idx, column in enumerate(data.columns):
                         h, b = ak.histogram(data[column], bins=bins)
                         overlay *= hv.Area(
                             (b[:-1].to_ndarray(), h.to_ndarray()), label=column
@@ -114,6 +249,8 @@ def area(
                             alpha=opacity_value,
                             xlabel="all variables",
                             ylabel="count",
+                            logy=log_scale,
+                            color=color_palette[idx],
                             **opts,
                         )
                     return overlay.opts(legend_position="top_right", **opts)
@@ -121,7 +258,7 @@ def area(
                 elif stack:
                     overlays = []
                     cumulative = np.zeros(bins)
-                    for column in data.columns:
+                    for idx, column in enumerate(data.columns):
                         h, b = ak.histogram(data[column], bins=bins)
                         cumulative += h.to_ndarray()
                         overlays.append(
@@ -129,6 +266,8 @@ def area(
                                 alpha=opacity_value,
                                 xlabel="all variables",
                                 ylabel="count",
+                                logy=log_scale,
+                                color=color_palette[idx],
                                 **opts,
                             )
                         )
@@ -137,7 +276,7 @@ def area(
                 else:
                     h, b = ak.histogram(data[var], bins=bins)
                     return hv.Area((b[:-1].to_ndarray(), h.to_ndarray())).opts(
-                        xlabel=var, ylabel="count", **opts
+                        xlabel=var, ylabel="count", logy=log_scale, color=color, **opts
                     )
 
             def handle_checkbox_change(event):
@@ -145,16 +284,18 @@ def area(
                     stack_widget.disabled = event.new
                     var_widget.disabled = event.new
                     opacity_widget.disabled = not event.new
+                    color_widget.disabled = event.new
                 elif event.obj.name == "stack":
                     all_widget.disabled = event.new
                     var_widget.disabled = event.new
                     opacity_widget.disabled = event.new
+                    color_widget.disabled = event.new
 
             all_widget.param.watch(handle_checkbox_change, "value")
             stack_widget.param.watch(handle_checkbox_change, "value")
 
             widgets = pn.WidgetBox(
-                var_widget, all_widget, stack_widget, opacity_widget, width=200, sizing_mode = 'stretch_height'
+                var_widget, all_widget, stack_widget, opacity_widget, bins_widget, log_scale_widget, color_widget, width=200, sizing_mode = 'stretch_height'
             )
             return pn.Row(widgets, create_figure).servable("Area")
         if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
@@ -200,6 +341,8 @@ def hist(
     dpi: int = 100,
 ):
     opts = render_env(engine, width=width, height=height, dpi=dpi)
+    pn.config.throttled = True
+
     if data:
         if isinstance(data, ak.DataFrame):
             numeric_columns = [
@@ -236,111 +379,6 @@ def hist(
     else:
         raise ValueError("No data was provided.")
 
-
-"""
-Plots a histogram for numeric data.
-Parameters
-----------
-data : ak.DataFrame or ak.pdarray
-    The data to be plotted.
-engine : string
-    The plotting engine.
-width : int
-    Width of the plot.
-height : int
-    Height of the plot.
-Returns
--------
-hv.Histogram() or pn.Row(pn.WidgetBox(), hv.Histogram).
-    A histogram with or without a variable dropdown menu based in single or multiple columns.
-"""
-
-
-def boxWhisker(
-    data: Union[ak.DataFrame, ak.pdarray] = None,
-    engine: str = "matplotlib",
-    width: int = 5,
-    height: int = 5,
-):
-    opts = render_env(engine, width=width, height=height)
-    if data is not None:
-        if isinstance(data, ak.DataFrame):
-            numeric_columns = [
-                col
-                for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64"]
-            ]
-            if len(numeric_columns) == 0:
-                raise ValueError(
-                    "The provided ak.DataFrame does not have at least one numeric columns."
-                )
-
-            data = data[numeric_columns]
-
-            var = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=data.columns
-            )
-
-            @pn.depends(var.param.value)
-            def create_figure(var):
-                sorted_data = ak.sort(data[var])
-
-                values = {
-                    "Q1": sorted_data[int(sorted_data.size * 0.25)],
-                    "median": sorted_data[int(sorted_data.size * 0.5)],
-                    "Q3": sorted_data[int(sorted_data.size * 0.75)],
-                    "lower": sorted_data[0],
-                    "upper": sorted_data[-1],
-                    # "outliers" TODO,
-                }
-
-                box = hv.Bounds((0, values["Q1"], 1, values["Q3"]))
-                median = hv.HLine(values["median"])
-                lower_whisker = hv.Segments((1, values["lower"], 1, values["Q1"]))
-                upper_whisker = hv.Segments((1, values["Q3"], 1, values["upper"]))
-                # outliers = hv.Points((1, outlier) for outlier in values["outliers"])
-                boxwhisker = box * median * lower_whisker * upper_whisker  # * outliers
-
-                return boxwhisker.opts(
-                    hv.opts.Bounds(alpha=0.5, color="blue"),
-                    hv.opts.HLine(color="red", linewidth=2, xlim=(0, 1)),
-                    hv.opts.Segments(color="black"),
-                    hv.opts.Points(color="green"),
-                )
-
-            widgets = pn.WidgetBox(var, width=200)
-            return pn.Row(widgets, create_figure).servable("Box and Whisker")
-        if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
-            sorted_data = ak.sort(data)
-
-            values = {
-                "Q1": sorted_data[int(sorted_data.size * 0.25)],
-                "median": sorted_data[int(sorted_data.size * 0.5)],
-                "Q3": sorted_data[int(sorted_data.size * 0.75)],
-                "lower": sorted_data[0],
-                "upper": sorted_data[-1],
-                # "outliers" TODO,
-            }
-
-            box = hv.Bounds((0, values["Q1"], 1, values["Q3"]))
-            median = hv.HLine(values["median"])
-            lower_whisker = hv.Segments((1, values["lower"], 1, values["Q1"]))
-            upper_whisker = hv.Segments((1, values["Q3"], 1, values["upper"]))
-            # outliers = hv.Points((1, outlier) for outlier in values["outliers"])
-            boxwhisker = box * median * lower_whisker * upper_whisker  # * outliers
-
-            return boxwhisker.opts(
-                hv.opts.Bounds(alpha=0.5, color="blue"),
-                hv.opts.HLine(color="red", linewidth=2, xlim=(0, 1)),
-                hv.opts.Segments(color="black"),
-                hv.opts.Points(color="green"),
-            )
-        else:
-            raise ValueError(
-                f"Please provide data in the form of an ak.pdarray instead of {str(type(data))}."
-            )
-    else:
-        raise ValueError("No data was provided.")
 
 
 """
@@ -633,4 +671,158 @@ def explore(
     )
     return pn.Row(widget_column, update)
 
+def line_plot(
+    data: Union[ak.DataFrame, ak.pdarray] = None,
+    engine: str = "matplotlib",
+    width: int = 500,
+    height: int = 500,
+    dpi: int = 100
+):
+    opts = render_env(engine, width=width, height=height, dpi=dpi)
+    pn.config.throttled = True
 
+    if data:
+        if isinstance(data, ak.DataFrame):
+            numeric_columns = [
+                col for col, dtype in data.dtypes.items() if dtype in ["float64", "int64"]
+            ]
+            if len(numeric_columns) == 0:
+                raise ValueError(
+                    "The provided ak.DataFrame does not have at least one numeric column."
+                )
+            data = data[numeric_columns]
+            var_widget = pn.widgets.Select(
+                name="variable", value=data.columns[0], options=list(data.columns)
+            )
+
+            @pn.depends(var_widget.param.value)
+            def create_figure(var):
+                return hv.Curve((np.arange(len(data[var])), data[var].to_ndarray())).opts(
+                    xlabel='Index', ylabel=var, **opts
+                )
+
+            widgets = pn.WidgetBox(var_widget, width=200)
+            return pn.Row(widgets, create_figure).servable("Line Plot")
+        elif isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
+            return hv.Curve((np.arange(len(data)), data.to_ndarray())).opts(**opts)
+        else:
+            raise ValueError(
+                f"Please provide data in the form of an ak.pdarray instead of {str(type(data))}."
+            )
+    else:
+        raise ValueError("No data was provided.")
+
+
+def hexbin(
+    data: Union[ak.DataFrame, Tuple[ak.pdarray, ak.pdarray]] = None,
+    gridsize: int = 50,
+    cmap: str = "Blues",
+    engine: str = "matplotlib",
+    width: int = 500,
+    height: int = 500,
+    dpi: int = 100,
+):
+    opts = render_env(engine, width=width, height=height, dpi=dpi)
+    pn.config.throttled = True
+
+    if data:
+        if isinstance(data, ak.DataFrame):
+            numeric_columns = [
+                col for col, dtype in data.dtypes.items() if dtype in ["float64", "int64"]
+            ]
+            if len(numeric_columns) < 2:
+                raise ValueError(
+                    "The provided ak.DataFrame does not have at least two numeric columns."
+                )
+            data = data[numeric_columns]
+            x_var_widget = pn.widgets.Select(
+                name="x-variable", value=data.columns[0], options=list(data.columns)
+            )
+            y_var_widget = pn.widgets.Select(
+                name="y-variable", value=data.columns[1], options=list(data.columns)
+            )
+
+            @pn.depends(x_var_widget.param.value, y_var_widget.param.value)
+            def create_figure(x_var, y_var):
+                x_data = data[x_var]
+                y_data = data[y_var]
+                
+                hist, x_edges, y_edges = ak.histogram2d(x_data, y_data, bins=gridsize)
+
+                if engine == "matplotlib":
+                    fig, ax = plt.subplots(figsize=(width / dpi, height / dpi))
+                    hb = ax.hexbin(x_edges[:-1], y_edges[:-1], C=hist.to_ndarray().flatten(), gridsize=gridsize, cmap=cmap)
+                    ax.set_xlabel(x_var)
+                    ax.set_ylabel(y_var)
+                    cb = fig.colorbar(hb, ax=ax)
+                    cb.set_label('Counts')
+                    return fig
+
+                elif engine == "bokeh":
+                    p = figure(width=width, height=height, tools="hover", match_aspect=True)
+                    bins = hist.to_ndarray()
+                    hexbin = p.hexbin(x_edges[:-1], y_edges[:-1], size=gridsize, orientation="pointytop", fill_color=cmap)
+                    mapper = LinearColorMapper(palette=cmap, low=bins.min(), high=bins.max())
+                    color_bar = ColorBar(color_mapper=mapper, label_standoff=12, location=(0,0), title='Counts')
+                    p.add_layout(color_bar, 'right')
+                    p.xaxis.axis_label = x_var
+                    p.yaxis.axis_label = y_var
+                    return p
+
+                elif engine == "plotly":
+                    fig = ff.create_hexbin_mapbox(
+                        data_frame=data.to_pandas(),
+                        lat=x_var,
+                        lon=y_var,
+                        nx_hexagon=gridsize,
+                        color_continuous_scale=cmap
+                    )
+                    fig.update_layout(width=width, height=height)
+                    return fig
+
+            widgets = pn.WidgetBox(x_var_widget, y_var_widget, width=200)
+            return pn.Row(widgets, pn.pane.Matplotlib(create_figure) if engine == "matplotlib" else create_figure).servable("Hexbin Plot")
+
+        elif isinstance(data, tuple) and len(data) == 2 and all(isinstance(item, ak.pdarray) for item in data):
+            x_data = data[0]
+            y_data = data[1]
+
+            hist, x_edges, y_edges = ak.histogram2d(x_data, y_data, bins=gridsize)
+
+            if engine == "matplotlib":
+                fig, ax = plt.subplots(figsize=(width / dpi, height / dpi))
+                hb = ax.hexbin(x_edges[:-1], y_edges[:-1], C=hist.to_ndarray().flatten(), gridsize=gridsize, cmap=cmap)
+                ax.set_xlabel("X")
+                ax.set_ylabel("Y")
+                cb = fig.colorbar(hb, ax=ax)
+                cb.set_label('Counts')
+                return pn.pane.Matplotlib(fig).servable("Hexbin Plot")
+
+            elif engine == "bokeh":
+                p = figure(width=width, height=height, tools="hover", match_aspect=True)
+                bins = hist.to_ndarray()
+                hexbin = p.hexbin(x_edges[:-1], y_edges[:-1], size=gridsize, orientation="pointytop", fill_color=cmap)
+                mapper = LinearColorMapper(palette=cmap, low=bins.min(), high=bins.max())
+                color_bar = ColorBar(color_mapper=mapper, label_standoff=12, location=(0,0), title='Counts')
+                p.add_layout(color_bar, 'right')
+                p.xaxis.axis_label = "X"
+                p.yaxis.axis_label = "Y"
+                return p
+
+            elif engine == "plotly":
+                fig = ff.create_hexbin_mapbox(
+                    data_frame={"x": x_data.to_ndarray(), "y": y_data.to_ndarray()},
+                    lat="x",
+                    lon="y",
+                    nx_hexagon=gridsize,
+                    color_continuous_scale=cmap
+                )
+                fig.update_layout(width=width, height=height)
+                return pn.pane.Plotly(fig).servable("Hexbin Plot")
+
+        else:
+            raise ValueError(
+                "Invalid data. Please provide an ak.DataFrame or a tuple of two ak.pdarray."
+            )
+    else:
+        raise ValueError("No data was provided.")
