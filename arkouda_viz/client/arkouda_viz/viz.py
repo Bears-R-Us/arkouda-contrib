@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import panel as pn
 import param
-import plotly.figure_factory as ff
 
 from bokeh.models import HoverTool
 from bokeh.palettes import Category10
