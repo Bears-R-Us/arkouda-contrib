@@ -1,6 +1,5 @@
 
 import arkouda as ak
-import geopandas as gpd
 import holoviews as hv
 import math
 import matplotlib.pyplot as plt
