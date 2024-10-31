@@ -33,8 +33,9 @@ RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
 
 RUN make install-deps && \
-    sudo chown -R ubuntu:ubuntu /opt && \
-    sudo service ssh start && make
+    sudo chown -R ubuntu:ubuntu /opt 
+
+RUN sudo service ssh start && make
 
 EXPOSE 5555
 EXPOSE 5000-65000/udp

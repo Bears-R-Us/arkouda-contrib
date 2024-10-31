@@ -3,9 +3,12 @@ import holoviews as hv
 import panel as pn
 import param
 from typing import Tuple, Union
+<<<<<<< HEAD
 import numpy as np
 import math
 from bokeh.models import HoverTool
+=======
+>>>>>>> main
 
 """
 Helper method for setting up the plot rendering environment.
@@ -25,6 +28,7 @@ Dictionary
 
 
 def render_env(engine: str, width: int, height: int):
+<<<<<<< HEAD
     if engine in ("bokeh", "b"):
         hv.extension("bokeh", inline=True, logo=False)
         return dict(width=width, height=height)
@@ -33,6 +37,19 @@ def render_env(engine: str, width: int, height: int):
         return dict(width=width, height=height)
     elif engine in ("matplotlib", "m"):
         hv.extension("matplotlib", inline=True, logo=False)
+=======
+    from bokeh.io import output_notebook
+
+    output_notebook()
+    if engine in ("bokeh", "b"):
+        hv.extension("bokeh")
+        return dict(width=width, height=height)
+    elif engine in ("plotly", "p"):
+        hv.extension("plotly")
+        return dict(width=width, height=height)
+    elif engine in ("matplotlib", "m"):
+        hv.extension("matplotlib")
+>>>>>>> main
         return dict(fig_inches=(5, 5))
     else:
         raise ValueError("Please provide a supported plotting engine.")
@@ -77,6 +94,7 @@ def area(
                     "The provided ak.DataFrame does not have at least one numeric columns."
                 )
             data = data[numeric_columns]
+<<<<<<< HEAD
             h = ak.histogram(data[data.columns[0]], bins=bins)[0]
 
             all_widget = pn.widgets.Checkbox(name="all")
@@ -125,6 +143,31 @@ def area(
             return pn.Row(widgets, create_figure).servable("Area")
         if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
             h = ak.histogram(data, bins=bins)[0]
+=======
+            h, b = ak.histogram(data[data.columns[0]], bins=bins)
+            var = pn.widgets.Select(
+                name="variable", value=data.columns[0], options=data.columns
+            )
+            all = pn.widgets.Checkbox(name="all")
+
+            @pn.depends(var.param.value, all.param.value)
+            def create_figure(var, all):
+                if all:
+                    var.disabled = True
+                    overlay = hv.Overlay()
+                    for column in data.columns:
+                        h, b = ak.histogram(data[column], bins=bins)
+                        overlay *= hv.Area((h.to_ndarray())).opts(**opts)
+                    return overlay
+                else:
+                    h, b = ak.histogram(data[var], bins=bins)
+                    return hv.Area((h.to_ndarray())).opts(**opts)
+
+            widgets = pn.WidgetBox(var, all, width=200)
+            return pn.Row(widgets, create_figure).servable("Area")
+        if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
+            h, b = ak.histogram(data, bins=bins)
+>>>>>>> main
             return hv.Area(h.to_ndarray()).opts(**opts)
         else:
             raise ValueError(
@@ -177,12 +220,19 @@ def hist(
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
             var = pn.widgets.Select(
+<<<<<<< HEAD
                 name="variable", value=data.columns[0], options=list(data.columns), width=180
+=======
+                name="variable", value=data.columns[0], options=data.columns
+>>>>>>> main
             )
 
             @pn.depends(var.param.value)
             def create_figure(var):
+<<<<<<< HEAD
                 h, b = ak.histogram(data[var], bins=bins)
+=======
+>>>>>>> main
                 return hv.Histogram((h.to_ndarray(), b.to_ndarray())).opts(**opts)
 
             widgets = pn.WidgetBox(var, width=200)
@@ -197,6 +247,116 @@ def hist(
     else:
         raise ValueError("No data was provided.")
 
+<<<<<<< HEAD
+=======
+
+"""
+Plots a histogram for numeric data.
+Parameters
+----------
+data : ak.DataFrame or ak.pdarray
+    The data to be plotted.
+engine : string
+    The plotting engine.
+width : int
+    Width of the plot.
+height : int
+    Height of the plot.
+Returns
+-------
+hv.Histogram() or pn.Row(pn.WidgetBox(), hv.Histogram).
+    A histogram with or without a variable dropdown menu based in single or multiple columns.
+"""
+
+
+def boxWhisker(
+    data: Union[ak.DataFrame, ak.pdarray] = None,
+    engine: str = "matplotlib",
+    width: int = 5,
+    height: int = 5,
+):
+    opts = render_env(engine, width=width, height=height)
+    if data is not None:
+        if isinstance(data, ak.DataFrame):
+            numeric_columns = [
+                col
+                for col, dtype in data.dtypes.items()
+                if dtype in ["float64", "int64"]
+            ]
+            if len(numeric_columns) == 0:
+                raise ValueError(
+                    "The provided ak.DataFrame does not have at least one numeric columns."
+                )
+
+            data = data[numeric_columns]
+
+            var = pn.widgets.Select(
+                name="variable", value=data.columns[0], options=data.columns
+            )
+
+            @pn.depends(var.param.value)
+            def create_figure(var):
+                sorted_data = ak.sort(data[var])
+
+                values = {
+                    "Q1": sorted_data[int(sorted_data.size * 0.25)],
+                    "median": sorted_data[int(sorted_data.size * 0.5)],
+                    "Q3": sorted_data[int(sorted_data.size * 0.75)],
+                    "lower": sorted_data[0],
+                    "upper": sorted_data[-1],
+                    # "outliers" TODO,
+                }
+
+                box = hv.Bounds((0, values["Q1"], 1, values["Q3"]))
+                median = hv.HLine(values["median"])
+                lower_whisker = hv.Segments((1, values["lower"], 1, values["Q1"]))
+                upper_whisker = hv.Segments((1, values["Q3"], 1, values["upper"]))
+                # outliers = hv.Points((1, outlier) for outlier in values["outliers"])
+                boxwhisker = box * median * lower_whisker * upper_whisker  # * outliers
+
+                return boxwhisker.opts(
+                    hv.opts.Bounds(alpha=0.5, color="blue"),
+                    hv.opts.HLine(color="red", linewidth=2, xlim=(0, 1)),
+                    hv.opts.Segments(color="black"),
+                    hv.opts.Points(color="green"),
+                )
+
+            widgets = pn.WidgetBox(var, width=200)
+            return pn.Row(widgets, create_figure).servable("Box and Whisker")
+        if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
+            sorted_data = ak.sort(data)
+
+            values = {
+                "Q1": sorted_data[int(sorted_data.size * 0.25)],
+                "median": sorted_data[int(sorted_data.size * 0.5)],
+                "Q3": sorted_data[int(sorted_data.size * 0.75)],
+                "lower": sorted_data[0],
+                "upper": sorted_data[-1],
+                # "outliers" TODO,
+            }
+
+            box = hv.Bounds((0, values["Q1"], 1, values["Q3"]))
+            median = hv.HLine(values["median"])
+            lower_whisker = hv.Segments((1, values["lower"], 1, values["Q1"]))
+            upper_whisker = hv.Segments((1, values["Q3"], 1, values["upper"]))
+            # outliers = hv.Points((1, outlier) for outlier in values["outliers"])
+            boxwhisker = box * median * lower_whisker * upper_whisker  # * outliers
+
+            return boxwhisker.opts(
+                hv.opts.Bounds(alpha=0.5, color="blue"),
+                hv.opts.HLine(color="red", linewidth=2, xlim=(0, 1)),
+                hv.opts.Segments(color="black"),
+                hv.opts.Points(color="green"),
+            )
+        else:
+            raise ValueError(
+                f"Please provide data in the form of an ak.pdarray instead of {str(type(data))}."
+            )
+    else:
+        raise ValueError("No data was provided.")
+
+
+>>>>>>> main
 """
 Explore data using binning techniques.
 Parameters
@@ -213,8 +373,11 @@ width : int
     Width of the plot.
 height : int
     Height of the plot.
+<<<<<<< HEAD
 background : string
     The backround color expected for the map.
+=======
+>>>>>>> main
 Returns
 -------
 hv.Image().
@@ -224,6 +387,7 @@ hv.Image().
 
 def explore(
     data: Union[ak.DataFrame, Tuple[ak.pdarray, ak.pdarray]] = None,
+<<<<<<< HEAD
     xbins: int = 100,
     ybins: int = 100,
     engine: str = "bokeh",
@@ -234,13 +398,27 @@ def explore(
     render_env(engine, width=width, height=height)
     pn.extension()
     pn.config.throttled = True
+=======
+    xBin: int = 10,
+    yBin: int = 10,
+    engine: str = "bokeh",
+    width: int = 500,
+    height: int = 500,
+):
+    render_env(engine, width=width, height=height)
+    pn.extension()
+>>>>>>> main
     full_data = None
     if data is not None:
         if isinstance(data, ak.DataFrame):
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
+<<<<<<< HEAD
                 if dtype in ["float64", "int64", "uint64"]
+=======
+                if dtype in ["float64", "int64"]
+>>>>>>> main
             ]
             if len(numeric_columns) < 2:
                 raise ValueError(
@@ -262,11 +440,15 @@ def explore(
 
     class Explore(param.Parameterized):
         cmap = param.Selector(
+<<<<<<< HEAD
             label="color map",
             default="Bokeh",
             objects=hv.plotting.list_cmaps(
                 reverse=False, bg=background, provider="bokeh"
             ),
+=======
+            label="color map", default="turbo", objects=hv.plotting.list_cmaps()
+>>>>>>> main
         )
         x_var = param.Selector(
             label="x-variable", default=data.columns[0], objects=data.columns
@@ -274,6 +456,7 @@ def explore(
         y_var = param.Selector(
             label="y-variable", default=data.columns[1], objects=data.columns
         )
+<<<<<<< HEAD
 
         x_bin = param.Integer(label="x-bin", default=xbins, bounds=(1, width))
         y_bin = param.Integer(label="y-bin", default=ybins, bounds=(1, height))
@@ -430,9 +613,54 @@ def explore(
                 log_checkbox,
                 z_score,
             ),
-            streams=[stream],
+=======
+        enable_slider_checkbox = pn.widgets.Checkbox(
+            name="remove outliers", value=False
+        )
+        z_score_threshold_slider = pn.widgets.FloatSlider(
+            name="z-score threshold", start=0.0, end=5, step=0.1, value=3.0
         )
 
+    params = Explore()
+    cols = full_data.columns
+    initial_xrange = (ak.min(full_data[cols[0]]), ak.max(full_data[cols[0]]))
+    initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
+
+    def make_data(x_range, y_range, cmap, x_var, y_var):
+        if x_range is None or y_range is None or not x_range or not y_range:
+            binned_data = ak.histogram2d(
+                full_data[x_var], full_data[y_var], bins=(xBin, yBin)
+            )
+            return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
+                cmap=cmap, width=width, height=height, color_bar=True
+            )
+        else:
+            subset_data = data[
+                (full_data[x_var] >= x_range[0])
+                & (full_data[x_var] <= x_range[1])
+                & (full_data[y_var] >= y_range[0])
+                & (full_data[y_var] <= y_range[1])
+            ]
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+        binned_data = ak.histogram2d(
+            subset_data[x_var], subset_data[y_var], bins=(1000, 1000)
+        )
+        return hv.Image(
+            binned_data[0].to_ndarray(),
+            bounds=(x_range[0], y_range[0], x_range[0] + x_span, y_range[0] + y_span),
+        ).opts(cmap=cmap, width=width, height=height, colorbar=True)
+
+    @pn.depends(
+        cmap=params.param.cmap, x_var=params.param.x_var, y_var=params.param.y_var
+    )
+    def update(cmap, x_var, y_var):
+        stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
+        dmap = hv.DynamicMap(
+            lambda x_range, y_range: make_data(x_range, y_range, cmap, x_var, y_var),
+>>>>>>> main
+            streams=[stream],
+        )
         return dmap
 
     widget_column = pn.Column(
@@ -440,11 +668,17 @@ def explore(
         params.param.cmap,
         params.param.x_var,
         params.param.y_var,
+<<<<<<< HEAD
         params.param.x_bin,
         params.param.y_bin,
         pn.Row(params.enable_slider_checkbox, params.log_checkbox),
         params.z_score_threshold_slider,
         params.status_spinner,
         width=310,
+=======
+        params.enable_slider_checkbox,
+        params.z_score_threshold_slider,
+        width=200,
+>>>>>>> main
     )
     return pn.Row(widget_column, update)

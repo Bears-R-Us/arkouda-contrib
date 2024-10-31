@@ -59,11 +59,12 @@ class KubernetesDao:
     core_client: client.CoreV1Api
     apps_client: client.AppsV1Api
 
-    def __init__(self, cert_file : str, key_file : str, k8s_host : str):
+    def __init__(self, cacert_file : str, token : str, k8s_host : str):
         config = client.Configuration()
 
-        config.cert_file = cert_file
-        config.key_file = key_file
+        config.ssl_ca_cert = cacert_file
+        config.api_key['authorization'] = token
+        config.api_key_prefix['authorization'] = 'Bearer'
         config.host = k8s_host
 
         # used to disable non-verified cert warnings

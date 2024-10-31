@@ -8,50 +8,61 @@ The arkouda-udp-server Helm chart deploys the containerized Arkouda server (loca
 
 arkouda-udp-server generates GASNET udp connections with all previously-deployed arkouda-udp-locale pods, registers itself as a service, and creates a Prometheus scrape target via Kubernetes API CRUD operations. Accordingly, the following Kubernetes artifacts are required:
 
-1. Kubernetes user that is to be bound to the requisite Roles
-2. TLS secret composed of the .key and .crt files used to create the Kubernetes user and enable Kubernetes API requests
+1. ServiceAccount that is bound to the Roles required to register Arkouda with Kubernetes
+2. service-account-token secret used to authenticate ServiceAccount to Kubernetes API request
 3. Roles with permissions to enable Kubernetes API requests
-4. RoleBindings that bind the k8s Roles to the Kubernetes user
-5. SSH secret to enable GASNET udp startup of all Arkouda locale pods
+4. RoleBindings that bind the k8s Roles to the Arkouda ServiceAccount
+5. SSH secret to enable GASNET UDP startup of all Arkouda locale pods
 
-### Kubernetes User
+### ServiceAccount
 
-The workflow for creating an a Kubernetes user that can be bound to Roles possessing the required Kubernetes API permissions is as follows:
-
-```
-# Generate base key file
-openssl genrsa -out arkouda.key 2048
- 
-# User and password generated in this step
-openssl req -new -key arkouda.key -out arkouda.csr
- 
-# sign with the configured k8s CA
-sudo openssl x509 -req -in arkouda.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out arkouda.crt -days 730
-
-# Create the arkouda user with the generated credentials
-kubectl config set-credentials arkouda --client-certificate=arkouda.crt --client-key=arkouda.key
+The Arkouda ServiceAccount is bound to Roles required to register/deregister Arkouda with Kubernetes. An example ServiceAccount is as follows:
 
 ```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arkouda-sa
+automountServiceAccountToken: false
+```
 
-Note: the cert CN is the Kubernetes user name
-
-### TLS Secret
-
-The .key and .crt files created above are used to create a Kubernetes secret, which is used to connect to the Kubernetes API and load permissions from the Roles bound to the user. Important note: the secret must be deployed to the same namespace arkouda-udp-server and arkouda-udp-locale are deployed.
-
-An example Kubernetes secret create command is as follows:
+The ServiceAccount is created in the namespace Arkouda is deployed to. An example kubectl command is as follows:
 
 ```
-kubectl create secret tls arkouda-tls --cert=arkouda.crt --key=arkouda.key -n arkouda
+export NAMESPACE=arkouda
+
+kubectl apply -f serviceacount.yaml -n $NAMESPACE
+```
+
+### service-account-token
+
+The service-account-token is bound to the Arkouda ServiceAccount and is used to authenticate to the Kubernetes API. An example service-account-token is as follows:
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arkouda-sa
+  annotations:
+    kubernetes.io/service-account.name: arkouda-sa # matches the ServiceAccount name defined in previous step
+type: kubernetes.io/service-account-token
+```
+
+The service-acccount-token is created in the namespace Arkouda is deployed to. An example kubectl command is as follows:
+
+```
+export NAMESPACE=arkouda
+
+kubectl apply -f serviceacount-token.yaml -n $NAMESPACE
 ```
 
 ### Roles
 
 The Kubernetes API permissions are in the form of a Role (scoped to the arkouda-udp-locale/arkouda-udp-server deployment namespace). For the purposes of this demonstration, the Roles are as follows:
 
-#### GASNET udp Integration
+#### GASNET SSH Launcher
 
-The arkouda-udp-server deployment discovers all arkouda-udp-locale pods on startup to create the GASNET udp connections between all Arkouda locales. Accordingly, Arkouda requires Kubernetes pod list and get permissions. The corresponding Role is as follows:
+The arkouda-udp-server pod launches all Arkouda locales on startup via SSH to create the GASNET UDP connections between all Arkouda locales. The first step in the SSH locale launcher process is to discover the IP addresses of all arkouda-udp-locale pods. Accordingly, Arkouda requires Kubernetes pod list and get permissions. The corresponding Role is as follows:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -64,7 +75,7 @@ rules:
   verbs: ["get", "watch", "list"]
 ```
 
-This Role is bound to the arkouda Kubernetes user as follows:
+This Role is bound to the Arkouda ServiceAccount as follows:
 
 ```
 kind: RoleBinding
@@ -72,9 +83,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: arkouda-pod-reader
 subjects:
-- kind: User
-  name: {{ .Values.user }}
-  apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: {{ .Values.serviceaccount }}
 roleRef:
   kind: Role
   name: pod-reader
@@ -96,7 +106,7 @@ rules:
   verbs: ["get","watch","list","create","delete","update"]
 ```
 
-This Role is bound to the arkouda Kubernetes user as follows:
+This Role is bound to the Arkouda Kubernetes ServiceAccount as follows:
 
 ```
 kind: RoleBinding
@@ -104,6 +114,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: arkouda-service-endpoints-crud
 subjects:
+- kind: ServiceAccount
+  name: {{ .Values.serviceaccount }}
 - kind: User
   name: {{ .Values.user }}
   apiGroup: rbac.authorization.k8s.io
@@ -119,13 +131,10 @@ While the Role and RoleBinding file contents are detailed above, all required Ro
 
 ### SSH Secret
 
-An SSH key pair deployed within Kubernetes as a secret is required for all Arkouda locales to startup via the GASNET udp with the S (SSH) spawner. _Since the arkouda pods launch as the ubuntu user, the SSH key pair must be generated as the ubuntu user._ The key pair can be generated as the ubuntu user either on a host system that is running ubuntu or within one of the bearsrus Arkouda docker images 
-
-An example SSH key on a host system is as follows:
+An SSH key pair deployed within Kubernetes as a secret is required for all Arkouda locales to startup via the Chapel GASNET UDP comm substrate with the S (SSH) spawner. The key pair is generated as follows:
 
 ```
 # Generate the SSH key pair
-sudo su ubuntu
 ssh-keygen
 
 Generating public/private rsa key pair.
@@ -155,69 +164,128 @@ kubectl create secret generic arkouda-ssh --from-file=~/.ssh/id_rsa --from-file=
 
 ## Configuration
 
-The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml).
+The arkouda-udp-server Helm deployment is configured within the [values.yaml](values.yaml) file.
 
-### values.yaml
+The releaseVersion parameter (Arkouda tag) and imagePullPolicy are set at the top of the Pod Settings section.
 
-#### user
+### resources
 
-Ther user value is the Kubernetes user bound to the TLS secret as well as the Roles discussed
-above via the corresponding RoleBindings.
-
-#### server
+The resource request and limit parameters are specified in the resources element of the Pod Settings section. Note: the resource requests and limits parameters are the same because the compute resources allocated to Chapel processes is static.
 
 ```
-server:
-  totalNumLocales: # totalNumLocales = number of arkouda-udp-locale pods + 1 (arkouda-udp-server pod)
-  authenticate: # whether to require token authentication
-  verbose: # enable verbose logging
-  memTrack: true
-  threadsPerLocale: # number of cpu cores to be used per locale
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2024Mi
+  requests:
+    cpu: 1000m
+    memory: 2024Mi
+```
+
+### server
+
+```
+server: 
+  numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  authenticate: # whether to require token authentication, defaults to false
+  verbose: # enable verbose logging, defaults to false
   memMax: # maximum bytes of RAM to be used per locale
-  logLevel: LogLevel.INFO
+  threadsPerLocale: # number of cpu cores to be used per locale
+  logLevel: LogLevel.DEBUG # logging level
+  name: # k8s app name
   service:
-    type: # k8s service type, usually ClusterIP, NodePort, or LoadBalancer
-    port: # service port Arkouda is listening on, defaults to 5555
-    nodeport: # if service type is Nodeport
-    name: # service name
+    type: ClusterIP
+    port: 5555 # Arkouda k8s service port
+    name: # k8s service name for Arkouda server
   metrics:
-    collectMetrics: # whether to collect metrics and make them available via  k8s service
+    collectMetrics: true # indicates whether to collecte metrcis
     service:
-      name: # k8s service name for the Arkouda metrics service endpoint
-      port: # k8s service port for the Arkouda metrics service endpoint, defaults to 5556
+      name: # service name for Arkouda metrics service endpoint
+      port: 5556
 ```
 
-#### external
+### locale
+
+```
+locale:
+  name: # arkouda-udp-locale app name used to find locale IP addresses
+  podMethod: GET_POD_IPS 
+```
+
+### external
+
+The external section encapsulates the parameters for Arkouda registering with Kubernetes.
 
 ```
 external:
-  persistence:
-    enabled: false
-    path: /opt/locale # pod directory path DO NOT CHANGE
-    hostPath: # host machine path
-  k8sHost:
+  k8sHost: # Kubernetes API url used to register service(s)
   namespace: # namespace Arkouda will register service
-  service:
-    name: # k8s service name Arkouda will register
-    port: # k8s service port Arkouda will register, defaults to 5555
 ```
 
-#### metricsExporter
+### persistence
+
+The persistence section configures the container and host paths that, if persistence is enabled, enables users to write out Arkouda arrays to files:
+
+```
+persistence:
+  enabled: # indicates whether files can be written to/read from the host system, defaults to false
+  containerPath: /arkouda-files # container directory for reading/writing Arkouda files
+  hostPath: /mnt/data/arkouda-files/ # host directory for reading/writing Arkouda files
+```
+
+### metricsExporter
 
 The metricsExporter section configures the embedded prometheus-arkouda-exporter which is deployed if server.metrics.collectMetrics = true.
 
 ```
 metricsExporter:
-  imageRepository: bearsrus
-  releaseVersion: # prometheus-arkouda-exporter release version
+  name: # Kubernetes app and server name for prometheus-arkouda-exporter
+  releaseVersion: # bearsrus prometheus-arkouda-exporter image version
   imagePullPolicy: IfNotPresent
-  service:
-    name: # prometheus-arkouda-exporter service name
-    port: # prometheus-arkouda-exporter service port, defaults to 5080
-  pollingIntervalSeconds: 5
+  pollingIntervalSeconds: 10 # interval prometheus-arkouda-exporter pulls metrics from Arkouda, defaults to 30
+  serviceMonitor:
+    enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
+    pollingInterval: # interval that ServiceMonitor polls prometheus-arkouda-exporter, defaults to 15s
+    additionalLabels:
+      launcher: kubernetes
+    targetLabels:
+      - arkouda_instance
+      - launcher
 ```
 
 The prometheus-arkouda-exporter registers as a Prometheus scrape target via the Prometheus [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md).
+
+### user
+
+The name and the uid for the user running Arkouda if user-specific Arkouda is enabled. This setting is important if users wish to write Arkouda arrays out to Parquet or HDF5 as directory permissions require. 
+
+```
+user:
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
+```
+
+### group
+
+The name and gid corresponding the user Arkouda is running as. The gid is normally used to enable writing Arkouda files to common-use directories:
+
+```
+group:
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
+```
+
+### secrets
+
+The name of the ServiceAccount bearer token secret used to access the Kubernetes API on startup is specified in the secrets.sa parameter while the name of the SSH cert used to launch Arkouda locales via the Chapel UDP launcher is specified in the secrets.ssh parameter:
+
+```
+secrets:
+  ssh: # name of ssh secret used to launch Arkouda locales
+  sa: # name of ServiceAccount bearer token secret used to access Kubernetes API
+```
 
 ## Helm Install Command
 
@@ -225,4 +293,50 @@ An example Helm install command is shown below:
 
 ```
 helm install -n arkouda arkouda-server arkouda-udp-server/
+```
+
+## Troubleshooting
+
+### SSH Permission Denied 
+
+The following error occurs when the user defined in the arkouda-udp-locale and arkouda-udp-server helm deployments differ:
+
+```
+Warning: Permanently added '10.42.3.59' (ED25519) to the list of known hosts.
+Warning: Permanently added '10.42.3.77' (ED25519) to the list of known hosts.
+Warning: Permanently added '10.42.2.5' (ED25519) to the list of known hosts.
+Permission denied, please try again.
+Permission denied, please try again.
+ubuntu@10.42.3.59: Permission denied (publickey,password).
+Permission denied, please try again.
+Permission denied, please try again.
+ubuntu@10.42.2.5: Permission denied (publickey,password).
+```
+
+To fix, check the user and group definition sections of the arkouda-udp-locale/values.yaml and arkouda-udp-server/values.yaml files and ensure they match. To run Arkouda as the default user, both values.yaml files must have the following configuration;
+
+```
+user:
+  enabled: # indicates whether to run Arkouda as a specified user, defaults to false
+  name: # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: # uid of user running Arkouda
+
+group:
+  enabled: # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: # name of group user needs to configured for to execute host commands
+  gid: # gid of group user needs to configured for to execute host commands
+```
+
+To run Arkouda as a specific user in a specific group, both values.yaml files must have the following configuration:
+
+```
+user:
+  enabled: true # indicates whether to run Arkouda as a specified user, defaults to false
+  name: user # name of user running arkouda and CN for corresponding secret for rolebindings
+  uid: 1005 # uid of user running Arkouda
+
+group:
+  enabled: true # indicates whether to run Arkouda as a specified user with corresponding group, defaults to false
+  name: usergroup # name of group user needs to configured for to execute host commands
+  gid: 1006  # gid of group user needs to configured for to execute host commands
 ```
