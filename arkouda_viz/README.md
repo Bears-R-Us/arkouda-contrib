@@ -1,5 +1,4 @@
 <p align="center">
-<<<<<<< HEAD
   <img src="./pictures/logo.png"/>
 </p>
 
@@ -22,34 +21,11 @@ In order to use the `explore()` method, you need to run the following code to up
 
 ```bash
 sed -i '/"nd": \[1\]/s/\[1\]/[1, 2]/' $PATH_TO_ARKOUDA/registration-config.json
-=======
-  <img src="../pictures/logo.png"/>
-</p>
-
-This is a client only implementation of vizualizations using Arkouda. Thus, all code is python and uses only server elements currently included in the main arkouda repository. 
-
-## Functionality Implemented
-
-- 'datashade()' - Takes an Arkouda DataFrame along with optional parameters and creates an interactive plot using datashader. The method then updates the plot based on the user's selections of a variety of widgets.
-
-- 'crossfilter()' - Takes an Arkouda Dataframe and creates a scatterplot with the widgets of size and color that manipulates the points.
-
-## Usage
-
-Arkouda must be installed prior to utilization.
-
-```commandline
-pip install arkouda
->>>>>>> main
 ```
 
 In your code,
 
 ```python
-<<<<<<< HEAD
 import arkouda # as ak
 import arkouda_viz # as akv
-=======
-import arkouda_viz
->>>>>>> main
 ```
