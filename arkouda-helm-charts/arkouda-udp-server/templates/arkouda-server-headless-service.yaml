@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: arkouda-headless-service
+  name: {{ .Values.server.name }}-server-headless-service
   namespace: arkouda
 spec: 
   clusterIP: None
   selector:
-    app: arkouda-server
+    app: {{ .Values.server.name }}

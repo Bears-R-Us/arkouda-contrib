@@ -13,7 +13,7 @@ arkouda:
       name: arkouda-on-slurm # maps to arkouda_server_name Prometheus label
       namespace: arkouda # Arkouda service deployment namespace
     service:
-      name: # <Arkouda metrics service name>.<Arkouda deployment namespace>
+      name: # Arkouda metrics service name
       port: # Arkouda metrics port
 ```
 
@@ -26,6 +26,14 @@ exporter:
     pollingIntervalSeconds: 5 # polling interval
   service:
     name: # prometheus-arkouda-exporter k8s service name
+  serviceMonitor:
+    enabled: true # indicates if ServiceMonitor registration is to be used, defaults to true
+    pollingInterval: 30s # polling interval in the form of seconds, default value is 15s
+    additionalLabels:
+      launcher: kubernetes # labels that enable Prometheus to discover Arkouda ServiceMonitor
+    targetLabels:
+      - arkouda_instance
+      - launcher
 ```
 
 ### Prometheus 
