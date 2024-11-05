@@ -18,12 +18,7 @@ requirements = [
 
 setup(
     name="arkouda_viz",
-<<<<<<< HEAD
     description="Visualizations for Arkouda.",
-=======
-    version="0.0.0",
-    description="Vizualizations for Arkouda.",
->>>>>>> main
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Bears-R-Us/arkouda-contrib/tree/main/arkouda_viz",
