@@ -2,14 +2,25 @@ import arkouda as ak
 import holoviews as hv
 import panel as pn
 import param
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
+
+_numeric_types = ["float64", "int64", "uint64"]
+
+"""
+The plotting engine to be used by default
+unless specified explicitly.
+"""
+
+
+default_engine = "matplotlib"
+
 
 """
 Helper method for setting up the plot rendering environment.
 Parameters
 ----------
-engine : str
-    The plotting engine.
+engine : string
+    The plotting engine; 'default_engine' by default.
 width : int
     Width of the plot.
 height : int
@@ -21,31 +32,38 @@ Dictionary
 """
 
 
-def render_env(engine: str, width: int, height: int):
-    from bokeh.io import output_notebook
+def render_env(engine: Optional[str], width: int, height: int):
+    global default_engine
+    if engine == None: engine = default_engine
 
-    output_notebook()
+    def ensure(name):
+        if not hv.extension._loaded or hv.Store.current_backend != name:
+            hv.extension(name)
+
     if engine in ("bokeh", "b"):
-        hv.extension("bokeh")
+        ensure("bokeh")
         return dict(width=width, height=height)
     elif engine in ("plotly", "p"):
-        hv.extension("plotly")
+        ensure("plotly")
         return dict(width=width, height=height)
     elif engine in ("matplotlib", "m"):
-        hv.extension("matplotlib")
-        return dict(fig_inches=(5, 5))
+        ensure("matplotlib")
+        return dict(fig_inches=(int(width/100), int(height/100)))
     else:
         raise ValueError("Please provide a supported plotting engine.")
 
 
 """
-Plots an area plot for numeric data.
+Plots a histogram for numeric data as an area plot.
+The X axis is always range(0, bins).
 Parameters
 ----------
 data : ak.DataFrame or ak.pdarray
     The data to be plotted.
+bins : int
+    Number of bins to divide the data into.
 engine : string
-    The plotting engine.
+    The plotting engine; 'default_engine' by default.
 width : int
     Width of the plot.
 height : int
@@ -59,8 +77,8 @@ hv.Area()
 
 def area(
     data: Union[ak.DataFrame, ak.pdarray] = None,
-    bins=10,
-    engine: str = "matplotlib",
+    bins: int = 10,
+    engine: Optional[str] = None,
     width: int = 500,
     height: int = 500,
 ):
@@ -70,7 +88,7 @@ def area(
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64"]
+                if dtype in _numeric_types
             ]
             if len(numeric_columns) == 0:
                 raise ValueError(
@@ -79,14 +97,13 @@ def area(
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
             var = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=data.columns
+                name="variable", value=data.columns[0], options=data.columns.to_list()
             )
             all = pn.widgets.Checkbox(name="all")
 
             @pn.depends(var.param.value, all.param.value)
             def create_figure(var, all):
                 if all:
-                    var.disabled = True
                     overlay = hv.Overlay()
                     for column in data.columns:
                         h, b = ak.histogram(data[column], bins=bins)
@@ -98,7 +115,7 @@ def area(
 
             widgets = pn.WidgetBox(var, all, width=200)
             return pn.Row(widgets, create_figure).servable("Area")
-        if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
+        if isinstance(data, ak.pdarray) and data.dtype in _numeric_types:
             h, b = ak.histogram(data, bins=bins)
             return hv.Area(h.to_ndarray()).opts(**opts)
         else:
@@ -118,7 +135,7 @@ data : ak.DataFrame or ak.pdarray
 bins : int
     Number of bins to divide the data into.
 engine : string
-    The plotting engine.
+    The plotting engine; 'default_engine' by default.
 width : int
     Width of the plot.
 height : int
@@ -133,7 +150,7 @@ hv.Histogram() or pn.Row(pn.WidgetBox(), hv.Histogram).
 def hist(
     data: Union[ak.DataFrame, ak.pdarray] = None,
     bins=10,
-    engine: str = "matplotlib",
+    engine: Optional[str] = None,
     width: int = 500,
     height: int = 500,
 ):
@@ -143,7 +160,7 @@ def hist(
             numeric_columns = [
                 col
                 for col, dtype in data.dtypes.items()
-                if dtype in ["float64", "int64"]
+                if dtype in _numeric_types
             ]
             if len(numeric_columns) == 0:
                 raise ValueError(
@@ -152,7 +169,7 @@ def hist(
             data = data[numeric_columns]
             h, b = ak.histogram(data[data.columns[0]], bins=bins)
             var = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=data.columns
+                name="variable", value=data.columns[0], options=data.columns.to_list()
             )
 
             @pn.depends(var.param.value)
@@ -161,7 +178,7 @@ def hist(
 
             widgets = pn.WidgetBox(var, width=200)
             return pn.Row(widgets, create_figure).servable("Histogram")
-        if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
+        if isinstance(data, ak.pdarray) and data.dtype in _numeric_types:
             h, b = ak.histogram(data, bins=bins)
             return hv.Histogram((h.to_ndarray(), b.to_ndarray())).opts(**opts)
         else:
@@ -179,7 +196,7 @@ Parameters
 data : ak.DataFrame or ak.pdarray
     The data to be plotted.
 engine : string
-    The plotting engine.
+    The plotting engine; 'default_engine' by default.
 width : int
     Width of the plot.
 height : int
@@ -193,7 +210,7 @@ hv.Histogram() or pn.Row(pn.WidgetBox(), hv.Histogram).
 
 def boxWhisker(
     data: Union[ak.DataFrame, ak.pdarray] = None,
-    engine: str = "matplotlib",
+    engine: Optional[str] = None,
     width: int = 5,
     height: int = 5,
 ):
@@ -213,7 +230,7 @@ def boxWhisker(
             data = data[numeric_columns]
 
             var = pn.widgets.Select(
-                name="variable", value=data.columns[0], options=data.columns
+                name="variable", value=data.columns[0], options=data.columns.to_list()
             )
 
             @pn.depends(var.param.value)
@@ -238,14 +255,14 @@ def boxWhisker(
 
                 return boxwhisker.opts(
                     hv.opts.Bounds(alpha=0.5, color="blue"),
-                    hv.opts.HLine(color="red", linewidth=2, xlim=(0, 1)),
+                    hv.opts.HLine(color="red", line_width=2, xlim=(0, 1)),
                     hv.opts.Segments(color="black"),
                     hv.opts.Points(color="green"),
                 )
 
             widgets = pn.WidgetBox(var, width=200)
             return pn.Row(widgets, create_figure).servable("Box and Whisker")
-        if isinstance(data, ak.pdarray) and data.dtype in ["int64", "float64"]:
+        if isinstance(data, ak.pdarray) and data.dtype in _numeric_types:
             sorted_data = ak.sort(data)
 
             values = {
@@ -266,7 +283,7 @@ def boxWhisker(
 
             return boxwhisker.opts(
                 hv.opts.Bounds(alpha=0.5, color="blue"),
-                hv.opts.HLine(color="red", linewidth=2, xlim=(0, 1)),
+                hv.opts.HLine(color="red", line_width=2, xlim=(0, 1)),
                 hv.opts.Segments(color="black"),
                 hv.opts.Points(color="green"),
             )
@@ -289,7 +306,7 @@ xBin : int
 yBin : int
     Number of bins to divide the y data into.
 engine : string
-    The plotting engine.
+    The plotting engine; 'bokeh' by default.
 width : int
     Width of the plot.
 height : int
@@ -300,18 +317,16 @@ hv.Image().
     An image with or without a variable dropdown menu based in single or multiple columns.
 """
 
-
 def explore(
     data: Union[ak.DataFrame, Tuple[ak.pdarray, ak.pdarray]] = None,
-    xBin: int = 10,
-    yBin: int = 10,
-    engine: str = "bokeh",
+    xBin: int = 100,
+    yBin: int = 100,
+    engine: Optional[str] = "bokeh",
     width: int = 500,
     height: int = 500,
 ):
-    render_env(engine, width=width, height=height)
+    opts = render_env(engine, width=width, height=height)
     pn.extension()
-    full_data = None
     if data is not None:
         if isinstance(data, ak.DataFrame):
             numeric_columns = [
@@ -323,16 +338,16 @@ def explore(
                 raise ValueError(
                     "The provided DataFrame does not have at least two numeric columns."
                 )
-            full_data = data[numeric_columns]
         elif (
             isinstance(data, tuple)
             and len(data) == 2
             and all(isinstance(item, ak.pdarray) for item in data)
         ):
-            full_data = ak.DataFrame(data[0], data[1])
+            data = ak.DataFrame({"0":data[0], "1":data[1]})
+            numeric_columns = ["0", "1"]
         else:
             raise ValueError(
-                "Invalid data. Please provide an ak.Dataframe or [ak.pdarray, ak.pdarray]."
+                "Invalid data. Please provide an ak.Dataframe or (ak.pdarray, ak.pdarray)."
             )
     else:
         raise ValueError("Please provide data.")
@@ -342,10 +357,10 @@ def explore(
             label="color map", default="turbo", objects=hv.plotting.list_cmaps()
         )
         x_var = param.Selector(
-            label="x-variable", default=data.columns[0], objects=data.columns
+            label="x-variable", default=numeric_columns[0], objects=numeric_columns
         )
         y_var = param.Selector(
-            label="y-variable", default=data.columns[1], objects=data.columns
+            label="y-variable", default=numeric_columns[1], objects=numeric_columns
         )
         enable_slider_checkbox = pn.widgets.Checkbox(
             name="remove outliers", value=False
@@ -355,40 +370,38 @@ def explore(
         )
 
     params = Explore()
-    cols = full_data.columns
-    initial_xrange = (ak.min(full_data[cols[0]]), ak.max(full_data[cols[0]]))
-    initial_yrange = (ak.min(full_data[cols[1]]), ak.max(full_data[cols[1]]))
+    server_widget = pn.widgets.StaticText(name="", value="", styles = {'color': 'red'})
 
-    def make_data(x_range, y_range, cmap, x_var, y_var):
-        if x_range is None or y_range is None or not x_range or not y_range:
-            binned_data = ak.histogram2d(
-                full_data[x_var], full_data[y_var], bins=(xBin, yBin)
-            )
-            return hv.Image(binned_data[0].to_ndarray(), bounds=(0, 0, 1, 1)).opts(
-                cmap=cmap, width=width, height=height, color_bar=True
-            )
+    # use caching to preserve the current range when changing the color map and to
+    # avoid unnecessary re-histogramming, which sometimes happens with hv.streams
+    class Cache: pass
+    h_cache = Cache()
+    h_cache.x_var, h_cache.y_var, h_cache.histo, h_cache.range2 = None, None, None, None
+
+    def make_data(x_range, y_range, cmap, x_var, y_var, h_cache=h_cache):
+        if x_var == h_cache.x_var and y_var == h_cache.y_var \
+           and (x_range == None or (x_range, y_range) == h_cache.range2):
+            histo, range2 = h_cache.histo, h_cache.range2
         else:
-            subset_data = data[
-                (full_data[x_var] >= x_range[0])
-                & (full_data[x_var] <= x_range[1])
-                & (full_data[y_var] >= y_range[0])
-                & (full_data[y_var] <= y_range[1])
-            ]
-        x_span = x_range[1] - x_range[0]
-        y_span = y_range[1] - y_range[0]
-        binned_data = ak.histogram2d(
-            subset_data[x_var], subset_data[y_var], bins=(1000, 1000)
-        )
+            if x_range == None: range = None
+            else:               range = (x_range, y_range)
+            server_widget.value = "server processing"
+            histo,xbins,ybins = ak.histogram2d(data[x_var], data[y_var], bins=(xBin, yBin), range=range)
+            server_widget.value = ""
+            histo = histo.to_ndarray().T[::-1,:]
+            range2 = ((xbins[0], xbins[-1]), (ybins[0], ybins[-1]))  # ((xmin,xmax),(ymin,ymax))
+            h_cache.x_var, h_cache.y_var, h_cache.histo, h_cache.range2 = x_var, y_var, histo, range2
+
         return hv.Image(
-            binned_data[0].to_ndarray(),
-            bounds=(x_range[0], y_range[0], x_range[0] + x_span, y_range[0] + y_span),
-        ).opts(cmap=cmap, width=width, height=height, colorbar=True)
+            histo,
+            bounds=(range2[0][0], range2[1][0], range2[0][1], range2[1][1])  # xmin, ymin, xmax, ymax
+        ).opts(cmap=cmap, colorbar=True, **opts)
 
     @pn.depends(
         cmap=params.param.cmap, x_var=params.param.x_var, y_var=params.param.y_var
     )
     def update(cmap, x_var, y_var):
-        stream = hv.streams.RangeXY(x_range=initial_xrange, y_range=initial_yrange)
+        stream = hv.streams.RangeXY()
         dmap = hv.DynamicMap(
             lambda x_range, y_range: make_data(x_range, y_range, cmap, x_var, y_var),
             streams=[stream],
@@ -400,8 +413,10 @@ def explore(
         params.param.cmap,
         params.param.x_var,
         params.param.y_var,
-        params.enable_slider_checkbox,
-        params.z_score_threshold_slider,
+        # these are currently unused:
+        #params.enable_slider_checkbox,
+        #params.z_score_threshold_slider,
+        server_widget,
         width=200,
     )
     return pn.Row(widget_column, update)
