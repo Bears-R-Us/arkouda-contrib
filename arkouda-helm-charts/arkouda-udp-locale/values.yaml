@@ -2,7 +2,7 @@
 
 ######################## Pod Settings ########################
 
-releaseVersion: # bearsrus arkouda-udp-server image version
+releaseVersion: latest # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 resources:
@@ -15,10 +15,10 @@ resources:
 
 ################ Arkouda Locale Configuration ################
 
-locale: 
-  numLocales: # number of arkouda-udp-locale pods
-  name: # Kubernetes app name used by arkouda-udp-server for pod discovery
-  threadsPerLocale: # number of cpu cores assigned to each Arkouda locale
+locale:
+  numLocales: 4 # number of arkouda-udp-locale pods
+  name: asdfasdf # Kubernetes app name used by arkouda-udp-server for pod discovery
+  threadsPerLocale: 2 # number of cpu cores assigned to each Arkouda locale
 
 persistence: 
   enabled: # indicates if persistence of files to host is enabled, defaults to false
@@ -36,4 +36,4 @@ group:
   gid: # gid of group Arkouda user needs to be a member of to execute host commands
 
 secrets:
-  ssh: # name of ssh secret used to launch Arkouda locales
+  ssh: sshkey
