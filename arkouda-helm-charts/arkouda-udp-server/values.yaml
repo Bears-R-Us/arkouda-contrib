@@ -30,7 +30,7 @@ server:
   metrics:
     collectMetrics: false # indicates whether to collect metrics, defaults to false
     service:
-      name: # service name for Arkouda metrics service endpoint
+      name: asdfasdf-metrics # service name for Arkouda metrics service endpoint
       port: 5556
 
 locale:
