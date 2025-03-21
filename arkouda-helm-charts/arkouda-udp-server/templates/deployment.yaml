@@ -50,8 +50,6 @@ spec:
           volumeMounts:
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
-          # - name: sa
-          #   mountPath: /opt/sa
           {{- if .Values.persistence.enabled }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}
@@ -69,7 +67,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: NUMLOCALES
-              value: {{ .Values.server.numLocales | quote}}
+              value: {{ .Values.server.numLocales | quote }}
             - name: SSH_SERVERS
               valueFrom:
                 fieldRef:

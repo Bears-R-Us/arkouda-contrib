@@ -12,29 +12,15 @@ data:
      #!/bin/bash
      sudo service ssh start
 
-     # Set SSL parameters
-     export SSL_TOKEN=$(cat sa/token)
-     export CACERT_FILE=/opt/sa/ca.crt
+     set -x
 
-     # Set env variables need to get arkouda-locale pod IP addresses and start arkouda
-     sudo sh -c "echo 'K8S_HOST=$K8S_HOST' >> /etc/environment"
-     sudo sh -c "echo 'SSL_TOKEN=$SSL_TOKEN' >> /etc/environment"
-     sudo sh -c "echo 'CACERT_FILE=$CACERT_FILE' >> /etc/environment"
+     # Set env variables needed to start arkouda
      sudo sh -c "echo 'GASNET_MASTERIP=$MY_IP' >> /etc/environment"
-     sudo sh -c "echo 'NAMESPACE=$NAMESPACE' >> /etc/environment"
-     sudo sh -c "echo 'EXTERNAL_SERVICE_NAME=$EXTERNAL_SERVICE_NAME' >> /etc/environment"
      sudo sh -c "echo 'METRICS_SERVICE_NAME=$METRICS_SERVICE_NAME' >> /etc/environment"
 
      # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
-     # LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py \ 
-     #             '-c=$CACERT_FILE' '-k=$TOKEN' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
-     LOCALE_IPS="$MY_IP $(dig +search +short {{ .Values.locale.name }}-locale-ssh | tr '\n' ' ')"
-     echo MY_IP=$MY_IP
-     echo LOCALE_IPS=$LOCALE_IPS
-     # sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
+     LOCALE_IPS="$(dig +search +short {{ .Values.locale.name }}-locale-ssh | tr '\n' ' ')"
      sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
-
-     # sleep 600
 
      {{- if .Values.group.enabled }}
      # Add group corresponding to gid and user
@@ -42,7 +28,7 @@ data:
      sudo groupadd {{ .Values.user.name }}
      {{- end }}
 
-     {{- if .Values.user.enabled }} 
+     {{- if .Values.user.enabled }}
      # Add user with home directory
      sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid | int64 | quote }} -g {{ .Values.group.gid | int64 | quote }}
 
@@ -54,7 +40,7 @@ data:
      export USER=ubuntu
      {{- end }}
      echo $USER
-     # Add SSH certificate 
+     # Add SSH certificate
      sudo -u $USER mkdir /home/$USER/.ssh
      sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
      sudo chown -R $USER:$USER /home/$USER/.ssh
@@ -63,26 +49,21 @@ data:
      sudo -u $USER bash <<EOF
 
      # Change ssh cert file permissions to 600 as required by SSH client
-     chmod -R 600 /home/$USER/.ssh/id_rsa \ 
+     chmod -R 600 /home/$USER/.ssh/id_rsa \
 
      # Add public cert to authorized keys to enable GASNET SSH spawner
      cat /home/$USER/.ssh/id_rsa.pub > /home/$USER/.ssh/authorized_keys \
 
-     # Generate list of arkouda-server and arkouda-locale IP addresses 
+     # Generate list of arkouda-server and arkouda-locale IP addresses
      export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
 
      # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
-     # {{- if .Values.server.metrics.collectMetrics }}
-     # /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-     #                                                  --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
-     #                                                  --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-     #                                                  --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
-     # {{- else }}
-     # /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-     #                                                  --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
-     #                                                  --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-     #                                                  --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
-     # {{- end }}
+     {{- if .Values.server.metrics.collectMetrics }}
+     /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ServerDaemon.daemonTypes=ServerDaemonType.METRICS \
+                                                      --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
+     {{- else }}
      /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
                                                       --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
-     EOF  
+     {{- end }}
+     EOF
