@@ -16,7 +16,7 @@ resources:
 ################ Arkouda Server Configuration ################
 
 server: 
-  numLocales: 5 # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  numLocales: 3 # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
   authenticate: false # whether to require token authentication, defaults to false
   verbose: true # enable verbose logging, defaults to false
   memMax: 1000000000 # maximum bytes of RAM to be used by Chapel per locale
