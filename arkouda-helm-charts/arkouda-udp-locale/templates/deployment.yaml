@@ -13,6 +13,7 @@ spec:
         app: {{ .Values.locale.name }}
         name: {{ .Values.locale.name }}
     spec:
+      terminationGracePeriodSeconds: 5
       containers:
         - name: arkouda-locale
           image: arifthpe/arkouda-udp-server:{{ .Values.releaseVersion }}
@@ -27,6 +28,7 @@ spec:
           command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
           ports:
           - containerPort: 22
+            name: ssh
           volumeMounts:
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
@@ -40,7 +42,7 @@ spec:
           env:
             - name: MY_IP
               valueFrom:
-                fieldRef: 
+                fieldRef:
                   fieldPath: status.podIP
             - name: NUM_LOCALES
               value: {{ .Values.locale.numLocales | quote }}
