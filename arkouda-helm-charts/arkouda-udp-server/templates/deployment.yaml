@@ -50,8 +50,8 @@ spec:
           volumeMounts:
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
-          - name: sa
-            mountPath: /opt/sa
+          # - name: sa
+          #   mountPath: /opt/sa
           {{- if .Values.persistence.enabled }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}

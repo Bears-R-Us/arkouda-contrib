@@ -26,9 +26,15 @@ data:
      sudo sh -c "echo 'METRICS_SERVICE_NAME=$METRICS_SERVICE_NAME' >> /etc/environment"
 
      # Retrieve arkouda-locale pod IP addresses and set the corresponding env variable
-     LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py \ 
-                 '-c=$CACERT_FILE' '-k=$TOKEN' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+     # LOCALE_IPS=$(python3 /opt/arkouda-contrib/arkouda_integration/client/scripts/pods.py \ 
+     #             '-c=$CACERT_FILE' '-k=$TOKEN' '-kh=$K8S_HOST' '-i=GET_POD_IPS' '-n=$NAMESPACE' '-a=$APP_NAME')
+     LOCALE_IPS="$MY_IP $(dig +search +short {{ .Values.locale.name }}-locale-ssh | tr '\n' ' ')"
+     echo MY_IP=$MY_IP
+     echo LOCALE_IPS=$LOCALE_IPS
+     # sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
      sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
+
+     # sleep 600
 
      {{- if .Values.group.enabled }}
      # Add group corresponding to gid and user
@@ -66,15 +72,17 @@ data:
      export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
 
      # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
-     {{- if .Values.server.metrics.collectMetrics }}
-     /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-                                                      --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
-                                                      --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+     # {{- if .Values.server.metrics.collectMetrics }}
+     # /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
+     #                                                  --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION,ServerDaemonType.METRICS \
+     #                                                  --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+     #                                                  --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
+     # {{- else }}
+     # /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
+     #                                                  --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
+     #                                                  --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
+     #                                                  --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
+     # {{- end }}
+     /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
                                                       --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
-     {{- else }}
-     /opt/arkouda/arkouda_server -nl ${NUMLOCALES:-1} --ExternalIntegration.systemType=SystemType.KUBERNETES \
-                                                      --ServerDaemon.daemonTypes=ServerDaemonType.INTEGRATION \
-                                                      --memTrack=${MEMTRACK:-true} --authenticate=${AUTHENTICATE:-false} \
-                                                      --logLevel=${LOG_LEVEL:-LogLevel.INFO} --memMax={{ .Values.server.memMax | int }}
-     {{- end }}
      EOF  
