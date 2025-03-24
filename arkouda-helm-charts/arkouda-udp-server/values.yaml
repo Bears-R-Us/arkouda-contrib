@@ -2,7 +2,7 @@
 
 ######################## Pod Settings ########################
 
-releaseVersion: latest # bearsrus arkouda-udp-server image version
+releaseVersion: v2024.04.19 # bearsrus arkouda-udp-server image version
 imagePullPolicy: Always
 
 resources:
