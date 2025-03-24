@@ -1,5 +1,5 @@
 ARG CHAPEL_UDP_IMAGE
-FROM $CHAPEL_UDP_IMAGE as build
+FROM $CHAPEL_UDP_IMAGE as base
 
 # Download Arkouda
 ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
@@ -10,8 +10,18 @@ ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
 ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
 
 # Install dependencies
-RUN apt-get update && apt upgrade -y && \
-    apt-get install unzip libcurl4-openssl-dev cmake -y
+RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
+    unzip \
+    libcurl4-openssl-dev \
+    cmake \
+    ssh \
+    procps \
+    dnsutils \
+    openssh-client \
+    openssh-server \
+    sshpass
+
+FROM base as build
 
 WORKDIR /opt
 
@@ -28,16 +38,9 @@ RUN python3 -m pip install --upgrade pip && \
 
 # insecure to get around my ssl issues from zscaler
 RUN echo insecure >> $HOME/.curlrc
+
 RUN make -j6 install-deps
 
-# set up ssh
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ssh \
-    procps \
-    dnsutils \
-    openssh-client \
-    openssh-server \
-    sshpass
 ENV SSH_SERVERS=0.0.0.0
 ENV GASNET_MASTERIP=0.0.0.0
 RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
@@ -51,7 +54,7 @@ RUN rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip
 WORKDIR /opt/arkouda
 RUN rm -rf benchmarks converter examples *.md pictures pydoc resources runs src test tests toys
 
-FROM scratch
+FROM base as final
 COPY --from=build /opt /opt
 
 WORKDIR /opt
