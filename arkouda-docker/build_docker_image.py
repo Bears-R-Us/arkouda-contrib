@@ -149,10 +149,10 @@ def getDistroName(distro: str, tag: Optional[str]) -> str:
     return tag if tag else distro
 
 def generateChplSmpVersion(chapelVersion: str) -> str:
-    return f'bearsrus/chapel-gasnet-smp:{chapelVersion}'
+    return f'arifthpe/chapel-gasnet-smp:{chapelVersion}'
 
 def generateChplUdpVersion(chapelVersion: str) -> str:
-    return f'bearsrus/chapel-gasnet-udp:{chapelVersion}'
+    return f'arifthpe/chapel-gasnet-udp:{chapelVersion}'
 
 def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str:
     '''
