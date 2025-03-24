@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: arkouda-locale
-          image: bearsrus/arkouda-udp-server:{{ .Values.releaseVersion }}
+          image: arifthpe/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           resources:
             requests:

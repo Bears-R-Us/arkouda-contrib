@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: arkouda-metrics-exporter
-          image: bearsrus/prometheus-arkouda-exporter:{{ .Values.releaseVersion }}
+          image: arifthpe/prometheus-arkouda-exporter:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           resources:
             requests:
