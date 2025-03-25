@@ -57,6 +57,9 @@ RUN rm -rf benchmarks converter examples *.md pictures pydoc resources runs src 
 FROM base as final
 COPY --from=build /opt /opt
 
+RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
+    sudo
+
 WORKDIR /opt
 
 EXPOSE 5555
