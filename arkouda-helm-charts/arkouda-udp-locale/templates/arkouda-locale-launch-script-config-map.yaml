@@ -8,38 +8,37 @@ data:
   script: |-
 
      #!/bin/bash
-     service ssh start
+     sudo service ssh start
 
-     # Set user and group to run arkouda as
+     {{- if .Values.group.enabled }}
+     # Add group corresponding to gid and user
+     sudo groupadd -g {{ .Values.group.gid | int64 | quote }} {{ .Values.group.name }}
+     sudo groupadd {{ .Values.user.name }}
+     {{- end }}
+
      {{- if .Values.user.enabled }}
+     # Add user with home directory
+     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid | int64 | quote }} -g {{ .Values.group.gid | int64 | quote }}
+
+     # Add user to user group
+     sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
+
      export USER={{ .Values.user.name }}
-     export UID={{ .Values.user.uid | int64 }}
      {{- else }}
      export USER=ubuntu
-     export UID=1000
      {{- end }}
-     {{- if .Values.group.enabled }}
-     export GROUP={{ .Values.group.name }}
-     export GID={{ .Values.group.gid | int64 }}
-     {{- else }}
-     export GROUP=ubuntu
-     export GID=1000
-     {{- end }}
-     # Create group corresponding to gid and user
-     groupadd -g $GID $GROUP
-     groupadd $USER
-     # Add user with home directory and user group
-     useradd $USER -m -u $UID -g $GID
-     adduser $USER $USER
-     # Add SSH certificate
-     mkdir /home/$USER/.ssh
-     cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
-     chmod 600 /home/$USER/.ssh/*
-     cat /home/$USER/.ssh/id_rsa.pub > /home/$USER/.ssh/authorized_keys
-     chown -R $USER:$USER /home/$USER/.ssh
+
+     # Add SSH certificate 
+     sudo -u $USER mkdir /home/$USER/.ssh
+     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
+     sudo chown -R $USER:$USER /home/$USER/.ssh
 
      # Start arkouda_server as the configured user
      sudo -u $USER bash <<EOF
+
+     chmod -R 600 ~/.ssh/* \
+
+     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys \
 
      /bin/bash -c -- "while true; do sleep 600; done;"
 
