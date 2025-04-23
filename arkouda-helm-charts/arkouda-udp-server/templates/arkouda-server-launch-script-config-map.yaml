@@ -23,36 +23,36 @@ data:
      sudo sh -c "echo 'LOCALE_IPS=$LOCALE_IPS' >> /etc/environment"
 
      {{- if .Values.group.enabled }}
-     # Add group corresponding to gid and user
-     sudo groupadd -g {{ .Values.group.gid | int64 | quote }} {{ .Values.group.name }}
-     sudo groupadd {{ .Values.user.name }}
+     GID={{ .Values.group.gid | int64 | quote }}
+     GROUP={{ .Values.group.name }}
+     {{- else }}
+     GID=1000
+     GROUP=ubuntu
      {{- end }}
 
      {{- if .Values.user.enabled }}
-     # Add user with home directory
-     sudo useradd {{ .Values.user.name }} -m -u {{ .Values.user.uid | int64 | quote }} -g {{ .Values.group.gid | int64 | quote }}
-
-     # Add user to user group
-     sudo adduser {{ .Values.user.name }} {{ .Values.user.name }}
-
-     export USER={{ .Values.user.name }}
+     UID={{ .Values.user.uid | int64 | quote }}
+     USER={{ .Values.user.name }}
      {{- else }}
-     export USER=ubuntu
+     UID=1000
+     USER=ubuntu
      {{- end }}
+
+     # Add user with home directory
+     sudo useradd $USER -m -u $UID -g $GID
+     sudo adduser $USER $USER
+     HOME="/home/$USER"
+     # Add group corresponding to gid and user
+     sudo groupadd -g $GID $GROUP
+     sudo groupadd $USER
      echo $USER
+
      # Add SSH certificate
-     sudo -u $USER mkdir /home/$USER/.ssh
-     sudo cp /home/ubuntu/ssh-keys/id_rsa* /home/$USER/.ssh/
-     sudo chown -R $USER:$USER /home/$USER/.ssh
-     sudo ls -ltr  /home/$USER/.ssh
-     # Start arkouda_server as the configured user
-     sudo -u $USER bash <<EOF
-
-     # Change ssh cert file permissions to 600 as required by SSH client
-     chmod -R 600 /home/$USER/.ssh/id_rsa \
-
-     # Add public cert to authorized keys to enable GASNET SSH spawner
-     cat /home/$USER/.ssh/id_rsa.pub > /home/$USER/.ssh/authorized_keys \
+     sudo -u $USER mkdir $HOME/.ssh
+     sudo cp $HOME/ssh-keys/id_rsa* $HOME/.ssh/
+     sudo chown -R $USER:$USER $HOME/.ssh
+     chmod -R 600 $HOME/.ssh/*
+     cat $HOME/.ssh/id_rsa.pub > $HOME/.ssh/authorized_keys
 
      # Generate list of arkouda-server and arkouda-locale IP addresses
      export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
