@@ -199,7 +199,7 @@ def buildArkoudaImage(dockerFile: str) -> bool:
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Build bearsrus docker images')
 
-    parser.add_argument('--image_type', type=ImageType,
+    parser.add_argument('--image_type', type=ImageType, required=True,
                         help='possible image types are arkouda_full_stack, arkouda-smp-server, arkouda-udp-server and chapel_udp')
     parser.add_argument('--arkouda_tag', type=str,
                         help='if the desired arkouda version is a tag')
