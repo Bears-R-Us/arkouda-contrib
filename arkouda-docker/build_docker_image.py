@@ -13,6 +13,7 @@ class ImageType(Enum):
     ARKOUDA_UDP_SERVER = 'arkouda-udp-server'
     CHAPEL_GASNET_UDP = 'chapel-gasnet-udp'
     CHAPEL_GASNET_SMP = 'chapel-gasnet-smp'
+    CHAPEL_GASNET_IBV = 'chapel-gasnet-ibv'
     PROMETHEUS_ARKOUDA_EXPORTER = 'prometheus-arkouda-exporter'
     ARKOUDA_SMP_DEVELOPER = 'arkouda-smp-developer'
 
@@ -97,6 +98,15 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                                                '-t', f'{dockerRepo}/{file}:{chapelVersion}', '.'], stdout=subprocess.DEVNULL)
         print(result)
 
+    def buildChapelIbv(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str) -> None:
+        result = subprocess.run(args=['docker','build',
+                                               '--build-arg', f'CHPL_BASE_IMAGE=ubuntu:22.04',
+                                               '--build-arg', f'CHPL_VERSION={chapelVersion}',
+                                               '--build-arg', f'CHPL_SMP_IMAGE_REPO={dockerRepo}',
+                                               '-f',file,
+                                               '-t', f'{dockerRepo}/{file}:{chapelVersion}', '.'], stdout=subprocess.DEVNULL)
+        print(result)
+
     def buildPrometheusArkoudaExporter(dockerRepo: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
         result = subprocess.run(args=['docker', 'build' ,
                                                 '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
@@ -131,6 +141,8 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         buildChapelUdp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
     elif file == ImageType.CHAPEL_GASNET_SMP.value:
         buildChapelSmp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
+    elif file == ImageType.CHAPEL_GASNET_IBV.value:
+        buildChapelIbv(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
     elif file == ImageType.PROMETHEUS_ARKOUDA_EXPORTER.value:
         buildPrometheusArkoudaExporter(dockerRepo=dockerRepo,file=file,distro=distro,dockerTag=dockerTag,tag=tag)
     elif file == ImageType.ARKOUDA_SMP_DEVELOPER.value:

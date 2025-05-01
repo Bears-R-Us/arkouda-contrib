@@ -1,0 +1,10 @@
+FROM chapel/chapel:2.0.0
+
+ENV CHPL_COMM=gasnet
+ENV CHPL_COMM_SUBSTRATE=ibv
+ENV CHPL_LAUNCHER=gasnetrun_ibv
+
+RUN CHPL_TARGET_COMPILER=llvm make -j6 -C $CHPL_HOME \
+    && CHPL_TARGET_COMPILER=gnu make -j6 -C $CHPL_HOME \
+    && make -j6 -C $CHPL_HOME chpldoc test-venv mason \
+    && make -j6 -C $CHPL_HOME cleanall
