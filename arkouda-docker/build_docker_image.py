@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse, enum, subprocess, sys
 from typing import Optional
 from enum import Enum
