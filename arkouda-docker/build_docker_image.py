@@ -51,6 +51,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     '''
 
     docker_tag = generateBuildTag(dockerRepo=dockerRepo,file=file,tag=tag,distro=distro)
+    print(f'Building docker image {docker_tag} using Dockerfile {file}')
 
     def buildImageHelper(build_args: dict) -> None:
         args = ['docker', 'build']
@@ -170,10 +171,12 @@ def generateBuildTag(dockerRepo: str, file: str, tag: Optional[str], distro: Opt
     :param Optional[str] tag: Arkouda tag name, if applicable
     :param Optional[str] distro: Arkouda distro (branch name), if applicable
 
-    :return: docker build tag 
+    :return: docker build tag
     :rtype: str
     '''
-    return f'{dockerRepo}/{file}:{tag}' if tag else f'{dockerRepo}/{file}:{distro}'
+    base = f'{dockerRepo}/{file}'
+    suffix = tag if tag else distro if distro else 'latest'
+    return f'{base}:{suffix}'
 
 def buildArkoudaImage(dockerFile: str) -> bool:
     '''
