@@ -36,7 +36,7 @@ def getDistro(tag: str) -> str:
     '''
     return tag.lstrip('v')
 
-def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str], multiarch: bool) -> None:
+def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str], multiarch: bool, concurrency: int) -> None:
     '''
     Generates a build tag and then builds the desired docker image
 
@@ -55,6 +55,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         for key, value in build_args.items():
             args.append('--build-arg')
             args.append(f'{key}={value}')
+        args.extend(['--build-arg', f'MAKE_THREADS={concurrency}'])
         if multiarch:
             args.extend(['--platform', 'linux/amd64,linux/arm64'])
         args.extend(['-f', file, '-t', docker_tag])
@@ -199,6 +200,8 @@ if __name__=="__main__":
                         help='Version of Chapel used to build image')
     parser.add_argument('--multiarch', action='store_true',
                         help='Build multiarch image (default native arch only)')
+    parser.add_argument('--concurrency', type=int, default=1,
+                        help='Number of make jobs to run in parallel (default 1)')
 
     args = parser.parse_args()
 
@@ -209,6 +212,7 @@ if __name__=="__main__":
     chapelVersion = args.chapel_version
     distro = None
     multiarch = args.multiarch
+    concurrency = args.concurrency
 
     if buildArkoudaImage(file):
         if tag:
@@ -219,4 +223,4 @@ if __name__=="__main__":
             else:
                 raise ValueError('Either --arkouda_tag or --arkouda_branch must be specified')
 
-    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro,multiarch=multiarch)
+    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro,multiarch=multiarch,concurrency=concurrency)

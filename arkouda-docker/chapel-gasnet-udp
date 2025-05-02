@@ -5,7 +5,8 @@ ENV CHPL_COMM=gasnet
 ENV CHPL_COMM_SUBSTRATE=udp
 ENV CHPL_LAUNCHER=amudprun
 
-RUN CHPL_TARGET_COMPILER=llvm make -j6 -C $CHPL_HOME \
-    && CHPL_TARGET_COMPILER=gnu make -j6 -C $CHPL_HOME \
-    && make -j6 -C $CHPL_HOME chpldoc test-venv mason \
-    && make -j6 -C $CHPL_HOME cleanall
+ARG MAKE_THREADS
+RUN CHPL_TARGET_COMPILER=llvm make -j${MAKE_THREADS} -C $CHPL_HOME \
+    && CHPL_TARGET_COMPILER=gnu make -j${MAKE_THREADS} -C $CHPL_HOME \
+    && make -j${MAKE_THREADS} -C $CHPL_HOME chpldoc test-venv mason \
+    && make -j${MAKE_THREADS} -C $CHPL_HOME cleanall
