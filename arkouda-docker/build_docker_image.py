@@ -49,7 +49,9 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     :return: None
     '''
 
-    def buildImageHelper(file: str, docker_tag: str, build_args: dict) -> None:
+    docker_tag = generateBuildTag(dockerRepo=dockerRepo,file=file,tag=tag,distro=distro)
+
+    def buildImageHelper(build_args: dict) -> None:
         args = ['docker', 'build']
         for key, value in build_args.items():
             args.append('--build-arg')
@@ -62,12 +64,9 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         result = subprocess.run(args, stdout=subprocess.DEVNULL)
         print(result)
 
-    dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
 
     if file == ImageType.ARKOUDA_FULL_STACK.value:
-        buildImageHelper(file=file,
-                         docker_tag=dockerTag,
-                         build_args={
+        buildImageHelper(build_args={
                              'CHAPEL_SMP_IMAGE': generateChplSmpVersion(chapelVersion),
                              'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
                              'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
@@ -75,9 +74,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                          }
                         )
     elif file == ImageType.ARKOUDA_SMP_SERVER.value:
-        buildImageHelper(file=file,
-                         docker_tag=dockerTag,
-                         build_args={
+        buildImageHelper(build_args={
                              'CHAPEL_SMP_IMAGE': generateChplSmpVersion(chapelVersion),
                              'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
                              'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
@@ -85,9 +82,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                          }
                         )
     elif file == ImageType.ARKOUDA_UDP_SERVER.value:
-        buildImageHelper(file=file,
-                        docker_tag=dockerTag,
-                        build_args={
+        buildImageHelper(build_args={
                             'CHAPEL_UDP_IMAGE': generateChplUdpVersion(chapelVersion),
                             'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
                             'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
@@ -97,36 +92,28 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                         }
                         )
     elif file == ImageType.CHAPEL_GASNET_UDP.value:
-        buildImageHelper(file=file,
-                        docker_tag=dockerTag,
-                        build_args={
+        buildImageHelper(build_args={
                             'CHPL_BASE_IMAGE': 'ubuntu:22.04',
                             'CHPL_VERSION': chapelVersion,
                             'CHPL_UDP_IMAGE_REPO': dockerRepo,
                         }
                         )
     elif file == ImageType.CHAPEL_GASNET_SMP.value:
-        buildImageHelper(file=file,
-                         docker_tag=dockerTag,
-                         build_args={
+        buildImageHelper(build_args={
                              'CHPL_BASE_IMAGE': 'ubuntu:22.04',
                              'CHPL_VERSION': chapelVersion,
                              'CHPL_SMP_IMAGE_REPO': dockerRepo,
                          }
                          )
     elif file == ImageType.CHAPEL_GASNET_IBV.value:
-        buildImageHelper(file=file,
-                         docker_tag=dockerTag,
-                         build_args={
+        buildImageHelper(build_args={
                              'CHPL_BASE_IMAGE': 'ubuntu:22.04',
                              'CHPL_VERSION': chapelVersion,
                              'CHPL_IBV_IMAGE_REPO': dockerRepo,
                          }
                          )
     elif file == ImageType.PROMETHEUS_ARKOUDA_EXPORTER.value:
-        buildImageHelper(file=file,
-                        docker_tag=dockerTag,
-                        build_args={
+        buildImageHelper(build_args={
                             'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
                             'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
                             'ARKOUDA_BRANCH_NAME': distro,
@@ -135,9 +122,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                         }
                         )
     elif file == ImageType.ARKOUDA_SMP_DEVELOPER.value:
-        buildImageHelper(file=file,
-                        docker_tag=dockerTag,
-                        build_args={
+        buildImageHelper(build_args={
                             'CHAPEL_SMP_IMAGE': generateChplSmpVersion(chapelVersion),
                             'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
                             'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
