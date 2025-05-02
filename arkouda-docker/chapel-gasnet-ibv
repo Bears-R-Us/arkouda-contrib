@@ -4,6 +4,24 @@ ENV CHPL_COMM=gasnet
 ENV CHPL_COMM_SUBSTRATE=ibv
 ENV CHPL_LAUNCHER=gasnetrun_ibv
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    rdma-core \
+    libibmad5 \
+    opensm \
+    ibutils \
+    infiniband-diags \
+    perftest \
+    mstflint \
+    libibverbs1 \
+    libibverbs-dev \
+    librdmacm1 \
+    libibumad3 \
+    ibverbs-providers \
+    rdmacm-utils \
+    infiniband-diags \
+    libfabric1 \
+    ibverbs-utils
+
 RUN CHPL_TARGET_COMPILER=llvm make -j6 -C $CHPL_HOME \
     && CHPL_TARGET_COMPILER=gnu make -j6 -C $CHPL_HOME \
     && make -j6 -C $CHPL_HOME chpldoc test-venv mason \
