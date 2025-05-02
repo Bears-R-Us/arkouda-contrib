@@ -57,7 +57,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
             args.append(f'{key}={value}')
         if multiarch:
             args.extend(['--platform', 'linux/amd64,linux/arm64'])
-        args.extend(['-f', file, '-t', docker_tag, '.'])
+        args.extend(['-f', file, '-t', docker_tag])
         args.append('.')
         print("Running docker build command: ", ' '.join(args))
         result = subprocess.run(args, stdout=subprocess.DEVNULL)
