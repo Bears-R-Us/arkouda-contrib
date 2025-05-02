@@ -37,7 +37,7 @@ def getDistro(tag: str) -> str:
     '''
     return tag.lstrip('v')
 
-def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str]) -> None:
+def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str], multiarch: bool) -> None:
     '''
     Generates a build tag and then builds the desired docker image
 
@@ -54,7 +54,10 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         for key, value in build_args.items():
             args.append('--build-arg')
             args.append(f'{key}={value}')
+        if multiarch:
+            args.extend(['--platform', 'linux/amd64,linux/arm64'])
         args.extend(['-f', file, '-t', docker_tag, '.'])
+        args.append('.')
         print("Running docker build command: ", ' '.join(args))
         result = subprocess.run(args, stdout=subprocess.DEVNULL)
         print(result)
@@ -219,6 +222,8 @@ if __name__=="__main__":
                         help='the arkouda repo containing the arkouda source code, defaults to Bears-R-Us')
     parser.add_argument('--chapel_version', type=str,
                         help='Version of Chapel used to build image')
+    parser.add_argument('--multiarch', action='store_true',
+                        help='Build multiarch image (default native arch only)')
 
     args = parser.parse_args()
 
@@ -228,6 +233,7 @@ if __name__=="__main__":
     arkoudaRepo = args.arkouda_repo
     chapelVersion = args.chapel_version
     distro = None
+    multiarch = args.multiarch
 
     if buildArkoudaImage(file):
         if tag:
@@ -237,5 +243,5 @@ if __name__=="__main__":
                 distro = args.arkouda_branch
             else:
                 raise ValueError('Either --arkouda_tag or --arkouda_branch must be specified')
-    
-    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro)
+
+    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro,multiarch=multiarch)
