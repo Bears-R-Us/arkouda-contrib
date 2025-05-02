@@ -48,105 +48,99 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     :param Optional[str] tag: Arkouda tag name, if applicable
     :return: None
     '''
-    def buildArkoudaFullStack(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
-                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
-                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
-                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
-                                               '-f',file,
-                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
-        print(result)
 
-    def buildArkoudaSmpServer(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
-                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
-                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
-                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
-                                               '-f',file,
-                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
+    def buildImageHelper(file: str, docker_tag: str, build_args: dict) -> None:
+        args = ['docker', 'build']
+        for key, value in build_args.items():
+            args.append('--build-arg')
+            args.append(f'{key}={value}')
+        args.extend(['-f', file, '-t', docker_tag, '.'])
+        print("Running docker build command: ", ' '.join(args))
+        result = subprocess.run(args, stdout=subprocess.DEVNULL)
         print(result)
-
-    def buildArkoudaUdpServer(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHAPEL_UDP_IMAGE={generateChplUdpVersion(chapelVersion)}',
-                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
-                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
-                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
-                                               '--build-arg', 'ARKOUDA_INTEGRATION_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
-                                               '--build-arg', 'ARKOUDA_INTEGRATION_DISTRO_NAME=main',
-                                               '-f',file,
-                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
-        print(result)
-
-    def buildChapelUdp(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHPL_BASE_IMAGE=ubuntu:22.04',
-                                               '--build-arg', f'CHPL_VERSION={chapelVersion}',
-                                               '--build-arg', f'CHPL_UDP_IMAGE_REPO={dockerRepo}',
-                                               '-f',file,
-                                               '-t', f'{dockerRepo}/{file}:{chapelVersion}', '.'], stdout=subprocess.DEVNULL)
-        print(result)
-
-    def buildChapelSmp(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHPL_BASE_IMAGE=ubuntu:22.04',
-                                               '--build-arg', f'CHPL_VERSION={chapelVersion}',
-                                               '--build-arg', f'CHPL_SMP_IMAGE_REPO={dockerRepo}',
-                                               '-f',file,
-                                               '-t', f'{dockerRepo}/{file}:{chapelVersion}', '.'], stdout=subprocess.DEVNULL)
-        print(result)
-
-    def buildChapelIbv(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHPL_BASE_IMAGE=ubuntu:22.04',
-                                               '--build-arg', f'CHPL_VERSION={chapelVersion}',
-                                               '--build-arg', f'CHPL_SMP_IMAGE_REPO={dockerRepo}',
-                                               '-f',file,
-                                               '-t', f'{dockerRepo}/{file}:{chapelVersion}', '.'], stdout=subprocess.DEVNULL)
-        print(result)
-
-    def buildPrometheusArkoudaExporter(dockerRepo: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
-        result = subprocess.run(args=['docker', 'build' ,
-                                                '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
-                                                '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
-                                                '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
-                                                '--build-arg', 'ARKOUDA_CONTRIB_DOWNLOAD_URL=https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
-                                                '--build-arg', 'ARKOUDA_CONTRIB_DISTRO_NAME=main',
-                                                '-f', file,
-                                                '-t', f'{dockerTag}', '.'], stdout=subprocess.DEVNULL)
-        print(result)
-
-    def buildArkoudaSmpDeveloper(dockerRepo: str, chapelVersion: str, file: str, dockerTag: str, distro: str, tag: Optional[str]) -> None:
-        result = subprocess.run(args=['docker','build',
-                                               '--build-arg', f'CHAPEL_SMP_IMAGE={generateChplSmpVersion(chapelVersion)}',
-                                               '--build-arg', f'ARKOUDA_DISTRO_NAME={getDistroName(distro=distro, tag=tag)}',
-                                               '--build-arg', f'ARKOUDA_DOWNLOAD_URL={generateArkoudaDownloadUrl(tag=tag,branch=distro)}',
-                                               '--build-arg', f'ARKOUDA_BRANCH_NAME={distro}',
-                                               '-f',file,
-                                               '-t', dockerTag, '.'], stdout=subprocess.DEVNULL)
-        print(result)
-
 
     dockerTag = generateBuildTag(dockerRepo=dockerRepo, file=file, tag=tag,distro=distro)
 
     if file == ImageType.ARKOUDA_FULL_STACK.value:
-        buildArkoudaFullStack(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+        buildImageHelper(file=file,
+                         docker_tag=dockerTag,
+                         build_args={
+                             'CHAPEL_SMP_IMAGE': generateChplSmpVersion(chapelVersion),
+                             'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
+                             'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
+                             'ARKOUDA_BRANCH_NAME': distro,
+                         }
+                        )
     elif file == ImageType.ARKOUDA_SMP_SERVER.value:
-        buildArkoudaSmpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+        buildImageHelper(file=file,
+                         docker_tag=dockerTag,
+                         build_args={
+                             'CHAPEL_SMP_IMAGE': generateChplSmpVersion(chapelVersion),
+                             'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
+                             'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
+                             'ARKOUDA_BRANCH_NAME': distro,
+                         }
+                        )
     elif file == ImageType.ARKOUDA_UDP_SERVER.value:
-        buildArkoudaUdpServer(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+        buildImageHelper(file=file,
+                        docker_tag=dockerTag,
+                        build_args={
+                            'CHAPEL_UDP_IMAGE': generateChplUdpVersion(chapelVersion),
+                            'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
+                            'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
+                            'ARKOUDA_BRANCH_NAME': distro,
+                            'ARKOUDA_INTEGRATION_DOWNLOAD_URL': 'https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
+                            'ARKOUDA_INTEGRATION_DISTRO_NAME': 'main',
+                        }
+                        )
     elif file == ImageType.CHAPEL_GASNET_UDP.value:
-        buildChapelUdp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
+        buildImageHelper(file=file,
+                        docker_tag=dockerTag,
+                        build_args={
+                            'CHPL_BASE_IMAGE': 'ubuntu:22.04',
+                            'CHPL_VERSION': chapelVersion,
+                            'CHPL_UDP_IMAGE_REPO': dockerRepo,
+                        }
+                        )
     elif file == ImageType.CHAPEL_GASNET_SMP.value:
-        buildChapelSmp(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
+        buildImageHelper(file=file,
+                         docker_tag=dockerTag,
+                         build_args={
+                             'CHPL_BASE_IMAGE': 'ubuntu:22.04',
+                             'CHPL_VERSION': chapelVersion,
+                             'CHPL_SMP_IMAGE_REPO': dockerRepo,
+                         }
+                         )
     elif file == ImageType.CHAPEL_GASNET_IBV.value:
-        buildChapelIbv(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag)
+        buildImageHelper(file=file,
+                         docker_tag=dockerTag,
+                         build_args={
+                             'CHPL_BASE_IMAGE': 'ubuntu:22.04',
+                             'CHPL_VERSION': chapelVersion,
+                             'CHPL_IBV_IMAGE_REPO': dockerRepo,
+                         }
+                         )
     elif file == ImageType.PROMETHEUS_ARKOUDA_EXPORTER.value:
-        buildPrometheusArkoudaExporter(dockerRepo=dockerRepo,file=file,distro=distro,dockerTag=dockerTag,tag=tag)
+        buildImageHelper(file=file,
+                        docker_tag=dockerTag,
+                        build_args={
+                            'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
+                            'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
+                            'ARKOUDA_BRANCH_NAME': distro,
+                            'ARKOUDA_CONTRIB_DOWNLOAD_URL': 'https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
+                            'ARKOUDA_CONTRIB_DISTRO_NAME': 'main',
+                        }
+                        )
     elif file == ImageType.ARKOUDA_SMP_DEVELOPER.value:
-        buildArkoudaSmpDeveloper(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,dockerTag=dockerTag,distro=distro,tag=tag)
+        buildImageHelper(file=file,
+                        docker_tag=dockerTag,
+                        build_args={
+                            'CHAPEL_SMP_IMAGE': generateChplSmpVersion(chapelVersion),
+                            'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
+                            'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
+                            'ARKOUDA_BRANCH_NAME': distro,
+                        }
+                        )
     else:
         raise ValueError(f'Dockerfile {file} is invalid, check command-line args')
 
