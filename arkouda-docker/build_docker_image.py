@@ -12,7 +12,6 @@ class ImageType(Enum):
     ARKOUDA_SMP_SERVER = 'arkouda-smp-server'
     ARKOUDA_UDP_SERVER = 'arkouda-udp-server'
     CHAPEL_GASNET_UDP = 'chapel-gasnet-udp'
-    CHAPEL_GASNET_SMP = 'chapel-gasnet-smp'
     CHAPEL_GASNET_IBV = 'chapel-gasnet-ibv'
     PROMETHEUS_ARKOUDA_EXPORTER = 'prometheus-arkouda-exporter'
     ARKOUDA_SMP_DEVELOPER = 'arkouda-smp-developer'
@@ -98,13 +97,6 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                             'CHPL_UDP_IMAGE_REPO': dockerRepo,
                         }
                         )
-    elif file == ImageType.CHAPEL_GASNET_SMP.value:
-        buildImageHelper(build_args={
-                             'CHPL_BASE_IMAGE': 'ubuntu:22.04',
-                             'CHPL_VERSION': chapelVersion,
-                             'CHPL_SMP_IMAGE_REPO': dockerRepo,
-                         }
-                         )
     elif file == ImageType.CHAPEL_GASNET_IBV.value:
         buildImageHelper(build_args={
                              'CHPL_BASE_IMAGE': 'ubuntu:22.04',
