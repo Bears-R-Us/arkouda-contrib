@@ -1,4 +1,5 @@
-FROM chapel/chapel:2.0.0
+ARG CHPL_VERSION
+FROM chapel/chapel:${CHPL_VERSION}
 
 ENV CHPL_COMM=gasnet
 ENV CHPL_COMM_SUBSTRATE=udp

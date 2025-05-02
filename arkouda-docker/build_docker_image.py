@@ -92,14 +92,12 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                         )
     elif file == ImageType.CHAPEL_GASNET_UDP.value:
         buildImageHelper(build_args={
-                            'CHPL_BASE_IMAGE': 'ubuntu:22.04',
                             'CHPL_VERSION': chapelVersion,
                             'CHPL_UDP_IMAGE_REPO': dockerRepo,
                         }
                         )
     elif file == ImageType.CHAPEL_GASNET_IBV.value:
         buildImageHelper(build_args={
-                             'CHPL_BASE_IMAGE': 'ubuntu:22.04',
                              'CHPL_VERSION': chapelVersion,
                              'CHPL_IBV_IMAGE_REPO': dockerRepo,
                          }
