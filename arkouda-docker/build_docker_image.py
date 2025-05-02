@@ -45,6 +45,8 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     :param str file: Dockerfile name
     :param str distro: Arkouda distro (branch name)
     :param Optional[str] tag: Arkouda tag name, if applicable
+    :param bool multiarch: whether to build a multiarch image
+    :param int concurrency: number of make jobs to run in parallel
     :return: None
     '''
 
