@@ -50,10 +50,13 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     :return: None
     '''
 
-    docker_tag = generateBuildTag(dockerRepo=dockerRepo,file=file,tag=tag,distro=distro)
-    print(f'Building docker image {docker_tag} using Dockerfile {file}')
 
     def buildImageHelper(build_args: dict) -> None:
+        use_tag = tag
+        if not tag and build_args['CHPL_VERSION']:
+            use_tag = build_args['CHPL_VERSION']
+        docker_tag = generateBuildTag(dockerRepo=dockerRepo,file=file,tag=use_tag,distro=distro)
+        print(f'Building docker image {docker_tag} using Dockerfile {file}')
         args = ['docker', 'build']
         for key, value in build_args.items():
             args.append('--build-arg')
