@@ -36,7 +36,7 @@ def getDistro(tag: str) -> str:
     '''
     return tag.lstrip('v')
 
-def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str], multiarch: bool, concurrency: int) -> None:
+def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag: Optional[str], multiarch: bool, concurrency: int, push: bool) -> None:
     '''
     Generates a build tag and then builds the desired docker image
 
@@ -47,6 +47,7 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
     :param Optional[str] tag: Arkouda tag name, if applicable
     :param bool multiarch: whether to build a multiarch image
     :param int concurrency: number of make jobs to run in parallel
+    :param bool push: whether to push the image to dockerhub after building
     :return: None
     '''
 
@@ -64,6 +65,8 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
         args.extend(['--build-arg', f'MAKE_THREADS={concurrency}'])
         if multiarch:
             args.extend(['--platform', 'linux/amd64,linux/arm64'])
+        if push:
+            args.extend(['--push'])
         args.extend(['-f', file, '-t', docker_tag])
         args.append('.')
         print("Running docker build command: ", ' '.join(args))
@@ -210,6 +213,8 @@ if __name__=="__main__":
                         help='Build multiarch image (default native arch only)')
     parser.add_argument('--concurrency', type=int, default=1,
                         help='Number of make jobs to run in parallel (default 1)')
+    parser.add_argument('--push', action='store_true',
+                        help='Push the image to dockerhub after building (default False)')
 
     args = parser.parse_args()
 
@@ -221,6 +226,7 @@ if __name__=="__main__":
     distro = None
     multiarch = args.multiarch
     concurrency = args.concurrency
+    push = args.push
 
     if buildArkoudaImage(file):
         if tag:
@@ -231,4 +237,4 @@ if __name__=="__main__":
             else:
                 raise ValueError('Either --arkouda_tag or --arkouda_branch must be specified')
 
-    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro,multiarch=multiarch,concurrency=concurrency)
+    buildImage(dockerRepo=dockerRepo,chapelVersion=chapelVersion,file=file,tag=tag,distro=distro,multiarch=multiarch,concurrency=concurrency,push=push)
