@@ -8,6 +8,7 @@ ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
 ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
 ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
 ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ARG MAKE_THREADS=1
 
 # Install dependencies
 RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
@@ -39,14 +40,14 @@ RUN python3 -m pip install --upgrade pip && \
 # insecure to get around my ssl issues from zscaler
 RUN echo insecure >> $HOME/.curlrc
 
-RUN make -j6 install-deps
+RUN make -j${MAKE_THREADS} install-deps
 
 ENV SSH_SERVERS=0.0.0.0
 ENV GASNET_MASTERIP=0.0.0.0
 RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
 
-RUN service ssh start && make -j6
+RUN service ssh start && make -j${MAKE_THREADS}
 
 # Remove unneeded files
 RUN rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip
