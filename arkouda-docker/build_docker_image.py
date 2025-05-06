@@ -11,6 +11,7 @@ class ImageType(Enum):
     ARKOUDA_FULL_STACK = 'arkouda-full-stack'
     ARKOUDA_SMP_SERVER = 'arkouda-smp-server'
     ARKOUDA_UDP_SERVER = 'arkouda-udp-server'
+    ARKOUDA_IBV_SERVER = 'arkouda-ibv-server'
     CHAPEL_GASNET_UDP = 'chapel-gasnet-udp'
     CHAPEL_GASNET_IBV = 'chapel-gasnet-ibv'
     PROMETHEUS_ARKOUDA_EXPORTER = 'prometheus-arkouda-exporter'
@@ -100,6 +101,16 @@ def buildImage(dockerRepo: str, chapelVersion: str, file: str, distro: str, tag:
                             'ARKOUDA_INTEGRATION_DISTRO_NAME': 'main',
                         }
                         )
+    elif file == ImageType.ARKOUDA_IBV_SERVER.value:
+        buildImageHelper(build_args={
+                            'CHAPEL_IBV_IMAGE': generateChplIbvVersion(dockerRepo, chapelVersion),
+                            'ARKOUDA_DISTRO_NAME': getDistroName(distro=distro, tag=tag),
+                            'ARKOUDA_DOWNLOAD_URL': generateArkoudaDownloadUrl(tag=tag, branch=distro),
+                            'ARKOUDA_BRANCH_NAME': distro,
+                            'ARKOUDA_INTEGRATION_DOWNLOAD_URL': 'https://github.com/Bears-R-Us/arkouda-contrib/archive/refs/heads/main.zip',
+                            'ARKOUDA_INTEGRATION_DISTRO_NAME': 'main',
+                        }
+                        )
     elif file == ImageType.CHAPEL_GASNET_UDP.value:
         buildImageHelper(build_args={
                             'CHPL_VERSION': chapelVersion,
@@ -149,6 +160,9 @@ def generateChplSmpVersion(dockerRepo: str, chapelVersion: str) -> str:
 
 def generateChplUdpVersion(dockerRepo: str, chapelVersion: str) -> str:
     return f'{dockerRepo}/chapel-gasnet-udp:{chapelVersion}'
+
+def generateChplIbvVersion(dockerRepo: str, chapelVersion: str) -> str:
+    return f'{dockerRepo}/chapel-gasnet-ibv:{chapelVersion}'
 
 def generateArkoudaDownloadUrl(tag: Optional[str], branch: Optional[str]) -> str:
     '''

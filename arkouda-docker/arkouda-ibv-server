@@ -1,0 +1,69 @@
+ARG CHAPEL_IBV_IMAGE
+FROM $CHAPEL_IBV_IMAGE as base
+
+# Download Arkouda
+ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ENV ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
+ARG ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ENV ARKOUDA_DISTRO_NAME=${ARKOUDA_DISTRO_NAME}
+ARG ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ENV ARKOUDA_BRANCH_NAME=${ARKOUDA_BRANCH_NAME}
+ARG MAKE_THREADS=1
+
+# Install dependencies
+RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
+    unzip \
+    libcurl4-openssl-dev \
+    cmake \
+    ssh \
+    procps \
+    dnsutils \
+    openssh-client \
+    openssh-server \
+    sshpass
+
+FROM base as build
+
+WORKDIR /opt
+
+# Download desired Arkouda distro, move to commont /opt/arkouda dir
+RUN chmod 777 /opt && \
+    wget $ARKOUDA_DOWNLOAD_URL && \
+    unzip $ARKOUDA_DISTRO_NAME.zip && \
+    mv /opt/arkouda-$ARKOUDA_BRANCH_NAME /opt/arkouda
+
+WORKDIR /opt/arkouda
+
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install -e .[dev]
+
+# insecure to get around my ssl issues from zscaler
+RUN echo insecure >> $HOME/.curlrc
+
+RUN make -j${MAKE_THREADS} install-deps
+
+ENV SSH_SERVERS=0.0.0.0
+ENV GASNET_MASTERIP=0.0.0.0
+RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
+    cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+
+RUN service ssh start && make -j${MAKE_THREADS}
+
+# Remove unneeded files
+RUN rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip
+
+WORKDIR /opt/arkouda
+RUN rm -rf benchmarks converter examples *.md pictures pydoc resources runs src test tests toys
+
+FROM base as final
+COPY --from=build /opt /opt
+
+RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
+    sudo
+
+WORKDIR /opt
+
+EXPOSE 5555
+EXPOSE 5000-65000/udp
+
+EXPOSE 22
