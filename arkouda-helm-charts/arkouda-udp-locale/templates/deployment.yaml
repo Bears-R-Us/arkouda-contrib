@@ -16,7 +16,7 @@ spec:
       terminationGracePeriodSeconds: 5
       containers:
         - name: arkouda-locale
-          image: arifthpe/arkouda-udp-server:{{ .Values.releaseVersion }}
+          image: {{ .Values.imageRepo }}/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           resources:
             requests:
