@@ -41,8 +41,4 @@ data:
      chmod -R 600 $HOME/.ssh/*
      cat $HOME/.ssh/id_rsa.pub > $HOME/.ssh/authorized_keys
 
-     # Start arkouda_server as the configured user
-     sudo -u $USER bash <<EOF
-
      /bin/bash -c -- "while true; do sleep 600; done;"
-     EOF
