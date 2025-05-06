@@ -34,7 +34,7 @@ data:
      echo $USER
 
      # Add SSH certificate
-     sudo -u $USER mkdir $HOME/.ssh
+     sudo mkdir $HOME/.ssh
      sudo cp $HOME/ssh-keys/id_rsa* $HOME/.ssh/
      sudo chown -R $USER:$USER $HOME/.ssh
 
