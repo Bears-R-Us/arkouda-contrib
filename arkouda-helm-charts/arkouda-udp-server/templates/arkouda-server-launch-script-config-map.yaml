@@ -45,6 +45,8 @@ data:
      sudo groupadd $USER
      echo $USER
 
+     sudo chown -R $USER:$USER /opt
+
      # Add SSH certificate
      sudo mkdir $HOME/.ssh
      sudo cp $HOME/ssh-keys/id_rsa* $HOME/.ssh/
