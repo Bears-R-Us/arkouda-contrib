@@ -57,7 +57,7 @@ data:
 
 
      # Start arkouda_server as the configured user
-     sudo -u $USER bash <<EOF
+     sudo -E -u $USER bash <<EOF
 
      # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
      {{- if .Values.server.metrics.collectMetrics }}
