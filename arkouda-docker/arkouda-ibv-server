@@ -1,5 +1,5 @@
 ARG CHAPEL_IBV_IMAGE
-FROM $CHAPEL_IBV_IMAGE as base
+FROM $CHAPEL_IBV_IMAGE AS base
 
 # Download Arkouda
 ARG ARKOUDA_DOWNLOAD_URL=${ARKOUDA_DOWNLOAD_URL}
@@ -22,7 +22,7 @@ RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommen
     openssh-server \
     sshpass
 
-FROM base as build
+FROM base AS build
 
 WORKDIR /opt
 
@@ -56,7 +56,7 @@ RUN rm -rf /opt/$ARKOUDA_DISTRO_NAME.zip
 WORKDIR /opt/arkouda
 RUN rm -rf benchmarks converter examples *.md pictures pydoc resources runs src test tests toys
 
-FROM base as final
+FROM base AS final
 COPY --from=build /opt /opt
 
 RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
