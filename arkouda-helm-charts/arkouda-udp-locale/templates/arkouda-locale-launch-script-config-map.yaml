@@ -45,4 +45,4 @@ data:
      sudo -u $USER bash <<EOF
 
      /bin/bash -c -- "while true; do sleep 600; done;"
-
+     EOF
