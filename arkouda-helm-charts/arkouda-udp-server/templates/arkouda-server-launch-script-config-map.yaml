@@ -53,7 +53,11 @@ data:
      cat $HOME/.ssh/id_rsa.pub > $HOME/.ssh/authorized_keys
 
      # Generate list of arkouda-server and arkouda-locale IP addresses
-     export SSH_SERVERS="$MY_IP $LOCALE_IPS" \
+     export SSH_SERVERS="$MY_IP $LOCALE_IPS"
+
+
+     # Start arkouda_server as the configured user
+     sudo -u $USER bash <<EOF
 
      # Start arkouda_server via the GASNET SSH_SPAWNER using the udp CHAPEL_COMM_SUBSTRATE and SSH_SERVER list of pod ip addresses
      {{- if .Values.server.metrics.collectMetrics }}
