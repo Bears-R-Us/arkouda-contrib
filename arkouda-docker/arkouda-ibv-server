@@ -45,6 +45,7 @@ RUN make -j${MAKE_THREADS} install-deps
 ENV SSH_SERVERS=0.0.0.0
 ENV GASNET_SSH_SERVERS=0.0.0.0
 ENV GASNET_MASTERIP=0.0.0.0
+ENV ARKOUDA_SKIP_CHECK_DEPS=true
 RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
 
