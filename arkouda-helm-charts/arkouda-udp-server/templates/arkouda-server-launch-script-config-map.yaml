@@ -38,12 +38,10 @@ data:
      USER=ubuntu
      {{- end }}
 
-     # Add user with home directory
+     sudo groupadd -g $GID $GROUP
      sudo useradd $USER -m -u $UID -g $GID
      sudo adduser $USER $USER
      HOME="/home/$USER"
-     # Add group corresponding to gid and user
-     sudo groupadd -g $GID $GROUP
      sudo groupadd $USER
      echo $USER
 
