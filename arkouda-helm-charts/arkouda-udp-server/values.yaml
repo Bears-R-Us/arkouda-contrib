@@ -40,7 +40,7 @@ locale:
 
 external:
   k8sHost: https://192.168.49.2:8443 # Kubernetes API url used to register service(s)
-  namespace: arkouda # namespace Arkouda will register service
+  namespace: rift-arkouda # namespace Arkouda will register service
 
 persistence:
   enabled: # indicates whether files can be written to/read from the host system, defaults to false
