@@ -54,6 +54,7 @@ data:
 
      # Generate list of arkouda-server and arkouda-locale IP addresses
      export SSH_SERVERS="$MY_IP $LOCALE_IPS"
+     export GASNET_SSH_SERVERS="$SSH_SERVERS"
 
 
      # Start arkouda_server as the configured user
