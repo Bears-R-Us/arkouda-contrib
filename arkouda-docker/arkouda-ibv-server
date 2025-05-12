@@ -45,6 +45,7 @@ RUN make -j${MAKE_THREADS} install-deps
 ENV SSH_SERVERS=0.0.0.0
 ENV GASNET_SSH_SERVERS=0.0.0.0
 ENV GASNET_MASTERIP=0.0.0.0
+# required for gasnet/ibv build, as we don't have ibv devices at build time
 ENV ARKOUDA_SKIP_CHECK_DEPS=true
 # make arkouda server build faster
 ENV ARKOUDA_QUICK_COMPILE=1
