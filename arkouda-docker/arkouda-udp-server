@@ -45,6 +45,13 @@ RUN make -j${MAKE_THREADS} install-deps
 ENV SSH_SERVERS=0.0.0.0
 ENV GASNET_SSH_SERVERS=0.0.0.0
 ENV GASNET_MASTERIP=0.0.0.0
+# make arkouda server build faster
+ENV ARKOUDA_SKIP_CHECK_DEPS=true
+ENV ARKOUDA_QUICK_COMPILE=1
+ENV ARKOUDA_DEVELOPER=
+RUN echo "" > ServerModules.cfg
+# RUN sed -i '/uint\|real\|bool\|bigint/d' registration-config.json
+# RUN sed -i 's/"int",/"int"/' registration-config.json
 RUN ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa && \
     cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
 
