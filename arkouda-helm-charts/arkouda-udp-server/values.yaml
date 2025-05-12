@@ -3,7 +3,7 @@
 ######################## Pod Settings ########################
 
 releaseVersion: v2024.04.19
-imageRepo: bearsrus
+imageRepo: arifthpe
 imagePullPolicy: Always
 
 resources:
