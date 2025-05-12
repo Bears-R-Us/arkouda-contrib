@@ -1,10 +1,6 @@
 ARG CHPL_VERSION
 FROM chapel/chapel:${CHPL_VERSION}
 
-ENV CHPL_COMM=gasnet
-ENV CHPL_COMM_SUBSTRATE=ibv
-ENV CHPL_LAUNCHER=gasnetrun_ibv
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     rdma-core \
     libibmad5 \
@@ -22,6 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     infiniband-diags \
     libfabric1 \
     ibverbs-utils
+
+ENV CHPL_COMM=gasnet
+ENV CHPL_COMM_SUBSTRATE=ibv
+ENV CHPL_LAUNCHER=gasnetrun_ibv
+ENV GASNET_BACKTRACE=1
 
 ARG MAKE_THREADS
 RUN CHPL_TARGET_COMPILER=llvm make -j${MAKE_THREADS} -C $CHPL_HOME \
