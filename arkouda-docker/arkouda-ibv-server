@@ -64,12 +64,18 @@ WORKDIR /opt/arkouda
 RUN rm -rf benchmarks converter examples *.md pictures pydoc resources runs src test tests toys
 
 FROM base AS final
+
 COPY --from=build /opt /opt
+WORKDIR /opt
 
 RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
-    sudo
+    sudo \
+    libcap2-bin
 
-WORKDIR /opt
+RUN echo "* soft memlock unlimited" >> /etc/security/limits.conf && \
+    echo "* hard memlock unlimited" >> /etc/security/limits.conf && \
+    echo "root soft memlock unlimited" >> /etc/security/limits.conf && \
+    echo "root hard memlock unlimited" >> /etc/security/limits.conf
 
 EXPOSE 5555
 EXPOSE 5000-65000/udp
