@@ -2,7 +2,8 @@
 
 ######################## Pod Settings ########################
 
-releaseVersion: # bearsrus arkouda-udp-server image version
+releaseVersion: v2024.04.19
+imageRepo: arifthpe
 imagePullPolicy: Always
 
 resources:
@@ -16,30 +17,30 @@ resources:
 ################ Arkouda Server Configuration ################
 
 server: 
-  numLocales: # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
-  authenticate: # whether to require token authentication, defaults to false
-  verbose: # enable verbose logging, defaults to false
+  numLocales: 3 # total number of Arkouda locales = number of arkouda-udp-locale pods + 1
+  authenticate: false # whether to require token authentication, defaults to false
+  verbose: true # enable verbose logging, defaults to false
   memMax: 1000000000 # maximum bytes of RAM to be used by Chapel per locale
-  threadsPerLocale: # number of cpu cores to be used by Chapel per locale
+  threadsPerLocale: 2 # number of cpu cores to be used by Chapel per locale
   logLevel: LogLevel.DEBUG # logging level
-  name: # name of server
+  name: myarkoudaserver # name of server
   service:
     type: ClusterIP
     port: 5555 # Arkouda k8s service port
-    name: # k8s service name for Arkouda server
+    name: myarkoudaserver-service # k8s service name for Arkouda server
   metrics:
-    collectMetrics: true # indicates whether to collect metrics, defaults to false
+    collectMetrics: false # indicates whether to collect metrics, defaults to false
     service:
-      name: # service name for Arkouda metrics service endpoint
+      name: asdfasdf-metrics # service name for Arkouda metrics service endpoint
       port: 5556
 
 locale:
-  name: # arkouda-udp-locale app name used to find locale IP addresses
+  name: asdfasdf # arkouda-udp-locale app name used to find locale IP addresses
   podMethod: GET_POD_IPS 
 
 external:
-  k8sHost: # Kubernetes API url used to register service(s)
-  namespace: # namespace Arkouda will register service
+  k8sHost: https://192.168.49.2:8443 # Kubernetes API url used to register service(s)
+  namespace: rift-arkouda # namespace Arkouda will register service
 
 persistence:
   enabled: # indicates whether files can be written to/read from the host system, defaults to false
@@ -70,8 +71,8 @@ group:
   name: # name of group user needs to configured for to execute host commands
   gid: # gid of group user needs to configured for to execute host commands
 
-serviceaccount: # name of Arkouda ServiceAccount used for binding Arkouda k8s roles
+serviceaccount: arkouda-sa # name of Arkouda ServiceAccount used for binding Arkouda k8s roles
 
 secrets:
-  ssh: # name of ssh secret used to launch Arkouda locales
-  sa: # name of service-account-token assigned to the Arkouda ServiceAccount
+  ssh: sshkey # name of ssh secret used to launch Arkouda locales
+  sa: arkouda-sa # name of service-account-token assigned to the Arkouda ServiceAccount

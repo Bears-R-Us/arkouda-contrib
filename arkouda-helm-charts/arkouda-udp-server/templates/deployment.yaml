@@ -9,7 +9,7 @@ spec:
       containers:
         {{- if .Values.server.metrics.collectMetrics }}
         - name: arkouda-metrics-server
-          image: bearsrus/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
+          image: {{ .Values.imageRepo }}/prometheus-arkouda-exporter:{{ .Values.metricsExporter.releaseVersion }}
           imagePullPolicy: {{ .Values.metricsExporter.imagePullPolicy }}
           ports:
           - containerPort: 5080
@@ -26,7 +26,7 @@ spec:
               value: {{ .Values.server.metrics.service.port | quote}}
         {{- end }}
         - name: arkouda-server
-          image: bearsrus/arkouda-udp-server:{{ .Values.releaseVersion }}
+          image: {{ .Values.imageRepo }}/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           command: [ "sh", "/opt/arkouda/start-arkouda-server.sh" ]
           lifecycle:
@@ -50,8 +50,6 @@ spec:
           volumeMounts:
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
-          - name: sa
-            mountPath: /opt/sa
           {{- if .Values.persistence.enabled }}
           - name: locale
             mountPath: {{ .Values.persistence.containerPath }}
@@ -69,7 +67,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: NUMLOCALES
-              value: {{ .Values.server.numLocales | quote}}
+              value: {{ .Values.server.numLocales | quote }}
             - name: SSH_SERVERS
               valueFrom:
                 fieldRef:

@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ .Values.locale.name }}-locale
 spec:
@@ -13,9 +13,10 @@ spec:
         app: {{ .Values.locale.name }}
         name: {{ .Values.locale.name }}
     spec:
+      terminationGracePeriodSeconds: 5
       containers:
         - name: arkouda-locale
-          image: bearsrus/arkouda-udp-server:{{ .Values.releaseVersion }}
+          image: {{ .Values.imageRepo }}/arkouda-udp-server:{{ .Values.releaseVersion }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           resources:
             requests:
@@ -27,6 +28,7 @@ spec:
           command: [ "sh", "/opt/arkouda/start-arkouda-locale.sh" ]
           ports:
           - containerPort: 22
+            name: ssh
           volumeMounts:
           - name: ssh
             mountPath: "/home/ubuntu/ssh-keys"
@@ -40,7 +42,7 @@ spec:
           env:
             - name: MY_IP
               valueFrom:
-                fieldRef: 
+                fieldRef:
                   fieldPath: status.podIP
             - name: NUM_LOCALES
               value: {{ .Values.locale.numLocales | quote }}
